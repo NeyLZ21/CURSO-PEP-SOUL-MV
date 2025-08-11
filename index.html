@@ -266,7 +266,6 @@ const MSGS = {
   'auth/network-request-failed':'Error de red. Revisa tu conexión.'
 };
 const msg = (t)=>{ const el=$('#auth-msg'); if(el) el.textContent=t; };
-
 const emailOk = e => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((e||'').trim().toLowerCase());
 
 /* ======= Estado local por usuario ======= */
@@ -318,8 +317,7 @@ auth.onAuthStateChanged(async (user)=>{
 
 /* ======= REGISTRO ======= */
 document.getElementById('btn-register-2').addEventListener('click', async ()=>{
-  const rawEmail = (document.getElementById('reg-email').value||'');
-  const email = rawEmail.trim().toLowerCase();
+  const email = (document.getElementById('reg-email').value||'').trim().toLowerCase();
   const pass  = (document.getElementById('reg-pass').value||'').trim();
   const pass2 = (document.getElementById('reg-pass2').value||'').trim();
 
@@ -379,46 +377,52 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
   }
 });
 
-/* ======= LOGIN (con pre-chequeo de existencia) ======= */
+/* ======= LOGIN ROBUSTO ======= */
 document.getElementById('btn-login').addEventListener('click', async ()=>{
-  const rawEmail = (document.getElementById('login-email').value||'');
-  const email = rawEmail.trim().toLowerCase();
+  const email = (document.getElementById('login-email').value||'').trim().toLowerCase();
   const pass  = (document.getElementById('login-pass').value||'').trim();
 
   if(!email || !pass) return msg('Ingresa correo y contraseña.');
   if(!emailOk(email)) return msg('El formato del correo no es válido.');
 
+  const btn = document.getElementById('btn-login');
+  btn.disabled = true;
+
   try{
-    // PRE-CHECK de existencia
-    const methods = await auth.fetchSignInMethodsForEmail(email);
-    if(!methods || methods.length===0){
-      msg('Correo no registrado.');
-      setTab('reg');
-      document.getElementById('reg-email').value = email;
-      return;
-    }
+    // 1) Intento rápido de sign-in
     await auth.signInWithEmailAndPassword(email, pass);
     msg('Sesión iniciada.');
   }catch(e){
-    if (e.code==='auth/user-not-found'){
+    // 2) Diferenciar con fetchSignInMethods
+    let methods = [];
+    try { methods = await auth.fetchSignInMethodsForEmail(email); } catch(_){}
+    const hasAccount = methods && methods.length > 0;
+
+    if (e.code === 'auth/user-not-found' || !hasAccount) {
       msg('Correo no registrado.');
-      setTab('reg'); document.getElementById('reg-email').value = email;
-    } else if (e.code==='auth/wrong-password' || e.code==='auth/invalid-credential' || e.code==='auth/invalid-login-credentials'){
+      setTab('reg');
+      document.getElementById('reg-email').value = email;
+    } else if (
+      e.code==='auth/wrong-password' ||
+      e.code==='auth/invalid-credential' ||
+      e.code==='auth/invalid-login-credentials'
+    ){
       msg('Contraseña incorrecta.');
-    } else if (e.code==='auth/invalid-email'){
+    } else if (e.code==='auth/invalid-email') {
       msg('El formato del correo no es válido.');
-    } else if (e.code==='auth/too-many-requests'){
-      msg(MSGS[e.code]);
+    } else if (e.code==='auth/too-many-requests') {
+      msg('Demasiados intentos. Intenta más tarde.');
     } else {
       msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
     }
+  } finally {
+    btn.disabled = false;
   }
 });
 
 /* ======= Reset contraseña ======= */
 document.getElementById('btn-reset').addEventListener('click', async ()=>{
-  const rawEmail=(document.getElementById('login-email').value||'');
-  const email=rawEmail.trim().toLowerCase();
+  const email=(document.getElementById('login-email').value||'').trim().toLowerCase();
   if(!email) return msg('Escribe tu correo para enviarte el enlace.');
   if(!emailOk(email)) return msg('El formato del correo no es válido.');
   try{
@@ -588,7 +592,7 @@ function updateProgress(){
 function renderQuiz(){
   const wrap=document.getElementById('quiz'); wrap.innerHTML='';
   QUESTIONS.forEach((q,idx)=>{
-    const card=document.createElement('div'); card.className='card'; card.style.marginBottom='12px';
+    const card=document.createElement('div'); card.className='card'; card.style	marginBottom='12px';
     const opts=q.options.map(o=>`
       <label style="display:flex;gap:8px;align-items:center;margin:6px 0">
         <input type="radio" name="${q.id}" value="${o.key}">
