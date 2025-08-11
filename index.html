@@ -1,380 +1,622 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Inducción a Soul MV • Hospital Vozandes</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  <style>
-    :root{
-      --brand:#781C38;
-      --ink:#111827;--muted:#6b7280;--bg:#f8fafc;--card:#ffffff;--ok:#15803d;--warn:#b45309;--err:#b91c1c;
-      --ring:#e5e7eb
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0}
-    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
-    .container{max-width:980px;margin:auto;padding:24px}
-    header{display:flex;gap:16px;align-items:center;margin:12px 0 20px}
-    header .logo{width:48px;height:48px;border-radius:12px;background:var(--brand);display:grid;place-content:center;color:#fff;font-weight:800}
-    h1{font-size:clamp(22px,3.2vw,34px);margin:0}
-    .subtitle{color:var(--muted);margin-top:4px}
-    .card{background:var(--card);border-radius:18px;box-shadow:0 10px 24px rgba(0,0,0,.06);padding:20px}
-    .badge{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:600;background:#eef2ff;color:#3730a3}
-    .grid{display:grid;gap:12px}
-    .grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
-    @media (max-width:800px){.grid.cols-2{grid-template-columns:1fr}}
-
-    /* Inputs y botones (unificados para que no “cambien” entre pestañas) */
-    input[type="text"],input[type="email"],input[type="password"]{
-      width:100%;padding:12px;border-radius:12px;border:1px solid var(--ring);outline:none;
-      transition: box-shadow .2s,border-color .2s; background:#fff;
-    }
-    input[type="text"]:focus,input[type="email"]:focus,input[type="password"]:focus{
-      border-color:#d1d5db; box-shadow:0 0 0 4px rgba(120,28,56,.10);
-    }
-    .row{display:flex;gap:10px;align-items:center}
-    .btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor:pointer;font-weight:600}
-    .btn-primary{background:var(--brand);color:#fff}
-    .btn-muted{background:#e5e7eb;color:#111827}
-    .btn-ok{background:var(--ok);color:#fff}
-    .btn[disabled]{opacity:.5;cursor:not-allowed}
-
-    /* Toggle pestañas */
-    .tabs{display:flex;gap:8px;margin-bottom:10px}
-    .tab{padding:8px 12px;border-radius:999px;background:#f3f4f6;color:#111827;font-weight:600;cursor:pointer;border:1px solid #e5e7eb}
-    .tab.active{background:var(--brand);color:#fff;border-color:transparent}
-    .hint{color:var(--muted);font-size:12px}
-    .msg{font-size:14px;margin-top:6px}
-    .msg.ok{color:var(--ok)} .msg.err{color:var(--err)}
-    .eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;opacity:.7}
-    .field{position:relative}
-
-    /* Requisitos tarjeta */
-    .warn-card{background:#fff7f7;border:1px dashed #fda4af}
-    .yellow{background:#fffbeb;border:1px solid #fde68a}
-    .top-right{margin-left:auto;color:var(--muted);font-size:13px}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Inducción a Soul MV • Hospital Vozandes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--brand:#781C38;--ink:#1f2937;--muted:#6b7280;--bg:#f8fafc;--card:#ffffff;--ok:#15803d;--warn:#b45309}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+.container{max-width:980px;margin:auto;padding:24px}
+header{display:flex;gap:16px;align-items:center;margin:12px 0 20px}
+header .logo{width:48px;height:48px;border-radius:12px;background:var(--brand);display:grid;place-content:center;color:#fff;font-weight:800}
+h1{font-size:clamp(22px,3.5vw,34px);margin:0}
+.subtitle{color:var(--muted);margin-top:4px}
+.card{background:var(--card);border-radius:18px;box-shadow:0 10px 24px rgba(0,0,0,.06);padding:20px}
+.grid{display:grid;gap:16px}
+.grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:800px){.grid.cols-2{grid-template-columns:1fr}}
+button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor:pointer;font-weight:600}
+.btn-primary{background:var(--brand);color:#fff}
+.btn-muted{background:#e5e7eb;color:#111827}
+.btn-success{background:var(--ok);color:#fff}
+.btn-warn{background:#fef3c7;color:#92400e}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.badge{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:600;background:#eef2ff;color:#3730a3}
+.progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}
+.progress>span{display:block;height:100%;background:var(--brand);width:0}
+.module{display:flex;gap:16px;align-items:flex-start}
+.module .num{flex:0 0 auto;width:36px;height:36px;border-radius:10px;background:#f3f4f6;display:grid;place-content:center;font-weight:700}
+.module .meta{flex:1}
+.yt-wrap{position:relative;padding-top:56.25%;border-radius:16px;overflow:hidden;background:#000;margin-top:12px}
+.yt-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.muted{color:var(--muted)}
+.footer{margin-top:24px;color:var(--muted);font-size:13px}
+/* Certificado */
+#certificado{display:none}
+#certificado.show{display:block}
+@media print{.no-print{display:none !important} #certificado{display:block}}
+.cert-card{background:#fff;border:4px solid var(--brand);border-radius:20px;padding:40px;text-align:center}
+.cert-title{font-size:28px;font-weight:800;margin:0 0 10px;color:var(--brand)}
+.cert-name{font-size:26px;font-weight:800;margin:8px 0}
+.cert-meta{color:#374151;margin-top:10px}
+/* Inputs con ojito */
+.input-wrap{position:relative}
+.input-wrap input{width:100%;padding:12px 40px 12px 12px;border-radius:12px;border:1px solid #e5e7eb}
+.eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;border:0;background:transparent;font-size:16px}
+/* Avisos */
+.alert{border-radius:12px;padding:12px 14px;font-size:14px}
+.alert-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
+.alert-ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46}
+/* Modal (no lo usamos en este flujo, pero queda listo) */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:50}
+.modal{background:#fff;border-radius:18px;box-shadow:0 20px 48px rgba(0,0,0,.18);width:min(640px,92vw);padding:20px}
+.modal h3{margin:0 0 8px}
+.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+</style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <div class="logo">HV</div>
-      <div style="flex:1">
-        <h1>Inducción a Soul MV</h1>
-        <div class="subtitle">Curso para nuevos médicos • Hospital Vozandes</div>
-      </div>
-      <div id="auth-chip" class="top-right"></div>
-    </header>
+<div class="container">
+  <header class="no-print">
+    <div class="logo">HV</div>
+    <div style="flex:1">
+      <h1>Inducción a Soul MV</h1>
+      <div class="subtitle">Curso para nuevos médicos • Hospital Vozandes</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span id="auth-user" class="muted" style="font-size:13px"></span>
+      <button id="btn-logout" class="btn btn-muted" style="display:none">Cerrar sesión</button>
+    </div>
+  </header>
 
-    <!-- Acceso -->
-    <section id="sec-auth" class="card">
-      <div class="tabs">
-        <button id="tab-login" class="tab active">Iniciar sesión</button>
-        <button id="tab-reg" class="tab">Registrarme</button>
-      </div>
+  <!-- Acceso -->
+  <section id="step-welcome" class="card no-print">
+    <div class="grid cols-2" style="align-items:start">
+      <div>
+        <h2 style="margin:0 0 6px">Acceso</h2>
+        <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña. Te pediremos verificar el correo antes de iniciar el curso. Tu progreso quedará guardado en la nube.</p>
 
-      <!-- LOGIN -->
-      <div id="pane-login">
-        <div class="grid">
-          <label>Correo electrónico
-            <input id="li-email" type="email" placeholder="usuario@dominio.com" autocomplete="username" required>
-          </label>
-          <label>Contraseña
-            <div class="field">
-              <input id="li-pass" type="password" placeholder="••••••••" autocomplete="current-password" required>
-              <span class="eye" data-eye="li-pass">👁</span>
-            </div>
-          </label>
-          <div class="row">
-            <button id="btn-login" class="btn btn-primary">Confirmar</button>
-            <button id="btn-reset" class="btn btn-muted">Restablecer contraseña</button>
+        <div class="grid" id="auth-forms">
+          <div style="display:flex; gap:8px; margin-bottom:8px">
+            <button id="tab-login" class="btn btn-primary">Iniciar sesión</button>
+            <button id="tab-register" class="btn btn-muted">Registrarme</button>
           </div>
-          <div id="li-msg" class="msg"></div>
-        </div>
-      </div>
 
-      <!-- REGISTRO -->
-      <div id="pane-reg" style="display:none">
-        <div class="grid cols-2">
-          <label>Nombre y apellido (para certificado)
-            <input id="rg-name" type="text" placeholder="Ej.: María Pérez" required>
-          </label>
-          <label>Correo electrónico
-            <input id="rg-email" type="email" placeholder="usuario@dominio.com" autocomplete="username" required>
-          </label>
-        </div>
-        <div class="grid cols-2">
-          <label>Contraseña
-            <div class="field">
-              <input id="rg-pass" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" required>
-              <span class="eye" data-eye="rg-pass">👁</span>
+          <!-- LOGIN -->
+          <div id="form-login">
+            <label>Correo electrónico<br>
+              <input id="login-email" type="email" placeholder="usuario@dominio.com" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb" required>
+            </label>
+            <label>Contraseña<br>
+              <div class="input-wrap">
+                <input id="login-pass" type="password" placeholder="••••••••" required>
+                <button type="button" class="eye" data-eye="#login-pass">👁️</button>
+              </div>
+            </label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-primary" id="btn-login">Iniciar sesión</button>
+              <button class="btn" id="btn-reset" style="background:#e5e7eb">Restablecer contraseña</button>
             </div>
-            <div class="hint">Mínimo 6 caracteres</div>
-          </label>
-          <label>Confirmar contraseña
-            <div class="field">
-              <input id="rg-pass2" type="password" placeholder="Repite la contraseña" autocomplete="new-password" required>
-              <span class="eye" data-eye="rg-pass2">👁</span>
+          </div>
+
+          <!-- REGISTRO -->
+          <div id="form-register" style="display:none">
+            <label>Nombre y apellido (para certificado)<br>
+              <input id="reg-name" type="text" placeholder="Ej.: María Pérez" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb" required>
+            </label>
+            <label>Correo electrónico<br>
+              <input id="reg-email" type="email" placeholder="usuario@dominio.com" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb" required>
+            </label>
+            <label>Contraseña<br>
+              <div class="input-wrap">
+                <input id="reg-pass" type="password" placeholder="Mínimo 6 caracteres" required>
+                <button type="button" class="eye" data-eye="#reg-pass">👁️</button>
+              </div>
+            </label>
+            <label>Confirmar contraseña<br>
+              <div class="input-wrap">
+                <input id="reg-pass2" type="password" placeholder="Repite la contraseña" required>
+                <button type="button" class="eye" data-eye="#reg-pass2">👁️</button>
+              </div>
+            </label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-muted" id="btn-register-2">Crear cuenta</button>
             </div>
-          </label>
-        </div>
-        <div class="row">
-          <button id="btn-register" class="btn btn-primary">Crear cuenta</button>
+          </div>
+
+          <div id="auth-msg" class="muted" style="min-height:18px"></div>
         </div>
 
-        <div id="verify-box" class="card yellow" style="display:none;margin-top:12px">
-          <strong>Verifica tu correo:</strong>
-          <p class="hint" style="margin:.3rem 0 .6rem">Te enviamos un correo de verificación. Confirma tu cuenta y luego pulsa el botón para volver a comprobar.</p>
-          <div class="row">
-            <button id="btn-check-verify" class="btn btn-ok">Ya verifiqué mi correo</button>
+        <div id="verify-box" class="alert alert-warn" style="display:none;margin-top:10px">
+          <strong>Verifica tu correo:</strong> primero pulsa <em>“Reenviar verificación”</em> para que te llegue el correo. Luego confirma tu cuenta y vuelve aquí.
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="btn-check-verify" class="btn btn-primary">Ya verifiqué mi correo</button>
             <button id="btn-resend-verify" class="btn btn-muted">Reenviar verificación</button>
           </div>
-          <div id="verify-msg" class="msg"></div>
         </div>
-
-        <div id="rg-msg" class="msg"></div>
       </div>
 
-      <div class="card warn-card" style="margin-top:16px">
+      <div class="card" style="background:#fff7f7;border:1px dashed #fda4af">
         <div class="badge"><span>ℹ️</span> Requisitos</div>
-        <ul style="margin:8px 0 0 18px">
+        <ul>
           <li>Tener acceso a Internet</li>
           <li>Completar todos los videos para habilitar el cuestionario</li>
           <li>Correo válido (cualquier dominio) y verificado</li>
         </ul>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <!-- PERFIL (solo cuando inicia y está verificado) -->
-    <section id="sec-profile" class="card" style="display:none;margin-top:16px">
-      <h2 style="margin:0 0 8px">Mi perfil</h2>
-      <div class="grid cols-2">
-        <label>Nombre completo (para certificado)
-          <input id="pf-name" type="text" required>
-        </label>
-        <label>Cédula o Pasaporte
-          <input id="pf-id" type="text" required>
-        </label>
-        <label>Especialidad
-          <input id="pf-spec" type="text" required>
-        </label>
+  <!-- Perfil (solo dentro) -->
+  <section id="profile" class="card no-print" style="display:none;margin:18px 0">
+    <h2 style="margin:0 0 8px">Mi perfil</h2>
+    <p class="muted" id="pf-help">Completa todos los campos para habilitar los módulos.</p>
+    <div class="grid cols-2">
+      <label>Nombre completo (para certificado)<br>
+        <input id="pf-name" type="text" required style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
+      </label>
+      <label>Cédula o Pasaporte<br>
+        <input id="pf-id" type="text" required style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
+      </label>
+      <label>Especialidad<br>
+        <input id="pf-spec" type="text" required style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
+      </label>
+    </div>
+    <div class="actions" style="display:flex;gap:8px;margin-top:10px">
+      <button id="btn-save-profile" class="btn btn-primary">Guardar perfil</button>
+    </div>
+    <div id="pf-msg" class="muted" style="margin-top:6px"></div>
+  </section>
+
+  <!-- Progreso -->
+  <section id="progress" class="no-print" style="display:none;margin:18px 0">
+    <div class="card">
+      <div class="grid cols-2" style="align-items:center">
+        <div>
+          <strong>Progreso del curso</strong>
+          <div class="muted" id="progress-label">0% completado</div>
+        </div>
+        <div class="progress"><span id="bar" style="width:0%"></span></div>
       </div>
-      <div class="row" style="margin-top:8px">
-        <button id="btn-save-profile" class="btn btn-primary">Guardar perfil</button>
-        <button id="btn-logout" class="btn btn-muted" style="margin-left:auto">Cerrar sesión</button>
+    </div>
+  </section>
+
+  <!-- Módulos -->
+  <section id="modules" class="grid no-print" style="display:none"></section>
+
+  <!-- Evaluación + Certificado -->
+  <section id="eval" class="card no-print" style="display:none;margin-top:16px">
+    <h2 style="margin-top:0">Evaluación final</h2>
+    <p class="muted">Se habilita cuando completes todos los módulos.</p>
+
+    <div id="quiz-intro" class="grid cols-2">
+      <div>
+        <button id="btn-start-quiz" class="btn btn-primary" disabled>Comenzar evaluación</button>
+        <p class="muted" style="font-size:12px">Debes aprobar con 80% para habilitar el certificado.</p>
       </div>
-      <div id="pf-msg" class="msg"></div>
-    </section>
+      <div>
+        <button id="btn-cert" class="btn btn-success" disabled>Mostrar certificado</button>
+        <p class="muted" style="font-size:12px">Disponible cuando completes los módulos y apruebes la evaluación.</p>
+      </div>
+    </div>
 
-    <!-- marcador para que, al guardar perfil, puedas anclar tu sección de módulos -->
-    <div id="modules" style="height:1px"></div>
+    <div id="quiz" style="display:none;margin-top:16px"></div>
+    <div id="quiz-result" class="muted" style="display:none;margin-top:10px"></div>
+  </section>
 
-    <div style="margin-top:24px;color:var(--muted);font-size:13px">© <span id="year"></span> Hospital Vozandes — Inducción Soul MV</div>
-  </div>
+  <!-- Certificado imprimible -->
+  <section id="certificado" class="container">
+    <div class="cert-card">
+      <div class="cert-title">Certificado de participación</div>
+      <p>Otorgado a</p>
+      <div class="cert-name" id="cert-nombre">Nombre Apellido</div>
+      <p>por completar el curso <strong>Inducción a Soul MV</strong>.</p>
+      <div class="cert-meta">
+        <div id="cert-fecha"></div>
+        <div>Hospital Vozandes • Formación Interna</div>
+      </div>
+    </div>
+  </section>
 
-  <!-- Firebase compat -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <div class="footer no-print">© <span id="year"></span> Hospital Vozandes — Inducción Soul MV</div>
+</div>
 
-  <script>
-    // ======= RELLENA CON TU CONFIG DE FIREBASE =======
-    const firebaseConfig = {
-      apiKey: "TU_API_KEY",
-      authDomain: "TU_PROYECTO.firebaseapp.com",
-      projectId: "TU_PROYECTO",
-      storageBucket: "TU_PROYECTO.appspot.com",
-      appId: "TU_APP_ID",
-      messagingSenderId: "TU_SENDER_ID"
+<!-- YouTube API -->
+<script src="https://www.youtube.com/iframe_api"></script>
+<!-- Firebase (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+/* ======= Config del curso ======= */
+const MODULOS = [
+  { id:'mod1', titulo:'Navegación básica en Soul MV', yt:'dQw4w9WgXcQ', duracion:'10:05' },
+  { id:'mod2', titulo:'Prescripción y órdenes médicas', yt:'l482T0yNkeo',  duracion:'08:40' },
+  { id:'mod3', titulo:'Auditoría médica – honorarios',  yt:'9bZkp7q19f0',  duracion:'12:10' }
+];
+const PASS_PCT = 80;
+const QUESTIONS = [
+  { id:'q1', text:'¿Qué módulo usas para registrar una prescripción?', options:[
+    {key:'A',label:'Módulo de Prescripción'},{key:'B',label:'Módulo de Citas'},{key:'C',label:'Módulo de Imagen'}], correct:'A'},
+  { id:'q2', text:'La auditoría de honorarios se valida contra:', options:[
+    {key:'A',label:'Notas de enfermería'},{key:'B',label:'Tarifario MSP y prescripciones cerradas'},{key:'C',label:'Epicrisis provisional'}], correct:'B'},
+  { id:'q3', text:'Para finalizar una nota clínica debes:', options:[
+    {key:'A',label:'Guardar borrador'},{key:'B',label:'Cerrar/Finalizar el documento (FECHADO)'},{key:'C',label:'Imprimir sin cerrar'}], correct:'B'}
+];
+
+/* ======= Firebase ======= */
+const firebaseConfig = {
+  apiKey: "AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",
+  authDomain: "induccion-pep-hvq.firebaseapp.com",
+  projectId: "induccion-pep-hvq",
+  storageBucket: "induccion-pep-hvq.firebasestorage.app",
+  messagingSenderId: "651724182766",
+  appId: "1:651724182766:web:4eec9be43e9e8e60dc0fff",
+  measurementId: "G-Z62L1CCYP1"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+/* ======= Helpers/estado por usuario ======= */
+const $ = s => document.querySelector(s);
+$('#year').textContent = new Date().getFullYear();
+const MSGS = {
+  'auth/email-already-in-use':'Ese correo ya tiene una cuenta. Usa Iniciar sesión.',
+  'auth/invalid-email':'El formato del correo no es válido.',
+  'auth/missing-email':'Ingresa tu correo.',
+  'auth/missing-password':'Ingresa tu contraseña.',
+  'auth/weak-password':'La contraseña es muy corta (mínimo 6).',
+  'auth/user-not-found':'No existe una cuenta con ese correo.',
+  'auth/wrong-password':'Contraseña incorrecta.',
+  'auth/too-many-requests':'Demasiados intentos. Intenta más tarde.',
+  'auth/network-request-failed':'Error de red. Revisa tu conexión.'
+};
+const msg = (t)=>{ const el=$('#auth-msg'); if(el) el.textContent=t; };
+
+let CURRENT_UID = null;
+function keyFor(uid){ return `soulmv_${uid||'anon'}`; }
+function loadState(uid){ try{ return JSON.parse(localStorage.getItem(keyFor(uid))||'{}'); }catch{ return {}; } }
+function saveState(uid, st){ localStorage.setItem(keyFor(uid), JSON.stringify(st)); }
+let state = {}; // se cargará por usuario
+
+/* ======= Tabs + ojitos ======= */
+function setTab(which){
+  const onLogin = which==='login';
+  $('#form-login').style.display = onLogin ? 'block' : 'none';
+  $('#form-register').style.display = onLogin ? 'none'  : 'block';
+  $('#tab-login').classList.toggle('btn-primary', onLogin);
+  $('#tab-login').classList.toggle('btn-muted',   !onLogin);
+  $('#tab-register').classList.toggle('btn-primary', !onLogin);
+  $('#tab-register').classList.toggle('btn-muted',   onLogin);
+}
+$('#tab-login').addEventListener('click', ()=>setTab('login'));
+$('#tab-register').addEventListener('click', ()=>setTab('reg'));
+setTab('login');
+document.querySelectorAll('.eye').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const inp = document.querySelector(btn.dataset.eye);
+    if(!inp) return;
+    inp.type = inp.type==='password' ? 'text' : 'password';
+  });
+});
+
+/* ======= Auth listener ======= */
+auth.onAuthStateChanged(async (user)=>{
+  if(!user){
+    CURRENT_UID=null; state={}; $('#auth-user').textContent='';
+    $('#btn-logout').style.display='none';
+    showLogin(); return;
+  }
+  CURRENT_UID = user.uid;
+  state = loadState(CURRENT_UID); // estado local por usuario
+  $('#auth-user').textContent = user.email; // sin “(no verificado)”
+  if(!user.emailVerified){
+    $('#verify-box').style.display='block';
+    $('#btn-logout').style.display='none'; // nada de cerrar sesión aquí
+    showLogin(); return;
+  }
+  // verificado → fusionar nube y local y mostrar curso
+  await syncFromCloud(user);
+  showCourse();
+});
+
+/* ======= Registro / Login ======= */
+$('#btn-register-2').addEventListener('click', async ()=>{
+  const name = ($('#reg-name').value||'').trim();
+  const email= ($('#reg-email').value||'').trim();
+  const pass = ($('#reg-pass').value||'').trim();
+  const pass2= ($('#reg-pass2').value||'').trim();
+  if(!name || !email || !pass || !pass2) return msg('Completa todos los campos.');
+  if(pass!==pass2) return msg('Las contraseñas no coinciden.');
+  try{
+    const methods = await auth.fetchSignInMethodsForEmail(email);
+    if(methods && methods.length) { setTab('login'); return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.'); }
+    const { user } = await auth.createUserWithEmailAndPassword(email, pass);
+    await user.updateProfile({ displayName:name });
+    await db.collection('users').doc(user.uid).collection('courses').doc('soulmv').set({}, { merge:true });
+    // NO enviamos verificación aquí. Solo mostramos la caja:
+    msg('Cuenta creada. Ahora pulsa “Reenviar verificación” para recibir el correo.');
+    $('#verify-box').style.display='block';
+    setTab('login');
+  }catch(e){ msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.'); }
+});
+
+$('#btn-login').addEventListener('click', async ()=>{
+  const email=($('#login-email').value||'').trim();
+  const pass =($('#login-pass').value||'').trim();
+  if(!email || !pass) return msg('Ingresa correo y contraseña.');
+  try{
+    await auth.signInWithEmailAndPassword(email, pass);
+    msg('Sesión iniciada.');
+  }catch(e){ msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.'); }
+});
+
+$('#btn-reset').addEventListener('click', async ()=>{
+  const email=($('#login-email').value||'').trim();
+  if(!email) return msg('Escribe tu correo para enviarte el enlace.');
+  try{ await auth.sendPasswordResetEmail(email); msg('Te enviamos un correo para restablecer la contraseña.'); }
+  catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.'); }
+});
+
+$('#btn-logout').addEventListener('click', async ()=>{
+  await auth.signOut(); msg('Sesión cerrada.');
+});
+
+/* ======= Verificación ======= */
+let _verifyPoll;
+function startVerifyPolling(){
+  clearInterval(_verifyPoll);
+  const deadline = Date.now()+10*60*1000;
+  _verifyPoll = setInterval(async ()=>{
+    if(Date.now()>deadline) { clearInterval(_verifyPoll); return; }
+    if(auth.currentUser){
+      await auth.currentUser.reload();
+      if(auth.currentUser.emailVerified){
+        clearInterval(_verifyPoll);
+        $('#verify-box').style.display='none';
+        msg('¡Correo verificado! Entrando…');
+        showCourse();
+      }
+    }
+  }, 8000);
+}
+$('#btn-check-verify').addEventListener('click', async ()=>{
+  if(auth.currentUser){ await auth.currentUser.reload(); if(auth.currentUser.emailVerified){ $('#verify-box').style.display='none'; showCourse(); } }
+});
+$('#btn-resend-verify').addEventListener('click', async ()=>{
+  try{
+    const actionCodeSettings = {
+      url: 'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1',
+      handleCodeInApp: false
     };
-    // ================================================
-
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db   = firebase.firestore();
-
-    const $ = sel => document.querySelector(sel);
-    const byId = id => document.getElementById(id);
-
-    // UI helpers
-    function setTab(name){
-      const isLogin = (name==='login');
-      $('#tab-login').classList.toggle('active', isLogin);
-      $('#tab-reg').classList.toggle('active', !isLogin);
-      $('#pane-login').style.display = isLogin ? 'block':'none';
-      $('#pane-reg').style.display   = !isLogin ? 'block':'none';
+    if(auth.currentUser){
+      await auth.currentUser.sendEmailVerification(actionCodeSettings);
+      msg('Te enviamos el correo de verificación (revisa Spam). Usa el enlace más reciente.');
+      startVerifyPolling();
+    }else{
+      msg('Primero inicia sesión.');
     }
-    $('#tab-login').onclick = ()=> setTab('login');
-    $('#tab-reg').onclick   = ()=> setTab('reg');
+  }catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.'); }
+});
+// Si viene de ?verified=1, intentar recargar estado
+if(new URLSearchParams(location.search).get('verified')) startVerifyPolling();
 
-    // Eye toggles
-    document.addEventListener('click', (e)=>{
-      const id = e.target.getAttribute('data-eye');
-      if(!id) return;
-      const inp = byId(id);
-      inp.type = (inp.type==='password')?'text':'password';
-    });
+/* ======= Vistas ======= */
+function showCourse(){
+  if(!auth.currentUser || !auth.currentUser.emailVerified){ return; }
+  $('#step-welcome').style.display='none';
+  $('#profile').style.display='block';
+  $('#btn-logout').style.display='inline-flex'; // solo dentro
+  // si falta perfil, bloquear módulos
+  loadProfile().then(()=>{
+    const complete = profileComplete();
+    toggleCourse(complete);
+  });
+}
+function showLogin(){
+  $('#step-welcome').style.display='block';
+  $('#profile').style.display='none';
+  $('#progress').style.display='none';
+  $('#modules').style.display='none';
+  $('#eval').style.display='none';
+}
+function profileComplete(){
+  const p = state.profile || {};
+  return !!(p.name && p.iddoc && p.spec);
+}
+function toggleCourse(enabled){
+  if(enabled){
+    $('#progress').style.display='block';
+    $('#modules').style.display='grid';
+    $('#eval').style.display='block';
+    renderModules(); updateProgress();
+    $('#pf-help').textContent = 'Puedes actualizar tus datos cuando quieras.';
+  }else{
+    $('#progress').style.display='none';
+    $('#modules').style.display='none';
+    $('#eval').style.display='none';
+    $('#pf-help').textContent = 'Completa todos los campos para habilitar los módulos.';
+  }
+}
 
-    // Año
-    $('#year').textContent = new Date().getFullYear();
-
-    // ============ AUTH FLOW ============
-    function showMsg(el, text, type=''){ const n=$(el); n.textContent=text; n.className='msg '+(type||''); }
-
-    // Login (Confirmar)
-    $('#btn-login').addEventListener('click', async ()=>{
-      const email = ($('#li-email').value||'').trim();
-      const pass  = ($('#li-pass').value||'').trim();
-      if(!email || !pass){ return showMsg('#li-msg','Escribe correo y contraseña.','err'); }
-      try{
-        const methods = await auth.fetchSignInMethodsForEmail(email);
-        if(!methods || methods.length===0){
-          return showMsg('#li-msg','Correo no registrado.','err');
+/* ======= Módulos (YouTube) ======= */
+const players = {};
+function renderModules(){
+  const wrap=$('#modules'); wrap.innerHTML='';
+  MODULOS.forEach((m,idx)=>{
+    const done = !!(state[m.id]?.done);
+    const locked = idx>0 && !state[MODULOS[idx-1].id]?.done;
+    const card=document.createElement('article'); card.className='card module';
+    card.innerHTML=`
+      <div class="num">${idx+1}</div>
+      <div class="meta">
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+          <h3 style="margin:0">${m.titulo}</h3>
+          <span class="badge">${m.duracion||''}</span>
+        </div>
+        <p class="muted" style="margin:6px 0 10px">Debes ver el video completo para marcar el módulo como terminado.</p>
+        <div class="yt-wrap" id="wrap-${m.id}">
+          ${locked?`<div style="position:absolute;inset:0;display:grid;place-content:center;color:#fff;background:rgba(0,0,0,.6);text-align:center;padding:20px">Completa primero el módulo ${idx}.<br><small>(bloqueado)</small></div>`:''}
+          <div id="player-${m.id}"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-muted" data-restart="${m.id}">Reiniciar</button>
+          <button class="btn ${done?'btn-success':'btn-primary'}" data-complete="${m.id}" ${done?'':'disabled'}>${done?'Completado ✓':'Marcar como completado'}</button>
+        </div>
+      </div>`;
+    wrap.appendChild(card);
+  });
+  wrap.querySelectorAll('[data-restart]').forEach(b=>b.addEventListener('click',e=>{
+    const id=e.currentTarget.getAttribute('data-restart'); players[id]?.seekTo(0,true);
+  }));
+  wrap.querySelectorAll('[data-complete]').forEach(b=>b.addEventListener('click',e=>{
+    const id=e.currentTarget.getAttribute('data-complete');
+    state[id]=state[id]||{}; state[id].done=true; saveState(CURRENT_UID,state);
+    updateProgress(); renderModules(); setTimeout(syncToCloud,300);
+  }));
+}
+window.onYouTubeIframeAPIReady = function(){
+  MODULOS.forEach((m,idx)=>{
+    const disabled = idx>0 && !state[MODULOS[idx-1].id]?.done;
+    players[m.id] = new YT.Player(`player-${m.id}`,{
+      height:'360', width:'640', videoId:m.yt,
+      playerVars:{rel:0,modestbranding:1,controls:1,disablekb:1},
+      events:{
+        onReady:(ev)=>{ if(disabled){ ev.target.stopVideo(); } },
+        onStateChange:(ev)=>{
+          if(ev.data===YT.PlayerState.ENDED){
+            const btn=document.querySelector(`[data-complete="${m.id}"]`);
+            if(btn){ btn.disabled=false; btn.classList.remove('btn-primary'); btn.classList.add('btn-success'); btn.textContent='Marcar como completado'; }
+          }
+          if(ev.data===YT.PlayerState.PLAYING){
+            try{
+              const t=ev.target.getCurrentTime(); const last=state[m.id]?.t||0;
+              if(t>last+30){ ev.target.seekTo(last,true); }
+              state[m.id]=state[m.id]||{}; state[m.id].t=t; saveState(CURRENT_UID,state);
+            }catch(_){}
+          }
         }
-        await auth.signInWithEmailAndPassword(email, pass);
-        showMsg('#li-msg','Sesión iniciada.','ok');
-      }catch(e){
-        showMsg('#li-msg','Error: '+(e?.message||'Intenta nuevamente.'),'err');
       }
     });
+  });
+};
 
-    // Reset pass
-    $('#btn-reset').addEventListener('click', async ()=>{
-      const email = ($('#li-email').value||'').trim();
-      if(!email) return showMsg('#li-msg','Escribe tu correo para enviarte el enlace.','err');
-      try{ await auth.sendPasswordResetEmail(email); showMsg('#li-msg','Hemos enviado el enlace para restablecer tu contraseña.','ok'); }
-      catch(e){ showMsg('#li-msg','No se pudo enviar: '+e.message,'err'); }
-    });
+/* ======= Progreso / Quiz / Certificado ======= */
+function updateProgress(){
+  const total=MODULOS.length;
+  const done =MODULOS.filter(m=>state[m.id]?.done).length;
+  const pct  =Math.round((done/total)*100);
+  $('#bar').style.width=pct+'%';
+  $('#progress-label').textContent=`${pct}% completado (${done}/${total})`;
+  const allDone=(done===total);
+  $('#btn-start-quiz').disabled=!allDone;
+  const passed=state.quiz?.passed;
+  $('#btn-cert').disabled=!(allDone && passed);
+}
+function renderQuiz(){
+  const wrap=$('#quiz'); wrap.innerHTML='';
+  QUESTIONS.forEach((q,idx)=>{
+    const card=document.createElement('div'); card.className='card'; card.style.marginBottom='12px';
+    const opts=q.options.map(o=>`
+      <label style="display:flex;gap:8px;align-items:center;margin:6px 0">
+        <input type="radio" name="${q.id}" value="${o.key}">
+        <span>${o.key}) ${o.label}</span>
+      </label>`).join('');
+    card.innerHTML=`<strong>${idx+1}. ${q.text}</strong><div style="margin-top:6px">${opts}</div>`;
+    wrap.appendChild(card);
+  });
+  const submit=document.createElement('button'); submit.className='btn btn-primary'; submit.textContent='Enviar evaluación';
+  submit.addEventListener('click', gradeQuiz); wrap.appendChild(submit);
+}
+function gradeQuiz(){
+  let correct=0; QUESTIONS.forEach(q=>{ const c=document.querySelector(`input[name="${q.id}"]:checked`); if(c && c.value===q.correct) correct++; });
+  const scorePct=Math.round((correct/QUESTIONS.length)*100);
+  state.quiz={correct,total:QUESTIONS.length,scorePct,passed:scorePct>=PASS_PCT}; saveState(CURRENT_UID,state);
+  const result=$('#quiz-result'); result.style.display='block';
+  result.textContent=`Resultado: ${correct}/${QUESTIONS.length} (${scorePct}%). ${state.quiz.passed?'✅ Aprobado':'❌ No aprobado'}.`;
+  if(state.quiz.passed){ $('#btn-cert').disabled=false; }
+  setTimeout(syncToCloud,300);
+  window.scrollTo({ top: result.offsetTop-80, behavior:'smooth' });
+}
+$('#btn-start-quiz')?.addEventListener('click', ()=>{ $('#quiz-intro').style.display='none'; $('#quiz').style.display='block'; renderQuiz(); });
+$('#btn-cert')?.addEventListener('click', ()=>{
+  const preferName = state.profile?.name || auth.currentUser?.displayName || '';
+  $('#cert-nombre').textContent = preferName;
+  const f=new Date(); const fecha=f.toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'});
+  $('#cert-fecha').textContent=`Fecha: ${fecha}`;
+  $('#certificado').classList.add('show'); setTimeout(()=>window.print(),400);
+});
 
-    // Registro
-    $('#btn-register').addEventListener('click', async ()=>{
-      const name = ($('#rg-name').value||'').trim();
-      const email= ($('#rg-email').value||'').trim();
-      const p1   = ($('#rg-pass').value||'').trim();
-      const p2   = ($('#rg-pass2').value||'').trim();
-      if(!name || !email || !p1 || !p2) return showMsg('#rg-msg','Completa todos los campos.','err');
-      if(p1.length<6) return showMsg('#rg-msg','La contraseña debe tener al menos 6 caracteres.','err');
-      if(p1!==p2)     return showMsg('#rg-msg','Las contraseñas no coinciden.','err');
-
-      try{
-        const { user } = await auth.createUserWithEmailAndPassword(email, p1);
-        await user.updateProfile({ displayName:name });
-        // crea docs base
-        await db.collection('users').doc(user.uid).set({ created: firebase.firestore.FieldValue.serverTimestamp() },{merge:true});
-        // Envía verificación automáticamente
-        await user.sendEmailVerification();
-        $('#verify-box').style.display='block';
-        showMsg('#rg-msg','Cuenta creada. Te enviamos un correo de verificación.','ok');
-      }catch(e){
-        showMsg('#rg-msg','Error al registrar: '+e.message,'err');
-      }
-    });
-
-    // Reenviar verif.
-    $('#btn-resend-verify').addEventListener('click', async ()=>{
-      try{
-        if(auth.currentUser){ await auth.currentUser.sendEmailVerification(); showMsg('#verify-msg','Verificación reenviada. Revisa tu correo.','ok'); }
-      }catch(e){ showMsg('#verify-msg','No se pudo reenviar: '+e.message,'err'); }
-    });
-
-    // Ya verifiqué
-    $('#btn-check-verify').addEventListener('click', async ()=>{
-      try{
-        await auth.currentUser.reload();
-        if(auth.currentUser.emailVerified){
-          showMsg('#verify-msg','¡Correo verificado! Ya puedes iniciar sesión.','ok');
-          // cambia a pestaña login y prellena email
-          setTab('login');
-          $('#li-email').value = auth.currentUser.email || '';
-        }else{
-          showMsg('#verify-msg','Aún no está verificado. Revisa tu correo.','err');
-        }
-      }catch(e){
-        showMsg('#verify-msg','No se pudo comprobar: '+e.message,'err');
-      }
-    });
-
-    // Cerrar sesión
-    $('#btn-logout').addEventListener('click', async ()=>{
-      await auth.signOut();
-      // Deja activa la pestaña INICIAR SESIÓN
-      setTab('login');
-      $('#auth-chip').textContent='';
-      $('#sec-profile').style.display='none';
-      $('#sec-auth').style.display='block';
-      showMsg('#li-msg','Sesión cerrada.','ok');
-    });
-
-    // ============ PROFILE ============
-    async function loadProfile(){
-      const uid = auth.currentUser?.uid; if(!uid) return;
-      const snap = await db.collection('users').doc(uid).collection('profile').doc('main').get();
-      if(snap.exists){
-        const p = snap.data();
-        $('#pf-name').value = p?.name || auth.currentUser.displayName || '';
-        $('#pf-id').value   = p?.iddoc || '';
-        $('#pf-spec').value = p?.spec || '';
-      }else{
-        $('#pf-name').value = auth.currentUser.displayName || '';
-        $('#pf-id').value   = '';
-        $('#pf-spec').value = '';
-      }
+/* ======= Perfil + Cloud sync ======= */
+async function userDoc(){
+  const uid=auth.currentUser?.uid; if(!uid) return null;
+  return db.collection('users').doc(uid).collection('courses').doc('soulmv');
+}
+async function syncFromCloud(user){
+  try{
+    const ref=await userDoc(); if(!ref) return;
+    const snap=await ref.get();
+    if(snap.exists){
+      const cloud=snap.data()||{};
+      MODULOS.forEach(m=>{
+        const localDone=!!(state[m.id]?.done);
+        const cloudDone=!!(cloud[m.id]?.done);
+        state[m.id]={done:(localDone||cloudDone)};
+      });
+      state.quiz = cloud.quiz || state.quiz;
+      saveState(CURRENT_UID,state);
     }
-
-    async function saveProfile(){
-      const uid = auth.currentUser?.uid; if(!uid) return;
-      const name = ($('#pf-name').value||'').trim();
-      const iddoc= ($('#pf-id').value||'').trim();
-      const spec = ($('#pf-spec').value||'').trim();
-      if(!name || !iddoc || !spec) return showMsg('#pf-msg','Completa nombre, cédula/pasaporte y especialidad.','err');
-      try{
-        await db.collection('users').doc(uid).collection('profile').doc('main')
-          .set({ name, iddoc, spec, updated: firebase.firestore.FieldValue.serverTimestamp() }, { merge:true });
-        await auth.currentUser.updateProfile({ displayName:name });
-        showMsg('#pf-msg','Perfil guardado.','ok');
-        // Redirige a módulos/sección de curso (ajusta si tu ruta es distinta)
-        location.hash = '#modules';
-      }catch(e){ showMsg('#pf-msg','No se pudo guardar: '+e.message,'err'); }
+    const psnap=await db.collection('users').doc(user.uid).collection('profile').doc('main').get();
+    if(psnap.exists){ state.profile=psnap.data(); saveState(CURRENT_UID,state); }
+  }catch(e){ console.warn('No se pudo leer progreso/perfil',e); }
+}
+async function syncToCloud(){
+  try{
+    const ref=await userDoc(); if(!ref) return;
+    const payload={ quiz: state.quiz };
+    MODULOS.forEach(m=>{ payload[m.id]={done:!!(state[m.id]?.done)}; });
+    await ref.set(payload,{merge:true});
+    const uid=auth.currentUser?.uid; if(uid && state.profile){
+      await db.collection('users').doc(uid).collection('profile').doc('main').set(state.profile,{merge:true});
     }
-    $('#btn-save-profile').addEventListener('click', saveProfile);
+  }catch(e){ console.warn('No se pudo guardar en la nube',e); }
+}
+async function loadProfile(){
+  try{
+    const uid=auth.currentUser?.uid; if(!uid) return;
+    const s=await db.collection('users').doc(uid).collection('profile').doc('main').get();
+    if(s.exists){ state.profile=s.data(); saveState(CURRENT_UID,state); }
+    $('#pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
+    $('#pf-id').value   = state.profile?.iddoc || '';
+    $('#pf-spec').value = state.profile?.spec  || '';
+  }catch(e){ console.warn('Perfil no disponible',e); }
+}
+async function saveProfile(){
+  const name=($('#pf-name').value||'').trim();
+  const iddoc=($('#pf-id').value||'').trim();
+  const spec =($('#pf-spec').value||'').trim();
+  if(!name || !iddoc || !spec){
+    $('#pf-msg').textContent='Completa nombre, cédula/pasaporte y especialidad.';
+    return;
+  }
+  try{
+    const uid=auth.currentUser?.uid; if(!uid) return;
+    await db.collection('users').doc(uid).collection('profile').doc('main').set({name,iddoc,spec},{merge:true});
+    state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
+    if(name){ await auth.currentUser.updateProfile({displayName:name}); }
+    $('#pf-msg').textContent='✅ Perfil guardado.';
+    toggleCourse(true);
+  }catch(e){ $('#pf-msg').textContent='No se pudo guardar: '+(MSGS[e.code]||e.message); }
+}
+$('#btn-save-profile').addEventListener('click', saveProfile);
 
-    // ============ STATE ============
-    auth.onAuthStateChanged(async (user)=>{
-      // Si se llegó con ...?verified=1 (retorno del email link), muestra login y rellena
-      if(new URLSearchParams(location.search).get('verified')==='1' && user){
-        setTab('login');
-        $('#li-email').value = user.email || '';
-      }
-
-      if(!user){
-        // sin sesión
-        $('#auth-chip').textContent='';
-        setTab('login');
-        $('#sec-auth').style.display='block';
-        $('#sec-profile').style.display='none';
-        return;
-      }
-      // con sesión
-      $('#auth-chip').textContent = `${user.email} ${user.emailVerified?'(verificado)':'(no verificado)'}`;
-
-      if(!user.emailVerified){
-        // si no está verificado, quedarse en acceso
-        $('#sec-auth').style.display='block';
-        $('#sec-profile').style.display='none';
-        // fuerza login tab y prellena email correcto
-        setTab('login');
-        $('#li-email').value = user.email || '';
-        return;
-      }
-
-      // verificado → mostrar perfil
-      $('#sec-auth').style.display='none';
-      $('#sec-profile').style.display='block';
-      await loadProfile();
-    });
-  </script>
+/* ======= Inicial ======= */
+</script>
 </body>
 </html>
