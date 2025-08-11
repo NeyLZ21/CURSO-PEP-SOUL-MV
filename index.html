@@ -9,48 +9,34 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
 :root{--brand:#781C38;--ink:#1f2937;--muted:#6b7280;--bg:#f8fafc;--card:#ffffff;--ok:#15803d}
-*{box-sizing:border-box}
-body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+*{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
 .container{max-width:980px;margin:auto;padding:24px}
 header{display:flex;gap:16px;align-items:center;margin:12px 0 20px}
 header .logo{width:48px;height:48px;border-radius:12px;background:var(--brand);display:grid;place-content:center;color:#fff;font-weight:800}
-h1{font-size:clamp(22px,3.5vw,34px);margin:0}
-.subtitle{color:var(--muted);margin-top:4px}
+h1{font-size:clamp(22px,3.5vw,34px);margin:0}.subtitle{color:var(--muted);margin-top:4px}
 .card{background:var(--card);border-radius:18px;box-shadow:0 10px 24px rgba(0,0,0,.06);padding:20px}
-.grid{display:grid;gap:16px}
-.grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
-@media (max-width:800px){.grid.cols-2{grid-template-columns:1fr}}
+.grid{display:grid;gap:16px}.grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))} @media (max-width:800px){.grid.cols-2{grid-template-columns:1fr}}
 button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor:pointer;font-weight:600}
-.btn-primary{background:var(--brand);color:#fff}
-.btn-muted{background:#e5e7eb;color:#111827}
-.btn-success{background:var(--ok);color:#fff}
+.btn-primary{background:var(--brand);color:#fff}.btn-muted{background:#e5e7eb;color:#111827}.btn-success{background:var(--ok);color:#fff}
 .btn[disabled]{opacity:.5;cursor:not-allowed}
-.input{width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb}
-.input-wrap{position:relative}
-.input-wrap .input{padding-right:40px}
-.eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;border:0;background:transparent;font-size:16px}
 .badge{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:600;background:#eef2ff;color:#3730a3}
-.progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}
-.progress>span{display:block;height:100%;background:var(--brand);width:0}
-.module{display:flex;gap:16px;align-items:flex-start}
-.module .num{flex:0 0 auto;width:36px;height:36px;border-radius:10px;background:#f3f4f6;display:grid;place-content:center;font-weight:700}
-.module .meta{flex:1}
+.progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}.progress>span{display:block;height:100%;background:var(--brand);width:0}
+.module{display:flex;gap:16px;align-items:flex-start}.module .num{flex:0 0 auto;width:36px;height:36px;border-radius:10px;background:#f3f4f6;display:grid;place-content:center;font-weight:700}.module .meta{flex:1}
 .yt-wrap{position:relative;padding-top:56.25%;border-radius:16px;overflow:hidden;background:#000;margin-top:12px}
 .yt-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
-.muted{color:var(--muted)}
-.footer{margin-top:24px;color:var(--muted);font-size:13px}
-/* Alertas */
-.alert{border-radius:12px;padding:12px 14px;font-size:14px;margin-top:10px}
-.alert-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
-.alert-ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46}
+.muted{color:var(--muted)} .footer{margin-top:24px;color:var(--muted);font-size:13px}
 /* Certificado */
-#certificado{display:none}
-#certificado.show{display:block}
+#certificado{display:none} #certificado.show{display:block}
 @media print{.no-print{display:none !important} #certificado{display:block}}
 .cert-card{background:#fff;border:4px solid var(--brand);border-radius:20px;padding:40px;text-align:center}
-.cert-title{font-size:28px;font-weight:800;margin:0 0 10px;color:var(--brand)}
-.cert-name{font-size:26px;font-weight:800;margin:8px 0}
+.cert-title{font-size:28px;font-weight:800;margin:0 0 10px;color:var(--brand)} .cert-name{font-size:26px;font-weight:800;margin:8px 0}
 .cert-meta{color:#374151;margin-top:10px}
+/* Inputs con ojito */
+.input-wrap{position:relative} .input-wrap input{width:100%;padding:12px 40px 12px 12px;border-radius:12px;border:1px solid #e5e7eb}
+.eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;border:0;background:transparent;font-size:16px}
+/* Avisos */
+.alert{border-radius:12px;padding:12px 14px;font-size:14px}
+.alert-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
 </style>
 </head>
 <body>
@@ -83,34 +69,34 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
           <!-- LOGIN -->
           <div id="form-login">
             <label>Correo electrónico<br>
-              <input id="login-email" type="email" class="input" placeholder="usuario@dominio.com" required>
+              <input id="login-email" type="email" placeholder="usuario@dominio.com" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb" required>
             </label>
             <label>Contraseña<br>
               <div class="input-wrap">
-                <input id="login-pass" type="password" class="input" placeholder="••••••••" required>
+                <input id="login-pass" type="password" placeholder="••••••••" required>
                 <button type="button" class="eye" data-eye="#login-pass">👁️</button>
               </div>
             </label>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn btn-primary" id="btn-login">Confirmar</button>
-              <button class="btn btn-muted" id="btn-reset">Restablecer contraseña</button>
+              <button class="btn" id="btn-reset" style="background:#e5e7eb">Restablecer contraseña</button>
             </div>
           </div>
 
           <!-- REGISTRO -->
           <div id="form-register" style="display:none">
             <label>Correo electrónico<br>
-              <input id="reg-email" type="email" class="input" placeholder="usuario@dominio.com" required>
+              <input id="reg-email" type="email" placeholder="usuario@dominio.com" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb" required>
             </label>
             <label>Contraseña<br>
               <div class="input-wrap">
-                <input id="reg-pass" type="password" class="input" placeholder="Mínimo 6 caracteres" required>
+                <input id="reg-pass" type="password" placeholder="Mínimo 6 caracteres" required>
                 <button type="button" class="eye" data-eye="#reg-pass">👁️</button>
               </div>
             </label>
             <label>Confirmar contraseña<br>
               <div class="input-wrap">
-                <input id="reg-pass2" type="password" class="input" placeholder="Repite la contraseña" required>
+                <input id="reg-pass2" type="password" placeholder="Repite la contraseña" required>
                 <button type="button" class="eye" data-eye="#reg-pass2">👁️</button>
               </div>
             </label>
@@ -122,8 +108,8 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
           <div id="auth-msg" class="muted" style="min-height:18px"></div>
         </div>
 
-        <div id="verify-box" class="alert alert-warn" style="display:none">
-          <strong>Verifica tu correo:</strong> te enviamos un email con un enlace. Tras confirmar, vuelve y pulsa “Ya verifiqué mi correo”.
+        <div id="verify-box" class="alert alert-warn" style="display:none;margin-top:10px">
+          <strong>Verifica tu correo:</strong> te enviamos un email de verificación. Confírmalo y vuelve a esta pantalla para continuar.
           <div style="display:flex;gap:8px;margin-top:8px">
             <button id="btn-check-verify" class="btn btn-primary">Ya verifiqué mi correo</button>
             <button id="btn-resend-verify" class="btn btn-muted">Reenviar verificación</button>
@@ -148,13 +134,13 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     <p class="muted" id="pf-help">Completa todos los campos para habilitar los módulos.</p>
     <div class="grid cols-2">
       <label>Nombre completo (para certificado)<br>
-        <input id="pf-name" type="text" class="input" required>
+        <input id="pf-name" type="text" required style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
       </label>
       <label>Cédula o Pasaporte<br>
-        <input id="pf-id" type="text" class="input" required>
+        <input id="pf-id" type="text" required style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
       </label>
       <label>Especialidad<br>
-        <input id="pf-spec" type="text" class="input" required>
+        <input id="pf-spec" type="text" required style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
       </label>
     </div>
     <div class="actions" style="display:flex;gap:8px;margin-top:10px">
@@ -240,7 +226,7 @@ const QUESTIONS = [
     {key:'A',label:'Guardar borrador'},{key:'B',label:'Cerrar/Finalizar el documento (FECHADO)'},{key:'C',label:'Imprimir sin cerrar'}], correct:'B'}
 ];
 
-/* ======= Firebase (tu proyecto) ======= */
+/* ======= Firebase ======= */
 const firebaseConfig = {
   apiKey: "AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",
   authDomain: "induccion-pep-hvq.firebaseapp.com",
@@ -254,7 +240,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-/* ======= Helpers / estado local por usuario ======= */
+/* ======= Helpers/estado por usuario ======= */
 const $ = s => document.querySelector(s);
 $('#year').textContent = new Date().getFullYear();
 const MSGS = {
@@ -265,6 +251,8 @@ const MSGS = {
   'auth/weak-password':'La contraseña es muy corta (mínimo 6).',
   'auth/user-not-found':'Correo no registrado.',
   'auth/wrong-password':'Contraseña incorrecta.',
+  'auth/invalid-credential':'Contraseña incorrecta.',
+  'auth/invalid-login-credentials':'Contraseña incorrecta.',
   'auth/too-many-requests':'Demasiados intentos. Intenta más tarde.',
   'auth/network-request-failed':'Error de red. Revisa tu conexión.'
 };
@@ -289,118 +277,104 @@ function setTab(which){
 $('#tab-login').addEventListener('click', ()=>setTab('login'));
 $('#tab-register').addEventListener('click', ()=>setTab('reg'));
 setTab('login');
-document.addEventListener('click',(e)=>{
-  const id = e.target.getAttribute('data-eye');
-  if(!id) return;
-  const inp = document.querySelector(id);
-  if(inp) inp.type = (inp.type==='password') ? 'text' : 'password';
+document.querySelectorAll('.eye').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const inp = document.querySelector(btn.dataset.eye);
+    if(!inp) return; inp.type = inp.type==='password' ? 'text' : 'password';
+  });
 });
 
-/* ======= onAuthStateChanged: rápido a UI, sync en background ======= */
+/* ======= Auth listener ======= */
 auth.onAuthStateChanged(async (user)=>{
   if(!user){
     CURRENT_UID=null; state={}; $('#auth-user').textContent='';
     $('#btn-logout').style.display='none';
-    setTab('login'); showLogin(); return;
+    // vuelve a tab login al cerrar
+    setTab('login');
+    showLogin(); return;
   }
   CURRENT_UID = user.uid;
-  state = loadState(CURRENT_UID);
-  $('#auth-user').textContent = user.email || '';
-
+  state = loadState(CURRENT_UID); // estado local por usuario
+  $('#auth-user').textContent = user.email;
   if(!user.emailVerified){
     $('#verify-box').style.display='block';
     $('#btn-logout').style.display='none';
-    $('#login-email').value = user.email || '';
-    showLogin();
-    return;
+    showLogin(); return;
   }
-
-  // Mostrar curso YA
+  await syncFromCloud(user);
   showCourse();
-
-  // Sincronizar en background
-  (async ()=>{
-    try{ await syncFromCloud(user); renderModules(); updateProgress(); }
-    catch(_){}
-  })();
 });
 
-/* ======= Registro (envío automático de verificación) ======= */
-$('#btn-register-2').addEventListener('click', async ()=>{
-  const email= ($('#reg-email').value||'').trim();
-  const pass = ($('#reg-pass').value||'').trim();
-  const pass2= ($('#reg-pass2').value||'').trim();
+/* ======= Registro / Login ======= */
+document.getElementById('btn-register-2').addEventListener('click', async ()=>{
+  const email= (document.getElementById('reg-email').value||'').trim();
+  const pass  = (document.getElementById('reg-pass').value||'').trim();
+  const pass2 = (document.getElementById('reg-pass2').value||'').trim();
   if(!email || !pass || !pass2) return msg('Completa todos los campos.');
-  if(pass !== pass2) return msg('Las contraseñas no coinciden.');
+  if(pass!==pass2) return msg('Las contraseñas no coinciden.');
 
   try{
     const methods = await auth.fetchSignInMethodsForEmail(email);
     if(methods && methods.length){
       setTab('login');
-      $('#login-email').value = email;
+      document.getElementById('login-email').value = email;
       return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.');
     }
 
-    const cred = await auth.createUserWithEmailAndPassword(email, pass);
-    const user = cred.user;
+    const { user } = await auth.createUserWithEmailAndPassword(email, pass);
+    if (auth.currentUser?.uid !== user.uid) await auth.updateCurrentUser(user);
 
-    // Doc base
-    await db.collection('users').doc(user.uid)
-      .collection('courses').doc('soulmv')
-      .set({}, { merge:true });
+    // Base en Firestore (no bloquea)
+    db.collection('users').doc(user.uid).collection('courses').doc('soulmv').set({}, { merge:true }).catch(()=>{});
 
-    // Enviar verificación AUTOMÁTICA + fallback
-    const actionCodeSettings = {
-      url: 'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1',
-      handleCodeInApp: false
-    };
-    try {
-      await user.sendEmailVerification(actionCodeSettings);
-    } catch(e) {
-      try { await auth.currentUser?.sendEmailVerification(actionCodeSettings); } catch(_) {}
-    }
+    // Envío AUTOMÁTICO de verificación (con reintentos cortos)
+    const actionCodeSettings = { url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1', handleCodeInApp:false };
+    let sent=false;
+    try { await user.sendEmailVerification(actionCodeSettings); sent=true; } catch(_){}
+    if(!sent && auth.currentUser){ try{ await auth.currentUser.sendEmailVerification(actionCodeSettings); sent=true; }catch(_){ } }
+    if(!sent){ await new Promise(r=>setTimeout(r,1200)); try{ await auth.currentUser?.sendEmailVerification(actionCodeSettings); sent=true; }catch(_){} }
 
-    msg('Cuenta creada. Te enviamos un correo para verificarla (revisa Spam).');
-    $('#verify-box').style.display='block';
+    msg(sent
+      ? 'Cuenta creada. Te enviamos el correo de verificación (revisa Spam).'
+      : 'Cuenta creada. No se pudo enviar automáticamente, usa “Reenviar verificación”.');
+
+    document.getElementById('verify-box').style.display='block';
     setTab('login');
-    $('#login-email').value = email;
+    document.getElementById('login-email').value = email;
     startVerifyPolling();
 
-  }catch(e){
-    msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
-  }
+  }catch(e){ msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.'); }
 });
 
-/* ======= Login ======= */
-$('#btn-login').addEventListener('click', async ()=>{
-  const email=($('#login-email').value||'').trim();
-  const pass =($('#login-pass').value||'').trim();
+document.getElementById('btn-login').addEventListener('click', async ()=>{
+  const email=(document.getElementById('login-email').value||'').trim();
+  const pass =(document.getElementById('login-pass').value||'').trim();
   if(!email || !pass) return msg('Ingresa correo y contraseña.');
   try{
     await auth.signInWithEmailAndPassword(email, pass);
     msg('Sesión iniciada.');
   }catch(e){
-    if(e.code==='auth/user-not-found'){
+    if (e.code==='auth/user-not-found') {
       msg('Correo no registrado.');
-      $('#reg-email').value = email;
       setTab('reg');
-    }else{
+      document.getElementById('reg-email').value = email;
+    } else if (e.code==='auth/wrong-password' || e.code==='auth/invalid-credential' || e.code==='auth/invalid-login-credentials') {
+      msg('Contraseña incorrecta.');
+    } else {
       msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
     }
   }
 });
 
-$('#btn-reset').addEventListener('click', async ()=>{
-  const email=($('#login-email').value||'').trim();
+document.getElementById('btn-reset').addEventListener('click', async ()=>{
+  const email=(document.getElementById('login-email').value||'').trim();
   if(!email) return msg('Escribe tu correo para enviarte el enlace.');
   try{ await auth.sendPasswordResetEmail(email); msg('Te enviamos un correo para restablecer la contraseña.'); }
   catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.'); }
 });
 
-$('#btn-logout').addEventListener('click', async ()=>{
-  await auth.signOut();
-  msg('Sesión cerrada.');
-  setTab('login');
+document.getElementById('btn-logout').addEventListener('click', async ()=>{
+  await auth.signOut(); msg('Sesión cerrada.');
 });
 
 /* ======= Verificación ======= */
@@ -409,45 +383,29 @@ function startVerifyPolling(){
   clearInterval(_verifyPoll);
   const deadline = Date.now()+10*60*1000;
   _verifyPoll = setInterval(async ()=>{
-    if(Date.now()>deadline) { clearInterval(_verifyPoll); return; }
+    if(Date.now()>deadline){ clearInterval(_verifyPoll); return; }
     if(auth.currentUser){
       await auth.currentUser.reload();
       if(auth.currentUser.emailVerified){
         clearInterval(_verifyPoll);
-        $('#verify-box').style.display='none';
-        msg('¡Correo verificado! Ya puedes continuar.');
-        $('#login-email').value = auth.currentUser.email || '';
+        document.getElementById('verify-box').style.display='none';
+        msg('¡Correo verificado! Entrando…');
         showCourse();
       }
     }
   }, 8000);
 }
-$('#btn-check-verify').addEventListener('click', async ()=>{
-  if(auth.currentUser){
-    await auth.currentUser.reload();
-    if(auth.currentUser.emailVerified){
-      $('#verify-box').style.display='none';
-      msg('¡Correo verificado! Continuando…');
-      $('#login-email').value = auth.currentUser.email || '';
-      showCourse();
-    }else{
-      msg('Aún no detectamos la verificación. Revisa tu correo o pulsa “Reenviar verificación”.');
-    }
-  }
+document.getElementById('btn-check-verify').addEventListener('click', async ()=>{
+  if(auth.currentUser){ await auth.currentUser.reload(); if(auth.currentUser.emailVerified){ document.getElementById('verify-box').style.display='none'; showCourse(); } }
 });
-$('#btn-resend-verify').addEventListener('click', async ()=>{
+document.getElementById('btn-resend-verify').addEventListener('click', async ()=>{
   try{
-    const actionCodeSettings = {
-      url: 'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1',
-      handleCodeInApp: false
-    };
+    const actionCodeSettings = { url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1', handleCodeInApp:false };
     if(auth.currentUser){
       await auth.currentUser.sendEmailVerification(actionCodeSettings);
-      msg('Correo de verificación reenviado.');
+      msg('Te enviamos el correo de verificación (revisa Spam).');
       startVerifyPolling();
-    }else{
-      msg('Primero inicia sesión.');
-    }
+    }else{ msg('Primero inicia sesión.'); }
   }catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.'); }
 });
 if(new URLSearchParams(location.search).get('verified')) startVerifyPolling();
@@ -455,17 +413,20 @@ if(new URLSearchParams(location.search).get('verified')) startVerifyPolling();
 /* ======= Vistas ======= */
 function showCourse(){
   if(!auth.currentUser || !auth.currentUser.emailVerified){ return; }
-  $('#step-welcome').style.display='none';
-  $('#profile').style.display='block';
-  $('#btn-logout').style.display='inline-flex';
-  loadProfile().then(()=>{ toggleCourse(profileComplete()); });
+  document.getElementById('step-welcome').style.display='none';
+  document.getElementById('profile').style.display='block';
+  document.getElementById('btn-logout').style.display='inline-flex';
+  // Cargar perfil y activar módulos de inmediato si está completo
+  loadProfile().then(()=>{
+    toggleCourse(profileComplete());
+  });
 }
 function showLogin(){
-  $('#step-welcome').style.display='block';
-  $('#profile').style.display='none';
-  $('#progress').style.display='none';
-  $('#modules').style.display='none';
-  $('#eval').style.display='none';
+  document.getElementById('step-welcome').style.display='block';
+  document.getElementById('profile').style.display='none';
+  document.getElementById('progress').style.display='none';
+  document.getElementById('modules').style.display='none';
+  document.getElementById('eval').style.display='none';
 }
 function profileComplete(){
   const p = state.profile || {};
@@ -473,23 +434,23 @@ function profileComplete(){
 }
 function toggleCourse(enabled){
   if(enabled){
-    $('#progress').style.display='block';
-    $('#modules').style.display='grid';
-    $('#eval').style.display='block';
+    document.getElementById('progress').style.display='block';
+    document.getElementById('modules').style.display='grid';
+    document.getElementById('eval').style.display='block';
     renderModules(); updateProgress();
-    $('#pf-help').textContent = 'Puedes actualizar tus datos cuando quieras.';
+    document.getElementById('pf-help').textContent = 'Puedes actualizar tus datos cuando quieras.';
   }else{
-    $('#progress').style.display='none';
-    $('#modules').style.display='none';
-    $('#eval').style.display='none';
-    $('#pf-help').textContent = 'Completa todos los campos para habilitar los módulos.';
+    document.getElementById('progress').style.display='none';
+    document.getElementById('modules').style.display='none';
+    document.getElementById('eval').style.display='none';
+    document.getElementById('pf-help').textContent = 'Completa todos los campos para habilitar los módulos.';
   }
 }
 
 /* ======= Módulos (YouTube) ======= */
 const players = {};
 function renderModules(){
-  const wrap=$('#modules'); wrap.innerHTML='';
+  const wrap=document.getElementById('modules'); wrap.innerHTML='';
   MODULOS.forEach((m,idx)=>{
     const done = !!(state[m.id]?.done);
     const locked = idx>0 && !state[MODULOS[idx-1].id]?.done;
@@ -553,15 +514,15 @@ function updateProgress(){
   const total=MODULOS.length;
   const done =MODULOS.filter(m=>state[m.id]?.done).length;
   const pct  =Math.round((done/total)*100);
-  $('#bar').style.width=pct+'%';
-  $('#progress-label').textContent=`${pct}% completado (${done}/${total})`;
+  document.getElementById('bar').style.width=pct+'%';
+  document.getElementById('progress-label').textContent=`${pct}% completado (${done}/${total})`;
   const allDone=(done===total);
-  $('#btn-start-quiz').disabled=!allDone;
+  document.getElementById('btn-start-quiz').disabled=!allDone;
   const passed=state.quiz?.passed;
-  $('#btn-cert').disabled=!(allDone && passed);
+  document.getElementById('btn-cert').disabled=!(allDone && passed);
 }
 function renderQuiz(){
-  const wrap=$('#quiz'); wrap.innerHTML='';
+  const wrap=document.getElementById('quiz'); wrap.innerHTML='';
   QUESTIONS.forEach((q,idx)=>{
     const card=document.createElement('div'); card.className='card'; card.style.marginBottom='12px';
     const opts=q.options.map(o=>`
@@ -579,19 +540,23 @@ function gradeQuiz(){
   let correct=0; QUESTIONS.forEach(q=>{ const c=document.querySelector(`input[name="${q.id}"]:checked`); if(c && c.value===q.correct) correct++; });
   const scorePct=Math.round((correct/QUESTIONS.length)*100);
   state.quiz={correct,total:QUESTIONS.length,scorePct,passed:scorePct>=PASS_PCT}; saveState(CURRENT_UID,state);
-  const result=$('#quiz-result'); result.style.display='block';
+  const result=document.getElementById('quiz-result'); result.style.display='block';
   result.textContent=`Resultado: ${correct}/${QUESTIONS.length} (${scorePct}%). ${state.quiz.passed?'✅ Aprobado':'❌ No aprobado'}.`;
-  if(state.quiz.passed){ $('#btn-cert').disabled=false; }
+  if(state.quiz.passed){ document.getElementById('btn-cert').disabled=false; }
   setTimeout(syncToCloud,300);
   window.scrollTo({ top: result.offsetTop-80, behavior:'smooth' });
 }
-$('#btn-start-quiz')?.addEventListener('click', ()=>{ $('#quiz-intro').style.display='none'; $('#quiz').style.display='block'; renderQuiz(); });
-$('#btn-cert')?.addEventListener('click', ()=>{
+document.getElementById('btn-start-quiz')?.addEventListener('click', ()=>{
+  document.getElementById('quiz-intro').style.display='none';
+  document.getElementById('quiz').style.display='block';
+  renderQuiz();
+});
+document.getElementById('btn-cert')?.addEventListener('click', ()=>{
   const preferName = state.profile?.name || auth.currentUser?.displayName || '';
-  $('#cert-nombre').textContent = preferName;
+  document.getElementById('cert-nombre').textContent = preferName;
   const f=new Date(); const fecha=f.toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'});
-  $('#cert-fecha').textContent=`Fecha: ${fecha}`;
-  $('#certificado').classList.add('show'); setTimeout(()=>window.print(),400);
+  document.getElementById('cert-fecha').textContent=`Fecha: ${fecha}`;
+  document.getElementById('certificado').classList.add('show'); setTimeout(()=>window.print(),400);
 });
 
 /* ======= Perfil + Cloud sync ======= */
@@ -633,38 +598,30 @@ async function loadProfile(){
     const uid=auth.currentUser?.uid; if(!uid) return;
     const s=await db.collection('users').doc(uid).collection('profile').doc('main').get();
     if(s.exists){ state.profile=s.data(); saveState(CURRENT_UID,state); }
-    $('#pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
-    $('#pf-id').value   = state.profile?.iddoc || '';
-    $('#pf-spec').value = state.profile?.spec  || '';
+    document.getElementById('pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
+    document.getElementById('pf-id').value   = state.profile?.iddoc || '';
+    document.getElementById('pf-spec').value = state.profile?.spec  || '';
   }catch(e){ console.warn('Perfil no disponible',e); }
 }
 async function saveProfile(){
-  const name=($('#pf-name').value||'').trim();
-  const iddoc=($('#pf-id').value||'').trim();
-  const spec =($('#pf-spec').value||'').trim();
+  const name=(document.getElementById('pf-name').value||'').trim();
+  const iddoc=(document.getElementById('pf-id').value||'').trim();
+  const spec =(document.getElementById('pf-spec').value||'').trim();
   if(!name || !iddoc || !spec){
-    $('#pf-msg').textContent='Completa nombre, cédula/pasaporte y especialidad.';
+    document.getElementById('pf-msg').textContent='Completa nombre, cédula/pasaporte y especialidad.';
     return;
   }
-  // UI optimista: habilitar módulos de inmediato
-  state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
-  $('#pf-msg').textContent='✅ Perfil guardado.';
-  toggleCourse(true); renderModules(); updateProgress();
-  setTimeout(()=>document.getElementById('modules')?.scrollIntoView({behavior:'smooth'}),150);
-
-  // Guardar en la nube en segundo plano
-  (async ()=>{
-    try{
-      const uid=auth.currentUser?.uid; if(!uid) return;
-      await db.collection('users').doc(uid).collection('profile').doc('main').set(state.profile,{merge:true});
-      if(name){ await auth.currentUser.updateProfile({displayName:name}); }
-    }catch(e){
-      console.warn('No se pudo guardar en la nube',e);
-      $('#pf-msg').textContent='Perfil guardado localmente (sin conexión a la nube por ahora).';
-    }
-  })();
+  try{
+    const uid=auth.currentUser?.uid; if(!uid) return;
+    await db.collection('users').doc(uid).collection('profile').doc('main').set({name,iddoc,spec},{merge:true});
+    state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
+    if(name){ await auth.currentUser.updateProfile({displayName:name}); }
+    document.getElementById('pf-msg').textContent='✅ Perfil guardado.';
+    // Activa módulos inmediatamente (sin esperar a la nube)
+    toggleCourse(true);
+  }catch(e){ document.getElementById('pf-msg').textContent='No se pudo guardar: '+(MSGS[e.code]||e.message); }
 }
-$('#btn-save-profile').addEventListener('click', saveProfile);
+document.getElementById('btn-save-profile').addEventListener('click', saveProfile);
 </script>
 </body>
 </html>
