@@ -61,7 +61,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
         <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña. Te pediremos verificar el correo antes de iniciar el curso. Tu progreso quedará guardado en la nube.</p>
 
         <div class="grid" id="auth-forms" autocomplete="off">
-          <!-- Campos señuelo para minimizar autofill agresivo -->
+          <!-- señuelos para frenar autofill agresivo -->
           <input type="text" style="display:none" aria-hidden="true">
           <input type="password" style="display:none" aria-hidden="true">
 
@@ -267,9 +267,7 @@ const MSGS = {
 };
 const msg = (t)=>{ const el=$('#auth-msg'); if(el) el.textContent=t; };
 
-function isValidEmail(email){
-  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((email||'').trim());
-}
+const emailOk = e => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((e||'').trim().toLowerCase());
 
 /* ======= Estado local por usuario ======= */
 function keyFor(uid){ return `soulmv_${uid||'anon'}`; }
@@ -304,8 +302,7 @@ auth.onAuthStateChanged(async (user)=>{
   if(!user){
     CURRENT_UID=null; state={}; $('#auth-user').textContent='';
     $('#btn-logout').style.display='none';
-    setTab('login');
-    showLogin(); return;
+    setTab('login'); showLogin(); return;
   }
   CURRENT_UID = user.uid;
   state = loadState(CURRENT_UID);
@@ -319,20 +316,21 @@ auth.onAuthStateChanged(async (user)=>{
   showCourse();
 });
 
-/* ======= Registro ======= */
+/* ======= REGISTRO ======= */
 document.getElementById('btn-register-2').addEventListener('click', async ()=>{
-  const email=(document.getElementById('reg-email').value||'').trim();
-  const pass =(document.getElementById('reg-pass').value||'').trim();
-  const pass2=(document.getElementById('reg-pass2').value||'').trim();
+  const rawEmail = (document.getElementById('reg-email').value||'');
+  const email = rawEmail.trim().toLowerCase();
+  const pass  = (document.getElementById('reg-pass').value||'').trim();
+  const pass2 = (document.getElementById('reg-pass2').value||'').trim();
 
   if(!email || !pass || !pass2) return msg('Completa todos los campos.');
-  if(!isValidEmail(email)) return msg('El formato del correo no es válido.');
+  if(!emailOk(email)) return msg('El formato del correo no es válido.');
   if(pass!==pass2) return msg('Las contraseñas no coinciden.');
 
   try{
-    // Si ya existe, redirige a login
+    // Pre-chequeo
     const methods = await auth.fetchSignInMethodsForEmail(email);
-    if(methods && methods.length){
+    if (methods && methods.length){
       setTab('login');
       document.getElementById('login-email').value = email;
       return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.');
@@ -341,56 +339,57 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
     const cred = await auth.createUserWithEmailAndPassword(email, pass);
     const user = cred.user;
 
-    // Asegura que currentUser sea el recién creado y recarga
+    // Asegurar currentUser + reload
     if (auth.currentUser?.uid !== user.uid) await auth.updateCurrentUser(user);
     try { await auth.currentUser?.reload(); } catch(_){}
 
-    // Envío inmediato de verificación con reintentos (hasta 3)
+    // Envío automático del mail de verificación con reintentos
     const actionCodeSettings = { url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1', handleCodeInApp:false };
-    let sent=false, err=null;
+    let sent=false, lastErr=null;
     for (let i=0;i<3 && !sent;i++){
       try{
         await auth.currentUser.sendEmailVerification(actionCodeSettings);
         sent=true;
       }catch(e){
-        err=e;
-        // espera incremental 0ms, 800ms, 1600ms
-        await new Promise(r=>setTimeout(r, i*800));
-        // intenta un reload por si el token aún no está listo
+        lastErr=e;
         try{ await auth.currentUser.reload(); }catch(_){}
+        await new Promise(r=>setTimeout(r, 600*(i+1)));
       }
     }
-    if(sent){
-      msg('Cuenta creada. Te enviamos el correo de verificación (revisa Spam).');
-    }else{
-      console.warn('Fallo al enviar verificación:', err);
-      msg('Cuenta creada. No se pudo enviar automáticamente, usa “Reenviar verificación”.');
-    }
+    msg(sent
+      ? 'Cuenta creada. Te enviamos el correo de verificación (revisa Spam).'
+      : 'Cuenta creada. No se pudo enviar automáticamente, usa “Reenviar verificación”.');
 
-    // Muestra caja de verificación y prepara login con el correo
+    // Mostrar caja, pasar a login y precargar correo
     document.getElementById('verify-box').style.display='block';
     setTab('login');
     document.getElementById('login-email').value = email;
     startVerifyPolling();
 
-    // Guarda un doc base (no bloquea UI)
-    db.collection('users').doc(user.uid).collection('courses').doc('soulmv').set({}, { merge:true }).catch(()=>{});
-
+    // Base Firestore (no bloquea)
+    db.collection('users').doc(user.uid).collection('courses').doc('soulmv')
+      .set({}, { merge:true }).catch(()=>{});
   }catch(e){
+    if (e.code === 'auth/email-already-in-use'){
+      setTab('login');
+      document.getElementById('login-email').value = email;
+      return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.');
+    }
     msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
   }
 });
 
-/* ======= Login (con pre-chequeo de existencia) ======= */
+/* ======= LOGIN (con pre-chequeo de existencia) ======= */
 document.getElementById('btn-login').addEventListener('click', async ()=>{
-  const email=(document.getElementById('login-email').value||'').trim();
-  const pass =(document.getElementById('login-pass').value||'').trim();
+  const rawEmail = (document.getElementById('login-email').value||'');
+  const email = rawEmail.trim().toLowerCase();
+  const pass  = (document.getElementById('login-pass').value||'').trim();
 
   if(!email || !pass) return msg('Ingresa correo y contraseña.');
-  if(!isValidEmail(email)) return msg('El formato del correo no es válido.');
+  if(!emailOk(email)) return msg('El formato del correo no es válido.');
 
   try{
-    // PRE-CHECK: ¿existe ese correo en Firebase?
+    // PRE-CHECK de existencia
     const methods = await auth.fetchSignInMethodsForEmail(email);
     if(!methods || methods.length===0){
       msg('Correo no registrado.');
@@ -398,19 +397,17 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
       document.getElementById('reg-email').value = email;
       return;
     }
-
-    // Si existe, intenta iniciar sesión
     await auth.signInWithEmailAndPassword(email, pass);
     msg('Sesión iniciada.');
   }catch(e){
-    if (e.code==='auth/user-not-found') {
+    if (e.code==='auth/user-not-found'){
       msg('Correo no registrado.');
       setTab('reg'); document.getElementById('reg-email').value = email;
-    } else if (e.code==='auth/wrong-password' || e.code==='auth/invalid-credential' || e.code==='auth/invalid-login-credentials') {
+    } else if (e.code==='auth/wrong-password' || e.code==='auth/invalid-credential' || e.code==='auth/invalid-login-credentials'){
       msg('Contraseña incorrecta.');
-    } else if (e.code==='auth/invalid-email') {
+    } else if (e.code==='auth/invalid-email'){
       msg('El formato del correo no es válido.');
-    } else if (e.code==='auth/too-many-requests') {
+    } else if (e.code==='auth/too-many-requests'){
       msg(MSGS[e.code]);
     } else {
       msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
@@ -420,11 +417,11 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
 
 /* ======= Reset contraseña ======= */
 document.getElementById('btn-reset').addEventListener('click', async ()=>{
-  const email=(document.getElementById('login-email').value||'').trim();
+  const rawEmail=(document.getElementById('login-email').value||'');
+  const email=rawEmail.trim().toLowerCase();
   if(!email) return msg('Escribe tu correo para enviarte el enlace.');
-  if(!isValidEmail(email)) return msg('El formato del correo no es válido.');
+  if(!emailOk(email)) return msg('El formato del correo no es válido.');
   try{
-    // Verifica que exista antes de enviar reset
     const methods = await auth.fetchSignInMethodsForEmail(email);
     if(!methods || methods.length===0) return msg('Correo no registrado.');
     await auth.sendPasswordResetEmail(email);
@@ -443,7 +440,7 @@ document.getElementById('btn-logout').addEventListener('click', async ()=>{
 let _verifyPoll;
 function startVerifyPolling(){
   clearInterval(_verifyPoll);
-  const deadline = Date.now()+10*60*1000; // 10 minutos
+  const deadline = Date.now()+10*60*1000;
   _verifyPoll = setInterval(async ()=>{
     if(Date.now()>deadline){ clearInterval(_verifyPoll); return; }
     if(auth.currentUser){
@@ -466,9 +463,7 @@ document.getElementById('btn-check-verify').addEventListener('click', async ()=>
     }else{
       msg('Tu correo aún no aparece verificado. Revisa tu bandeja o reenvía el enlace.');
     }
-  } else {
-    msg('Primero inicia sesión.');
-  }
+  } else { msg('Primero inicia sesión.'); }
 });
 document.getElementById('btn-resend-verify').addEventListener('click', async ()=>{
   try{
@@ -482,7 +477,7 @@ document.getElementById('btn-resend-verify').addEventListener('click', async ()=
 });
 if(new URLSearchParams(location.search).get('verified')) startVerifyPolling();
 
-/* ======= Vistas del curso ======= */
+/* ======= Vistas ======= */
 function showCourse(){
   if(!auth.currentUser || !auth.currentUser.emailVerified){ return; }
   document.getElementById('step-welcome').style.display='none';
