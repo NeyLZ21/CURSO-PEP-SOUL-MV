@@ -240,7 +240,7 @@ const QUESTIONS = [
     {key:'A',label:'Guardar borrador'},{key:'B',label:'Cerrar/Finalizar el documento (FECHADO)'},{key:'C',label:'Imprimir sin cerrar'}], correct:'B'}
 ];
 
-/* ======= Firebase ======= */
+/* ======= Firebase (tu proyecto) ======= */
 const firebaseConfig = {
   apiKey: "AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",
   authDomain: "induccion-pep-hvq.firebaseapp.com",
@@ -254,7 +254,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-/* ======= Helpers y estado por usuario ======= */
+/* ======= Helpers / estado local por usuario ======= */
 const $ = s => document.querySelector(s);
 $('#year').textContent = new Date().getFullYear();
 const MSGS = {
@@ -289,43 +289,50 @@ function setTab(which){
 $('#tab-login').addEventListener('click', ()=>setTab('login'));
 $('#tab-register').addEventListener('click', ()=>setTab('reg'));
 setTab('login');
-document.querySelectorAll('.eye').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    const inp = document.querySelector(btn.dataset.eye);
-    if(!inp) return;
-    inp.type = inp.type==='password' ? 'text' : 'password';
-  });
+document.addEventListener('click',(e)=>{
+  const id = e.target.getAttribute('data-eye');
+  if(!id) return;
+  const inp = document.querySelector(id);
+  if(inp) inp.type = (inp.type==='password') ? 'text' : 'password';
 });
 
-/* ======= Auth listener ======= */
+/* ======= onAuthStateChanged: rápido a UI, sync en background ======= */
 auth.onAuthStateChanged(async (user)=>{
   if(!user){
     CURRENT_UID=null; state={}; $('#auth-user').textContent='';
     $('#btn-logout').style.display='none';
-    setTab('login');
-    showLogin(); return;
+    setTab('login'); showLogin(); return;
   }
   CURRENT_UID = user.uid;
   state = loadState(CURRENT_UID);
-  $('#auth-user').textContent = user.email;
+  $('#auth-user').textContent = user.email || '';
+
   if(!user.emailVerified){
     $('#verify-box').style.display='block';
     $('#btn-logout').style.display='none';
-    // pre-llenar login con el correo real
     $('#login-email').value = user.email || '';
-    showLogin(); return;
+    showLogin();
+    return;
   }
-  await syncFromCloud(user);
+
+  // Mostrar curso YA
   showCourse();
+
+  // Sincronizar en background
+  (async ()=>{
+    try{ await syncFromCloud(user); renderModules(); updateProgress(); }
+    catch(_){}
+  })();
 });
 
-/* ======= Registro / Login ======= */
+/* ======= Registro (envío automático de verificación) ======= */
 $('#btn-register-2').addEventListener('click', async ()=>{
   const email= ($('#reg-email').value||'').trim();
   const pass = ($('#reg-pass').value||'').trim();
   const pass2= ($('#reg-pass2').value||'').trim();
   if(!email || !pass || !pass2) return msg('Completa todos los campos.');
-  if(pass!==pass2) return msg('Las contraseñas no coinciden.');
+  if(pass !== pass2) return msg('Las contraseñas no coinciden.');
+
   try{
     const methods = await auth.fetchSignInMethodsForEmail(email);
     if(methods && methods.length){
@@ -333,24 +340,38 @@ $('#btn-register-2').addEventListener('click', async ()=>{
       $('#login-email').value = email;
       return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.');
     }
-    const { user } = await auth.createUserWithEmailAndPassword(email, pass);
-    await db.collection('users').doc(user.uid).collection('courses').doc('soulmv').set({}, { merge:true });
 
-    // Enviar verificación AUTOMÁTICAMENTE
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    const user = cred.user;
+
+    // Doc base
+    await db.collection('users').doc(user.uid)
+      .collection('courses').doc('soulmv')
+      .set({}, { merge:true });
+
+    // Enviar verificación AUTOMÁTICA + fallback
     const actionCodeSettings = {
       url: 'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1',
       handleCodeInApp: false
     };
-    await user.sendEmailVerification(actionCodeSettings);
+    try {
+      await user.sendEmailVerification(actionCodeSettings);
+    } catch(e) {
+      try { await auth.currentUser?.sendEmailVerification(actionCodeSettings); } catch(_) {}
+    }
 
     msg('Cuenta creada. Te enviamos un correo para verificarla (revisa Spam).');
     $('#verify-box').style.display='block';
     setTab('login');
-    $('#login-email').value = email; // listo para iniciar cuando verifique
+    $('#login-email').value = email;
     startVerifyPolling();
-  }catch(e){ msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.'); }
+
+  }catch(e){
+    msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
+  }
 });
 
+/* ======= Login ======= */
 $('#btn-login').addEventListener('click', async ()=>{
   const email=($('#login-email').value||'').trim();
   const pass =($('#login-pass').value||'').trim();
@@ -395,7 +416,6 @@ function startVerifyPolling(){
         clearInterval(_verifyPoll);
         $('#verify-box').style.display='none';
         msg('¡Correo verificado! Ya puedes continuar.');
-        // aseguramos que el login tenga el correo
         $('#login-email').value = auth.currentUser.email || '';
         showCourse();
       }
@@ -626,16 +646,23 @@ async function saveProfile(){
     $('#pf-msg').textContent='Completa nombre, cédula/pasaporte y especialidad.';
     return;
   }
-  try{
-    const uid=auth.currentUser?.uid; if(!uid) return;
-    await db.collection('users').doc(uid).collection('profile').doc('main').set({name,iddoc,spec},{merge:true});
-    state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
-    if(name){ await auth.currentUser.updateProfile({displayName:name}); }
-    $('#pf-msg').textContent='✅ Perfil guardado.';
-    toggleCourse(true);
-    // bajar a módulos suavemente
-    setTimeout(()=>document.getElementById('modules')?.scrollIntoView({behavior:'smooth'}),200);
-  }catch(e){ $('#pf-msg').textContent='No se pudo guardar: '+(MSGS[e.code]||e.message); }
+  // UI optimista: habilitar módulos de inmediato
+  state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
+  $('#pf-msg').textContent='✅ Perfil guardado.';
+  toggleCourse(true); renderModules(); updateProgress();
+  setTimeout(()=>document.getElementById('modules')?.scrollIntoView({behavior:'smooth'}),150);
+
+  // Guardar en la nube en segundo plano
+  (async ()=>{
+    try{
+      const uid=auth.currentUser?.uid; if(!uid) return;
+      await db.collection('users').doc(uid).collection('profile').doc('main').set(state.profile,{merge:true});
+      if(name){ await auth.currentUser.updateProfile({displayName:name}); }
+    }catch(e){
+      console.warn('No se pudo guardar en la nube',e);
+      $('#pf-msg').textContent='Perfil guardado localmente (sin conexión a la nube por ahora).';
+    }
+  })();
 }
 $('#btn-save-profile').addEventListener('click', saveProfile);
 </script>
