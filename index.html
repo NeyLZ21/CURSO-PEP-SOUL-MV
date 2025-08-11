@@ -60,7 +60,11 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
         <h2 style="margin:0 0 6px">Acceso</h2>
         <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña. Te pediremos verificar el correo antes de iniciar el curso. Tu progreso quedará guardado en la nube.</p>
 
-        <div class="grid" id="auth-forms">
+        <div class="grid" id="auth-forms" autocomplete="off">
+          <!-- Campos señuelo para frenar autofill agresivo -->
+          <input type="text" style="display:none">
+          <input type="password" style="display:none">
+
           <div style="display:flex; gap:8px; margin-bottom:8px">
             <button id="tab-login" class="btn btn-primary">Iniciar sesión</button>
             <button id="tab-register" class="btn btn-muted">Registrarme</button>
@@ -69,11 +73,13 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
           <!-- LOGIN -->
           <div id="form-login">
             <label>Correo electrónico<br>
-              <input id="login-email" type="email" placeholder="usuario@dominio.com" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb" required>
+              <input id="login-email" name="login-email" type="email" placeholder="usuario@dominio.com"
+                     style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb"
+                     required autocomplete="username email" autocapitalize="none" autocorrect="off" inputmode="email">
             </label>
             <label>Contraseña<br>
               <div class="input-wrap">
-                <input id="login-pass" type="password" placeholder="••••••••" required>
+                <input id="login-pass" name="current-password" type="password" placeholder="••••••••" required autocomplete="current-password">
                 <button type="button" class="eye" data-eye="#login-pass">👁️</button>
               </div>
             </label>
@@ -86,17 +92,19 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
           <!-- REGISTRO -->
           <div id="form-register" style="display:none">
             <label>Correo electrónico<br>
-              <input id="reg-email" type="email" placeholder="usuario@dominio.com" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb" required>
+              <input id="reg-email" name="new-email" type="email" placeholder="usuario@dominio.com"
+                     style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb"
+                     required autocomplete="email" autocapitalize="none" autocorrect="off" inputmode="email">
             </label>
             <label>Contraseña<br>
               <div class="input-wrap">
-                <input id="reg-pass" type="password" placeholder="Mínimo 6 caracteres" required>
+                <input id="reg-pass" name="new-password" type="password" placeholder="Mínimo 6 caracteres" required autocomplete="new-password">
                 <button type="button" class="eye" data-eye="#reg-pass">👁️</button>
               </div>
             </label>
             <label>Confirmar contraseña<br>
               <div class="input-wrap">
-                <input id="reg-pass2" type="password" placeholder="Repite la contraseña" required>
+                <input id="reg-pass2" name="new-password2" type="password" placeholder="Repite la contraseña" required autocomplete="new-password">
                 <button type="button" class="eye" data-eye="#reg-pass2">👁️</button>
               </div>
             </label>
@@ -240,9 +248,10 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-/* ======= Helpers/estado por usuario ======= */
+/* ======= Utilidades ======= */
 const $ = s => document.querySelector(s);
 $('#year').textContent = new Date().getFullYear();
+
 const MSGS = {
   'auth/email-already-in-use':'Ese correo ya tiene una cuenta. Usa Iniciar sesión.',
   'auth/invalid-email':'El formato del correo no es válido.',
@@ -258,11 +267,17 @@ const MSGS = {
 };
 const msg = (t)=>{ const el=$('#auth-msg'); if(el) el.textContent=t; };
 
-let CURRENT_UID = null;
+function isValidEmail(email){
+  // Sencilla y efectiva para la mayoría de casos
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
+}
+
+/* ======= Estado local por usuario ======= */
 function keyFor(uid){ return `soulmv_${uid||'anon'}`; }
 function loadState(uid){ try{ return JSON.parse(localStorage.getItem(keyFor(uid))||'{}'); }catch{ return {}; } }
 function saveState(uid, st){ localStorage.setItem(keyFor(uid), JSON.stringify(st)); }
-let state = {}; // por usuario
+let CURRENT_UID = null;
+let state = {};
 
 /* ======= Tabs + ojitos ======= */
 function setTab(which){
@@ -277,6 +292,7 @@ function setTab(which){
 $('#tab-login').addEventListener('click', ()=>setTab('login'));
 $('#tab-register').addEventListener('click', ()=>setTab('reg'));
 setTab('login');
+
 document.querySelectorAll('.eye').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     const inp = document.querySelector(btn.dataset.eye);
@@ -289,13 +305,12 @@ auth.onAuthStateChanged(async (user)=>{
   if(!user){
     CURRENT_UID=null; state={}; $('#auth-user').textContent='';
     $('#btn-logout').style.display='none';
-    // vuelve a tab login al cerrar
     setTab('login');
     showLogin(); return;
   }
   CURRENT_UID = user.uid;
-  state = loadState(CURRENT_UID); // estado local por usuario
-  $('#auth-user').textContent = user.email;
+  state = loadState(CURRENT_UID);
+  $('#auth-user').textContent = user.email || '';
   if(!user.emailVerified){
     $('#verify-box').style.display='block';
     $('#btn-logout').style.display='none';
@@ -305,15 +320,18 @@ auth.onAuthStateChanged(async (user)=>{
   showCourse();
 });
 
-/* ======= Registro / Login ======= */
+/* ======= Registro ======= */
 document.getElementById('btn-register-2').addEventListener('click', async ()=>{
-  const email= (document.getElementById('reg-email').value||'').trim();
-  const pass  = (document.getElementById('reg-pass').value||'').trim();
-  const pass2 = (document.getElementById('reg-pass2').value||'').trim();
+  const email=(document.getElementById('reg-email').value||'').trim();
+  const pass =(document.getElementById('reg-pass').value||'').trim();
+  const pass2=(document.getElementById('reg-pass2').value||'').trim();
+
   if(!email || !pass || !pass2) return msg('Completa todos los campos.');
+  if(!isValidEmail(email)) return msg('El formato del correo no es válido.');
   if(pass!==pass2) return msg('Las contraseñas no coinciden.');
 
   try{
+    // Antes de crear, verifica si ya existe método de acceso para ese correo
     const methods = await auth.fetchSignInMethodsForEmail(email);
     if(methods && methods.length){
       setTab('login');
@@ -324,10 +342,10 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
     const { user } = await auth.createUserWithEmailAndPassword(email, pass);
     if (auth.currentUser?.uid !== user.uid) await auth.updateCurrentUser(user);
 
-    // Base en Firestore (no bloquea)
+    // Crea base en Firestore (no bloquea)
     db.collection('users').doc(user.uid).collection('courses').doc('soulmv').set({}, { merge:true }).catch(()=>{});
 
-    // Envío AUTOMÁTICO de verificación (con reintentos cortos)
+    // Envío AUTOMÁTICO de verificación
     const actionCodeSettings = { url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1', handleCodeInApp:false };
     let sent=false;
     try { await user.sendEmailVerification(actionCodeSettings); sent=true; } catch(_){}
@@ -343,36 +361,48 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
     document.getElementById('login-email').value = email;
     startVerifyPolling();
 
-  }catch(e){ msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.'); }
+  }catch(e){
+    msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
+  }
 });
 
+/* ======= Login ======= */
 document.getElementById('btn-login').addEventListener('click', async ()=>{
   const email=(document.getElementById('login-email').value||'').trim();
   const pass =(document.getElementById('login-pass').value||'').trim();
+
   if(!email || !pass) return msg('Ingresa correo y contraseña.');
+  if(!isValidEmail(email)) return msg('El formato del correo no es válido.');
+
   try{
     await auth.signInWithEmailAndPassword(email, pass);
     msg('Sesión iniciada.');
   }catch(e){
+    // Mensajes específicos solicitados:
     if (e.code==='auth/user-not-found') {
       msg('Correo no registrado.');
       setTab('reg');
       document.getElementById('reg-email').value = email;
     } else if (e.code==='auth/wrong-password' || e.code==='auth/invalid-credential' || e.code==='auth/invalid-login-credentials') {
       msg('Contraseña incorrecta.');
+    } else if (e.code==='auth/invalid-email') {
+      msg('El formato del correo no es válido.');
     } else {
       msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
     }
   }
 });
 
+/* ======= Reset contraseña ======= */
 document.getElementById('btn-reset').addEventListener('click', async ()=>{
   const email=(document.getElementById('login-email').value||'').trim();
   if(!email) return msg('Escribe tu correo para enviarte el enlace.');
+  if(!isValidEmail(email)) return msg('El formato del correo no es válido.');
   try{ await auth.sendPasswordResetEmail(email); msg('Te enviamos un correo para restablecer la contraseña.'); }
   catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.'); }
 });
 
+/* ======= Logout ======= */
 document.getElementById('btn-logout').addEventListener('click', async ()=>{
   await auth.signOut(); msg('Sesión cerrada.');
 });
@@ -396,7 +426,15 @@ function startVerifyPolling(){
   }, 8000);
 }
 document.getElementById('btn-check-verify').addEventListener('click', async ()=>{
-  if(auth.currentUser){ await auth.currentUser.reload(); if(auth.currentUser.emailVerified){ document.getElementById('verify-box').style.display='none'; showCourse(); } }
+  if(auth.currentUser){
+    await auth.currentUser.reload();
+    if(auth.currentUser.emailVerified){
+      document.getElementById('verify-box').style.display='none';
+      showCourse();
+    }else{
+      msg('Tu correo aún no aparece verificado. Revisa tu bandeja o reenvía el enlace.');
+    }
+  }
 });
 document.getElementById('btn-resend-verify').addEventListener('click', async ()=>{
   try{
@@ -416,10 +454,7 @@ function showCourse(){
   document.getElementById('step-welcome').style.display='none';
   document.getElementById('profile').style.display='block';
   document.getElementById('btn-logout').style.display='inline-flex';
-  // Cargar perfil y activar módulos de inmediato si está completo
-  loadProfile().then(()=>{
-    toggleCourse(profileComplete());
-  });
+  loadProfile().then(()=>{ toggleCourse(profileComplete()); });
 }
 function showLogin(){
   document.getElementById('step-welcome').style.display='block';
@@ -617,7 +652,6 @@ async function saveProfile(){
     state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
     if(name){ await auth.currentUser.updateProfile({displayName:name}); }
     document.getElementById('pf-msg').textContent='✅ Perfil guardado.';
-    // Activa módulos inmediatamente (sin esperar a la nube)
     toggleCourse(true);
   }catch(e){ document.getElementById('pf-msg').textContent='No se pudo guardar: '+(MSGS[e.code]||e.message); }
 }
