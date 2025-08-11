@@ -257,6 +257,7 @@ const db   = firebase.firestore();
 /* ======= Helpers ======= */
 const $ = s => document.querySelector(s);
 $('#year').textContent = new Date().getFullYear();
+function normalizeEmail(v){ return (v||'').trim().toLowerCase(); }
 const MSGS = {
   'auth/email-already-in-use':'Correo ya registrado.',
   'auth/invalid-email':'El formato del correo no es válido.',
@@ -311,36 +312,26 @@ auth.onAuthStateChanged(async (user)=>{
   state = loadState(CURRENT_UID);
   $('#auth-user').textContent = user.email;
 
-  if(!user.emailVerified){
-    $('#verify-box').style.display='block';
-  }else{
-    $('#verify-box').style.display='none';
-  }
+  document.getElementById('verify-box').style.display = user.emailVerified ? 'none' : 'block';
   $('#btn-logout').style.display='inline-flex';
 
-  // Cargar perfil + curso igual, verificado o no (no bloquea UI)
+  // Cargar perfil + curso (no bloquea UI)
   syncFromCloud(user).finally(()=>{});
   showCourse();
 });
 
-/* ======= Registro ======= */
+/* ======= REGISTRO (normaliza correo + verificación inmediata) ======= */
 document.getElementById('btn-register-2').addEventListener('click', async ()=>{
-  const email= ($('#reg-email').value||'').trim();
-  const pass  = ($('#reg-pass').value||'').trim();
-  const pass2 = ($('#reg-pass2').value||'').trim();
+  const email = normalizeEmail(document.getElementById('reg-email').value);
+  const pass  = (document.getElementById('reg-pass').value || '').trim();
+  const pass2 = (document.getElementById('reg-pass2').value || '').trim();
   if(!email || !pass || !pass2) return msg('Completa todos los campos.');
-  if(pass!==pass2) return msg('Las contraseñas no coinciden.');
+  if(pass !== pass2) return msg('Las contraseñas no coinciden.');
 
   try{
-    const methods = await auth.fetchSignInMethodsForEmail(email);
-    if(methods && methods.length){
-      setTab('login'); $('#login-email').value = email;
-      return msg('Correo ya registrado. Usa Iniciar sesión.');
-    }
-
     const { user } = await auth.createUserWithEmailAndPassword(email, pass);
 
-    // Enviar verificación inmediato (evita "link expirado" por dominios)
+    // Envío de verificación inmediato
     try{
       await user.sendEmailVerification();
       msg('Cuenta creada. Te enviamos el correo de verificación (revisa Spam).');
@@ -354,58 +345,68 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
     }
 
     // UI
-    $('#verify-box').style.display='block';
-    setTab('login'); $('#login-email').value = email;
+    document.getElementById('verify-box').style.display='block';
+    setTab('login');
+    document.getElementById('login-email').value = email;
     startVerifyPolling();
 
     // Inicializa curso en la nube (no bloquea)
     db.collection('users').doc(user.uid).collection('courses').doc('soulmv')
       .set({}, { merge:true }).catch(()=>{});
-
   }catch(e){
-    msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
+    if(e.code === 'auth/email-already-in-use'){
+      msg('Correo ya registrado. Usa Iniciar sesión.');
+      setTab('login');
+      document.getElementById('login-email').value = email;
+    }else if(e.code === 'auth/weak-password'){
+      msg('La contraseña es muy corta (mínimo 6).');
+    }else{
+      msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
+    }
   }
 });
 
-/* ======= LOGIN: permite entrar si ya está registrado (verificado o no) ======= */
+/* ======= LOGIN robusto (sin pre-chequeo) ======= */
 document.getElementById('btn-login').addEventListener('click', async ()=>{
-  const email=($('#login-email').value||'').trim();
-  const pass =($('#login-pass').value||'').trim();
+  const email = normalizeEmail(document.getElementById('login-email').value);
+  const pass  = (document.getElementById('login-pass').value || '').trim();
   if(!email || !pass) return msg('Ingresa correo y contraseña.');
 
   try{
-    const methods = await auth.fetchSignInMethodsForEmail(email);
-    if(!methods || methods.length === 0){
-      msg('Correo no registrado.');
-      setTab('reg'); $('#reg-email').value = email;
-      return;
-    }
-
     await auth.signInWithEmailAndPassword(email, pass);
+
     const u = auth.currentUser;
     if(u && !u.emailVerified){
       msg('Sesión iniciada. Verifica tu correo para completar el acceso.');
-      $('#verify-box').style.display='block';
+      document.getElementById('verify-box').style.display='block';
     }else{
       msg('Sesión iniciada.');
-      $('#verify-box').style.display='none';
+      document.getElementById('verify-box').style.display='none';
     }
     showCourse();
   }catch(e){
-    if (e.code==='auth/wrong-password' || e.code==='auth/invalid-credential' || e.code==='auth/invalid-login-credentials') {
-      msg('Contraseña incorrecta.');
-    } else if (e.code==='auth/too-many-requests') {
-      msg(MSGS[e.code]);
-    } else if (e.code==='auth/user-not-found') {
+    if(e.code === 'auth/user-not-found'){
       msg('Correo no registrado.');
-    } else {
+      setTab('reg');
+      document.getElementById('reg-email').value = email;
+    }else if(
+      e.code === 'auth/wrong-password' ||
+      e.code === 'auth/invalid-credential' ||
+      e.code === 'auth/invalid-login-credentials'
+    ){
+      msg('Contraseña incorrecta.');
+    }else if(e.code === 'auth/too-many-requests'){
+      msg(MSGS[e.code]);
+    }else if(e.code === 'auth/account-exists-with-different-credential'){
+      msg('Ya existe una cuenta con otro método (Google, etc.). Usa ese proveedor.');
+    }else{
       msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
     }
   }
 });
 
 document.getElementById('btn-reset').addEventListener('click', async ()=>{
-  const email=($('#login-email').value||'').trim();
+  const email = normalizeEmail(document.getElementById('login-email').value);
   if(!email) return msg('Escribe tu correo para enviarte el enlace.');
   try{ await auth.sendPasswordResetEmail(email); msg('Te enviamos un correo para restablecer la contraseña.'); }
   catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.'); }
@@ -461,7 +462,6 @@ function showCourse(){
   if(!auth.currentUser){ return; }
   document.getElementById('step-welcome').style.display='none';
   document.getElementById('btn-logout').style.display='inline-flex';
-  // Cargar perfil sin bloquear UI
   loadProfile().finally(()=>{
     refreshProfileUI();
     toggleCourse(profileComplete());
@@ -491,7 +491,6 @@ function toggleCourse(enabled){
     document.getElementById('eval').style.display='none';
   }
 }
-
 document.getElementById('btn-edit-profile').addEventListener('click', ()=>{
   document.getElementById('profile').style.display='block';
   document.getElementById('profile-done').style.display='none';
@@ -574,7 +573,7 @@ function updateProgress(){
 function renderQuiz(){
   const wrap=document.getElementById('quiz'); wrap.innerHTML='';
   QUESTIONS.forEach((q,idx)=>{
-    const card=document.createElement('div'); card.className='card'; card.style.marginBottom='12px';
+    const card=document.createElement('div'); card.className='card'; card.style	marginBottom='12px';
     const opts=q.options.map(o=>`
       <label style="display:flex;gap:8px;align-items:center;margin:6px 0">
         <input type="radio" name="${q.id}" value="${o.key}">
@@ -661,10 +660,10 @@ async function saveProfile(){
     document.getElementById('pf-msg').textContent='Completa nombre, cédula/pasaporte y especialidad.';
     return;
   }
-  // Actualización optimista: actualiza UI y estado antes de la nube
+  // Optimista
   state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
   document.getElementById('pf-msg').textContent='Guardando…';
-  toggleCourse(true); // habilita inmediatamente
+  toggleCourse(true);
   refreshProfileUI();
 
   try{
@@ -672,8 +671,8 @@ async function saveProfile(){
     db.collection('users').doc(uid).collection('profile').doc('main')
       .set(state.profile,{merge:true})
       .then(()=>{ document.getElementById('pf-msg').textContent='✅ Perfil guardado.'; })
-      .catch(e=>{ document.getElementById('pf-msg').textContent='Guardado local. No se pudo sincronizar ahora.'; });
-  }catch(e){
+      .catch(()=>{ document.getElementById('pf-msg').textContent='Guardado local. No se pudo sincronizar ahora.'; });
+  }catch(_){
     document.getElementById('pf-msg').textContent='Guardado local. No se pudo sincronizar ahora.';
   }
 }
