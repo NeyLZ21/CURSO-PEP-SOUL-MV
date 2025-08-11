@@ -59,7 +59,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
         <h2 style="margin:0 0 6px">Acceso</h2>
         <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña. Te pediremos verificar el correo antes de iniciar el curso. Tu progreso quedará guardado en la nube.</p>
 
-        <!-- HONEYPOTS anti-autofill de nombres -->
+        <!-- Honeypots anti-autofill de nombres -->
         <input type="text" name="full-name" autocomplete="name" style="display:none" tabindex="-1" aria-hidden="true">
         <input type="text" name="given-name" autocomplete="given-name" style="display:none" tabindex="-1" aria-hidden="true">
         <input type="text" name="family-name" autocomplete="family-name" style="display:none" tabindex="-1" aria-hidden="true">
@@ -299,22 +299,27 @@ document.querySelectorAll('.eye').forEach(btn=>{
   });
 });
 
-/* ======= Auth listener ======= */
+/* ======= Auth listener (permite entrar aun sin verificación) ======= */
 auth.onAuthStateChanged(async (user)=>{
   if(!user){
     CURRENT_UID=null; state={}; $('#auth-user').textContent='';
     $('#btn-logout').style.display='none';
     setTab('login'); showLogin(); return;
   }
+
   CURRENT_UID = user.uid;
   state = loadState(CURRENT_UID);
   $('#auth-user').textContent = user.email;
+
   if(!user.emailVerified){
     $('#verify-box').style.display='block';
-    $('#btn-logout').style.display='none';
-    showLogin(); return;
+  }else{
+    $('#verify-box').style.display='none';
   }
-  await syncFromCloud(user);
+  $('#btn-logout').style.display='inline-flex';
+
+  // Cargar perfil + curso igual, verificado o no (no bloquea UI)
+  syncFromCloud(user).finally(()=>{});
   showCourse();
 });
 
@@ -335,12 +340,11 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
 
     const { user } = await auth.createUserWithEmailAndPassword(email, pass);
 
-    // Enviar verificación INMEDIATA (sin actionCodeSettings para evitar "link expirado")
+    // Enviar verificación inmediato (evita "link expirado" por dominios)
     try{
       await user.sendEmailVerification();
       msg('Cuenta creada. Te enviamos el correo de verificación (revisa Spam).');
     }catch(_){
-      // Fallback por si user no está aún enlazado a currentUser
       try{
         await auth.currentUser?.sendEmailVerification();
         msg('Cuenta creada. Te enviamos el correo de verificación (revisa Spam).');
@@ -349,7 +353,7 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
       }
     }
 
-    // Prepara UI
+    // UI
     $('#verify-box').style.display='block';
     setTab('login'); $('#login-email').value = email;
     startVerifyPolling();
@@ -363,7 +367,7 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
   }
 });
 
-/* ======= LOGIN (muestra “Correo no registrado.” si no existe) ======= */
+/* ======= LOGIN: permite entrar si ya está registrado (verificado o no) ======= */
 document.getElementById('btn-login').addEventListener('click', async ()=>{
   const email=($('#login-email').value||'').trim();
   const pass =($('#login-pass').value||'').trim();
@@ -376,8 +380,17 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
       setTab('reg'); $('#reg-email').value = email;
       return;
     }
+
     await auth.signInWithEmailAndPassword(email, pass);
-    msg('Sesión iniciada.');
+    const u = auth.currentUser;
+    if(u && !u.emailVerified){
+      msg('Sesión iniciada. Verifica tu correo para completar el acceso.');
+      $('#verify-box').style.display='block';
+    }else{
+      msg('Sesión iniciada.');
+      $('#verify-box').style.display='none';
+    }
+    showCourse();
   }catch(e){
     if (e.code==='auth/wrong-password' || e.code==='auth/invalid-credential' || e.code==='auth/invalid-login-credentials') {
       msg('Contraseña incorrecta.');
@@ -445,10 +458,11 @@ function refreshProfileUI(){
     : 'Completa todos los campos para habilitar los módulos.';
 }
 function showCourse(){
-  if(!auth.currentUser || !auth.currentUser.emailVerified){ return; }
+  if(!auth.currentUser){ return; }
   document.getElementById('step-welcome').style.display='none';
   document.getElementById('btn-logout').style.display='inline-flex';
-  loadProfile().then(()=>{
+  // Cargar perfil sin bloquear UI
+  loadProfile().finally(()=>{
     refreshProfileUI();
     toggleCourse(profileComplete());
   });
@@ -647,16 +661,20 @@ async function saveProfile(){
     document.getElementById('pf-msg').textContent='Completa nombre, cédula/pasaporte y especialidad.';
     return;
   }
+  // Actualización optimista: actualiza UI y estado antes de la nube
+  state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
+  document.getElementById('pf-msg').textContent='Guardando…';
+  toggleCourse(true); // habilita inmediatamente
+  refreshProfileUI();
+
   try{
     const uid=auth.currentUser?.uid; if(!uid) return;
-    await db.collection('users').doc(uid).collection('profile').doc('main').set({name,iddoc,spec},{merge:true});
-    state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
-    if(name){ await auth.currentUser.updateProfile({displayName:name}); }
-    document.getElementById('pf-msg').textContent='✅ Perfil guardado.';
-    toggleCourse(true);
-    refreshProfileUI();
+    db.collection('users').doc(uid).collection('profile').doc('main')
+      .set(state.profile,{merge:true})
+      .then(()=>{ document.getElementById('pf-msg').textContent='✅ Perfil guardado.'; })
+      .catch(e=>{ document.getElementById('pf-msg').textContent='Guardado local. No se pudo sincronizar ahora.'; });
   }catch(e){
-    document.getElementById('pf-msg').textContent='No se pudo guardar: '+(MSGS[e.code]||e.message);
+    document.getElementById('pf-msg').textContent='Guardado local. No se pudo sincronizar ahora.';
   }
 }
 document.getElementById('btn-save-profile').addEventListener('click', saveProfile);
