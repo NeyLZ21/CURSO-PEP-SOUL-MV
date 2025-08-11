@@ -50,6 +50,10 @@
     .cert-title{font-size:28px;font-weight:800;margin:0 0 10px;color:var(--brand)}
     .cert-name{font-size:26px;font-weight:800;margin:8px 0}
     .cert-meta{color:#374151;margin-top:10px}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:50}
+    .modal{background:#fff;border-radius:18px;box-shadow:0 20px 48px rgba(0,0,0,.18);width:min(640px,92vw);padding:20px}
+    .modal h3{margin:0 0 8px}
+    .modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
   </style>
 </head>
 <body>
@@ -108,6 +112,25 @@
       </div>
     </section>
 
+    <section id="profile" class="card no-print" style="display:none;margin:18px 0">
+      <h2 style="margin:0 0 8px">Mi perfil</h2>
+      <div class="grid cols-2">
+        <label>Nombre completo (para certificado)<br>
+          <input id="pf-name" type="text" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
+        </label>
+        <label>Cédula o Pasaporte<br>
+          <input id="pf-id" type="text" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
+        </label>
+        <label>Especialidad<br>
+          <input id="pf-spec" type="text" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
+        </label>
+      </div>
+      <div class="actions" style="display:flex;gap:8px;margin-top:10px">
+        <button id="btn-save-profile" class="btn btn-primary">Guardar perfil</button>
+      </div>
+      <div id="pf-msg" class="muted" style="margin-top:6px"></div>
+    </section>
+
     <section id="progress" class="no-print" style="display:none;margin:18px 0"> class="no-print" style="display:none;margin:18px 0">
       <div class="card">
         <div class="grid cols-2" style="align-items:center">
@@ -146,6 +169,30 @@
       </div>
       <div id="quiz-result" class="muted" style="display:none;margin-top:10px"></div>
     </section>
+
+    <!-- MODAL REGISTRO: datos adicionales -->
+    <div id="modal-register" class="modal-backdrop">
+      <div class="modal">
+        <h3>Completa tu registro</h3>
+        <p class="muted" style="margin:0 0 10px">Ingresa tus datos tal como deben aparecer en el certificado.</p>
+        <div class="grid cols-2">
+          <label>Nombre completo<br>
+            <input id="rg-name" type="text" placeholder="Ej.: María Pérez" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
+          </label>
+          <label>Cédula o pasaporte<br>
+            <input id="rg-id" type="text" placeholder="Documento" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
+          </label>
+          <label>Especialidad<br>
+            <input id="rg-spec" type="text" placeholder="Ej.: Medicina Interna" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
+          </label>
+        </div>
+        <div class="actions">
+          <button id="rg-cancel" class="btn btn-muted">Cancelar</button>
+          <button id="rg-save" class="btn btn-primary">Crear cuenta</button>
+        </div>
+        <div id="rg-msg" class="muted" style="margin-top:6px"></div>
+      </div>
+    </div>
 
     <!-- Certificado imprimible -->
     <section id="certificado" class="container">
@@ -548,6 +595,121 @@
 
     // Autoinit
     init();
+      // === Helpers modal ===
+    const modal = {
+      el: document.getElementById('modal-register'),
+      open(){ this.el.style.display='flex'; },
+      close(){ this.el.style.display='none'; }
+    };
+    document.getElementById('rg-cancel')?.addEventListener('click', ()=>modal.close());
+
+    // === Login que verifica existencia del correo ===
+    $('#btn-login').addEventListener('click', async ()=>{
+      const email = ($('#auth-email').value||'').trim();
+      const pass = ($('#auth-pass').value||'').trim();
+      if(!email || !pass){ return msg('Ingresa correo y contraseña.'); }
+      try{
+        const methods = await auth.fetchSignInMethodsForEmail(email);
+        if(!methods || methods.length===0){
+          // no existe → pedir datos y registrar
+          $('#rg-name').value = $('#auth-name').value || '';
+          modal.open();
+          const once = async ()=>{
+            document.getElementById('rg-save').removeEventListener('click', once);
+            const name = ($('#rg-name').value||'').trim();
+            const iddoc = ($('#rg-id').value||'').trim();
+            const spec = ($('#rg-spec').value||'').trim();
+            if(!name || !iddoc || !spec){ $('#rg-msg').textContent='Completa todos los campos.'; return; }
+            try{
+              const { user } = await auth.createUserWithEmailAndPassword(email, pass);
+              await user.updateProfile({ displayName: name });
+              await db.collection('users').doc(user.uid).collection('courses').doc('soulmv').set({});
+              await db.collection('users').doc(user.uid).collection('profile').doc('main').set({ name, iddoc, spec }, { merge:true });
+              state.profile = { name, iddoc, spec }; save();
+              await user.sendEmailVerification();
+              modal.close();
+              msg('Cuenta creada. Te enviamos email de verificación.');
+              $('#verify-box').style.display='block';
+            }catch(e){ $('#rg-msg').textContent = 'Error al crear cuenta: '+e.message; }
+          };
+          document.getElementById('rg-save').addEventListener('click', once);
+          return;
+        }
+        // existe → iniciar sesión
+        await auth.signInWithEmailAndPassword(email, pass);
+        msg('Sesión iniciada.');
+      }catch(e){ msg('Error: '+e.message); }
+    });
+
+    // === Cargar/Guardar perfil ===
+    async function loadProfile(){
+      try{
+        const uid = auth.currentUser?.uid; if(!uid) return;
+        const snap = await db.collection('users').doc(uid).collection('profile').doc('main').get();
+        if(snap.exists){
+          state.profile = snap.data(); save();
+        }
+        $('#pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
+        $('#pf-id').value = state.profile?.iddoc || '';
+        $('#pf-spec').value = state.profile?.spec || '';
+      }catch(e){ console.warn('Perfil no disponible', e); }
+    }
+    async function saveProfile(){
+      try{
+        const uid = auth.currentUser?.uid; if(!uid) return;
+        const name = ($('#pf-name').value||'').trim();
+        const iddoc = ($('#pf-id').value||'').trim();
+        const spec = ($('#pf-spec').value||'').trim();
+        await db.collection('users').doc(uid).collection('profile').doc('main').set({ name, iddoc, spec }, { merge:true });
+        state.profile = { name, iddoc, spec }; save();
+        if(name) { await auth.currentUser.updateProfile({ displayName: name }); }
+        $('#pf-msg').textContent = 'Perfil guardado.';
+      }catch(e){ $('#pf-msg').textContent = 'No se pudo guardar: '+e.message; }
+    }
+    $('#btn-save-profile').addEventListener('click', saveProfile);
+
+    // Mostrar sección perfil cuando esté logeado y verificado
+    function showCourse(){
+      if(auth.currentUser?.emailVerified){
+        $('#profile').style.display='block';
+        loadProfile();
+      }
+      // resto queda igual
+      if(auth.currentUser?.displayName){ state.nombre = auth.currentUser.displayName; save(); }
+      state.email = auth.currentUser?.email || state.email; save();
+      $('#step-welcome').style.display='none';
+      $('#progress').style.display='block';
+      $('#modules').style.display='grid';
+      $('#eval').style.display='block';
+      renderModules();
+      updateProgress();
+    }
+
+    // Usar nombre del perfil para el certificado si existe
+    const _certBtn = document.getElementById('btn-cert');
+    _certBtn?.addEventListener('click', ()=>{
+      const preferName = state.profile?.name || state.nombre || auth.currentUser?.displayName || '';
+      document.getElementById('cert-nombre').textContent = preferName;
+      const f = new Date();
+      const fecha = f.toLocaleDateString('es-EC', {year:'numeric',month:'long',day:'numeric'});
+      document.getElementById('cert-fecha').textContent = `Fecha: ${fecha}`;
+      document.getElementById('certificado').classList.add('show');
+      setTimeout(()=>window.print(), 400);
+    });
+
+    // Incluir perfil en sync cloud
+    const _syncToCloud = syncToCloud;
+    syncToCloud = async function(){
+      await _syncToCloud();
+      try{
+        const uid = auth.currentUser?.uid; if(!uid) return;
+        if(state.profile){
+          await db.collection('users').doc(uid).collection('profile').doc('main').set(state.profile, { merge:true });
+        }
+      }catch(e){ console.warn('Perfil no guardado', e); }
+    }
+
+    // Autoinit ya está definido arriba
   </script>
 </body>
 </html>
