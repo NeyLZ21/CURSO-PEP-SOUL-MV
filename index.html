@@ -83,8 +83,8 @@
           <div class="badge" title="Requisito"><span>ℹ️</span> Requisitos</div>
           <ul>
             <li>Tener acceso a Internet</li>
-            <li>Iniciar sesión con tu correo institucional para la evaluación</li>
             <li>Completar todos los videos para habilitar el cuestionario</li>
+            <li>Correo válido (cualquier dominio)</li>
           </ul>
         </div>
       </div>
@@ -112,16 +112,22 @@
     <section id="eval" class="card no-print" style="display:none;margin-top:16px">
       <h2 style="margin-top:0">Evaluación final</h2>
       <p class="muted">Responde el cuestionario. Se habilita cuando completes todos los módulos.</p>
-      <div class="grid cols-2">
+
+      <div id="quiz-intro" class="grid cols-2">
         <div>
-          <button id="btn-eval" class="btn btn-primary" disabled>Ir al cuestionario</button>
-          <p class="muted" style="font-size:12px">El cuestionario se abrirá en una nueva pestaña (Google/Microsoft Forms). Debes aprobar con 80%.</p>
+          <button id="btn-start-quiz" class="btn btn-primary" disabled>Comenzar evaluación</button>
+          <p class="muted" style="font-size:12px">Debes aprobar con 80% para habilitar el certificado.</p>
         </div>
         <div>
           <button id="btn-cert" class="btn btn-success" disabled>Mostrar certificado</button>
-          <p class="muted" style="font-size:12px">Disponible cuando completes los módulos y confirmes haber enviado la evaluación.</p>
+          <p class="muted" style="font-size:12px">Disponible cuando completes los módulos y apruebes la evaluación.</p>
         </div>
       </div>
+
+      <div id="quiz" style="display:none;margin-top:16px">
+        <!-- El cuestionario se genera por JS -->
+      </div>
+      <div id="quiz-result" class="muted" style="display:none;margin-top:10px"></div>
     </section>
 
     <!-- Certificado imprimible -->
@@ -145,18 +151,47 @@
   <script src="https://www.youtube.com/iframe_api"></script>
   <script>
     // ===== CONFIGURACIÓN =====
-    // 1) Pon aquí tus módulos y videos (IDs de YouTube). Puedes añadir o quitar.
+    // 1) Define aquí tus módulos y videos (IDs de YouTube)
     const MODULOS = [
       { id: 'mod1', titulo: 'Navegación básica en Soul MV', yt: 'dQw4w9WgXcQ', duracion: '10:05' },
       { id: 'mod2', titulo: 'Prescripción y órdenes médicas', yt: 'l482T0yNkeo', duracion: '08:40' },
       { id: 'mod3', titulo: 'Auditoría médica – honorarios', yt: '9bZkp7q19f0', duracion: '12:10' }
     ];
 
-    // 2) URL del cuestionario (Google/Microsoft Forms) con soportes de pre-llenado.
-    // Reemplaza por tu enlace real. Puedes usar campos prefill como ?entry.123=name&entry.456=email
-    const FORM_URL_BASE = 'https://docs.google.com/forms/d/e/TU_FORM_ID/viewform';
-    const REQUIERE_APROBAR = true; // Sólo informativo visual (no valida notas desde aquí)
-
+    // 2) Preguntas del cuestionario interno (puedes editar libremente)
+    const PASS_PCT = 80; // porcentaje mínimo para aprobar
+    const QUESTIONS = [
+      {
+        id: 'q1',
+        text: '¿Qué módulo del sistema usas para registrar una prescripción?',
+        options: [
+          { key: 'A', label: 'Módulo de Prescripción' },
+          { key: 'B', label: 'Módulo de Citas' },
+          { key: 'C', label: 'Módulo de Imagen' }
+        ],
+        correct: 'A'
+      },
+      {
+        id: 'q2',
+        text: 'La auditoría de honorarios se valida contra:',
+        options: [
+          { key: 'A', label: 'Notas de enfermería' },
+          { key: 'B', label: 'Tarifario MSP y prescripciones cerradas' },
+          { key: 'C', label: 'Epicrisis provisional' }
+        ],
+        correct: 'B'
+      },
+      {
+        id: 'q3',
+        text: 'Para finalizar una nota clínica debes:',
+        options: [
+          { key: 'A', label: 'Guardar borrador' },
+          { key: 'B', label: 'Cerrar/Finalizar el documento (FECHADO)' },
+          { key: 'C', label: 'Imprimir sin cerrar' }
+        ],
+        correct: 'B'
+      }
+    ];
     // ===== FIN CONFIGURACIÓN =====
 
     const $ = sel => document.querySelector(sel);
@@ -275,12 +310,20 @@
     $('#btn-start').addEventListener('click', startCourse);
 
     // Enlace a evaluación con prefill
-    $('#btn-eval').addEventListener('click', ()=>{
-      const params = new URLSearchParams({
-        // Ajusta las keys de prefill a tu formulario
-        'entry.123456': state.nombre || '',
-        'entry.654321': state.email || ''
-      });
+    function updateProgress(){
+      const total = MODULOS.length;
+      const done = MODULOS.filter(m=>state[m.id]?.done).length;
+      const pct = Math.round((done/total)*100);
+      $('#bar').style.width = pct+'%';
+      $('#progress-label').textContent = `${pct}% completado (${done}/${total})`;
+      const allDone = done===total;
+      // habilita comenzar quiz cuando terminen todos los módulos
+      const btnStartQuiz = $('#btn-start-quiz');
+      if(btnStartQuiz) btnStartQuiz.disabled = !allDone;
+      // habilita certificado si aprobó
+      const passed = state.quiz?.passed;
+      $('#btn-cert').disabled = !(allDone && passed);
+    }
       const url = FORM_URL_BASE + (FORM_URL_BASE.includes('?')?'&':'?') + params.toString();
       window.open(url, '_blank');
       // Habilita botón de certificado tras abrir evaluación
