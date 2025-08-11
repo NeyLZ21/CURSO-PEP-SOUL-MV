@@ -25,17 +25,18 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .yt-wrap{position:relative;padding-top:56.25%;border-radius:16px;overflow:hidden;background:#000;margin-top:12px}
 .yt-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .muted{color:var(--muted)} .footer{margin-top:24px;color:var(--muted);font-size:13px}
+/* Certificado */
 #certificado{display:none} #certificado.show{display:block}
 @media print{.no-print{display:none !important} #certificado{display:block}}
 .cert-card{background:#fff;border:4px solid var(--brand);border-radius:20px;padding:40px;text-align:center}
 .cert-title{font-size:28px;font-weight:800;margin:0 0 10px;color:var(--brand)} .cert-name{font-size:26px;font-weight:800;margin:8px 0}
 .cert-meta{color:#374151;margin-top:10px}
+/* Inputs con ojito */
 .input-wrap{position:relative} .input-wrap input{width:100%;padding:12px 40px 12px 12px;border-radius:12px;border:1px solid #e5e7eb}
 .eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;border:0;background:transparent;font-size:16px}
+/* Avisos */
 .alert{border-radius:12px;padding:12px 14px;font-size:14px}
 .alert-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
-#profile-done{display:none;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:#ecfdf5;color:#065f46;margin:12px 0}
-#profile-done button{background:#065f46;color:#fff;border-radius:10px;padding:6px 10px}
 </style>
 </head>
 <body>
@@ -59,57 +60,48 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
         <h2 style="margin:0 0 6px">Acceso</h2>
         <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña. Te pediremos verificar el correo antes de iniciar el curso. Tu progreso quedará guardado en la nube.</p>
 
-        <!-- Honeypots anti-autofill de nombres -->
-        <input type="text" name="full-name" autocomplete="name" style="display:none" tabindex="-1" aria-hidden="true">
-        <input type="text" name="given-name" autocomplete="given-name" style="display:none" tabindex="-1" aria-hidden="true">
-        <input type="text" name="family-name" autocomplete="family-name" style="display:none" tabindex="-1" aria-hidden="true">
-
-        <div class="grid" id="auth-forms" autocomplete="off">
+        <div class="grid" id="auth-forms">
           <div style="display:flex; gap:8px; margin-bottom:8px">
-            <button id="tab-login" class="btn btn-primary" type="button">Iniciar sesión</button>
-            <button id="tab-register" class="btn btn-muted" type="button">Registrarme</button>
+            <button id="tab-login" class="btn btn-primary">Iniciar sesión</button>
+            <button id="tab-register" class="btn btn-muted">Registrarme</button>
           </div>
 
           <!-- LOGIN -->
           <div id="form-login">
             <label>Correo electrónico<br>
-              <input id="login-email" name="login_email" type="email" placeholder="usuario@dominio.com"
-                     style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb"
-                     required autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false">
+              <input id="login-email" type="email" placeholder="usuario@dominio.com" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb" required>
             </label>
             <label>Contraseña<br>
               <div class="input-wrap">
-                <input id="login-pass" name="current-password" type="password" placeholder="••••••••" required autocomplete="current-password">
-                <button type="button" class="eye" data-eye="#login-pass" aria-label="Mostrar/ocultar">👁️</button>
+                <input id="login-pass" type="password" placeholder="••••••••" required>
+                <button type="button" class="eye" data-eye="#login-pass">👁️</button>
               </div>
             </label>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <button class="btn btn-primary" id="btn-login" type="button">Confirmar</button>
-              <button class="btn" id="btn-reset" type="button" style="background:#e5e7eb">Restablecer contraseña</button>
+              <button class="btn btn-primary" id="btn-login">Confirmar</button>
+              <button class="btn" id="btn-reset" style="background:#e5e7eb">Restablecer contraseña</button>
             </div>
           </div>
 
           <!-- REGISTRO -->
           <div id="form-register" style="display:none">
             <label>Correo electrónico<br>
-              <input id="reg-email" name="register_email" type="email" placeholder="usuario@dominio.com"
-                     style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb"
-                     required autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false">
+              <input id="reg-email" type="email" placeholder="usuario@dominio.com" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb" required>
             </label>
             <label>Contraseña<br>
               <div class="input-wrap">
-                <input id="reg-pass" name="new-password" type="password" placeholder="Mínimo 6 caracteres" required autocomplete="new-password">
-                <button type="button" class="eye" data-eye="#reg-pass" aria-label="Mostrar/ocultar">👁️</button>
+                <input id="reg-pass" type="password" placeholder="Mínimo 6 caracteres" required>
+                <button type="button" class="eye" data-eye="#reg-pass">👁️</button>
               </div>
             </label>
             <label>Confirmar contraseña<br>
               <div class="input-wrap">
-                <input id="reg-pass2" name="new-password2" type="password" placeholder="Repite la contraseña" required autocomplete="new-password">
-                <button type="button" class="eye" data-eye="#reg-pass2" aria-label="Mostrar/ocultar">👁️</button>
+                <input id="reg-pass2" type="password" placeholder="Repite la contraseña" required>
+                <button type="button" class="eye" data-eye="#reg-pass2">👁️</button>
               </div>
             </label>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <button class="btn btn-muted" id="btn-register-2" type="button">Crear cuenta</button>
+              <button class="btn btn-muted" id="btn-register-2">Crear cuenta</button>
             </div>
           </div>
 
@@ -119,8 +111,8 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
         <div id="verify-box" class="alert alert-warn" style="display:none;margin-top:10px">
           <strong>Verifica tu correo:</strong> te enviamos un email de verificación. Confírmalo y vuelve a esta pantalla para continuar.
           <div style="display:flex;gap:8px;margin-top:8px">
-            <button id="btn-check-verify" class="btn btn-primary" type="button">Ya verifiqué mi correo</button>
-            <button id="btn-resend-verify" class="btn btn-muted" type="button">Reenviar verificación</button>
+            <button id="btn-check-verify" class="btn btn-primary">Ya verifiqué mi correo</button>
+            <button id="btn-resend-verify" class="btn btn-muted">Reenviar verificación</button>
           </div>
         </div>
       </div>
@@ -142,26 +134,20 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     <p class="muted" id="pf-help">Completa todos los campos para habilitar los módulos.</p>
     <div class="grid cols-2">
       <label>Nombre completo (para certificado)<br>
-        <input id="pf-name" type="text" required autocomplete="name" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
+        <input id="pf-name" type="text" required style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
       </label>
       <label>Cédula o Pasaporte<br>
-        <input id="pf-id" type="text" required autocomplete="off" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
+        <input id="pf-id" type="text" required style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
       </label>
       <label>Especialidad<br>
-        <input id="pf-spec" type="text" required autocomplete="off" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
+        <input id="pf-spec" type="text" required style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
       </label>
     </div>
     <div class="actions" style="display:flex;gap:8px;margin-top:10px">
-      <button id="btn-save-profile" class="btn btn-primary" type="button">Guardar perfil</button>
+      <button id="btn-save-profile" class="btn btn-primary">Guardar perfil</button>
     </div>
     <div id="pf-msg" class="muted" style="margin-top:6px"></div>
   </section>
-
-  <!-- Barra compacta -->
-  <div id="profile-done" class="no-print">
-    <span>✅ Perfil listo.</span>
-    <button id="btn-edit-profile" type="button">Editar</button>
-  </div>
 
   <!-- Progreso -->
   <section id="progress" class="no-print" style="display:none;margin:18px 0">
@@ -186,11 +172,11 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 
     <div id="quiz-intro" class="grid cols-2">
       <div>
-        <button id="btn-start-quiz" class="btn btn-primary" disabled type="button">Comenzar evaluación</button>
+        <button id="btn-start-quiz" class="btn btn-primary" disabled>Comenzar evaluación</button>
         <p class="muted" style="font-size:12px">Debes aprobar con 80% para habilitar el certificado.</p>
       </div>
       <div>
-        <button id="btn-cert" class="btn btn-success" disabled type="button">Mostrar certificado</button>
+        <button id="btn-cert" class="btn btn-success" disabled>Mostrar certificado</button>
         <p class="muted" style="font-size:12px">Disponible cuando completes los módulos y apruebes la evaluación.</p>
       </div>
     </div>
@@ -254,12 +240,11 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-/* ======= Helpers ======= */
+/* ======= Helpers/estado por usuario ======= */
 const $ = s => document.querySelector(s);
 $('#year').textContent = new Date().getFullYear();
-function normalizeEmail(v){ return (v||'').trim().toLowerCase(); }
 const MSGS = {
-  'auth/email-already-in-use':'Correo ya registrado.',
+  'auth/email-already-in-use':'Ese correo ya tiene una cuenta. Usa Iniciar sesión.',
   'auth/invalid-email':'El formato del correo no es válido.',
   'auth/missing-email':'Ingresa tu correo.',
   'auth/missing-password':'Ingresa tu contraseña.',
@@ -273,12 +258,11 @@ const MSGS = {
 };
 const msg = (t)=>{ const el=$('#auth-msg'); if(el) el.textContent=t; };
 
-/* ======= Estado local ======= */
 let CURRENT_UID = null;
-function keyFor(uid){ return `soulmv_${uid||'anon'}`; }
+function keyFor(uid){ return soulmv_${uid||'anon'}; }
 function loadState(uid){ try{ return JSON.parse(localStorage.getItem(keyFor(uid))||'{}'); }catch{ return {}; } }
 function saveState(uid, st){ localStorage.setItem(keyFor(uid), JSON.stringify(st)); }
-let state = {};
+let state = {}; // por usuario
 
 /* ======= Tabs + ojitos ======= */
 function setTab(which){
@@ -300,118 +284,90 @@ document.querySelectorAll('.eye').forEach(btn=>{
   });
 });
 
-/* ======= Auth listener (permite entrar aun sin verificación) ======= */
+/* ======= Auth listener ======= */
 auth.onAuthStateChanged(async (user)=>{
   if(!user){
     CURRENT_UID=null; state={}; $('#auth-user').textContent='';
     $('#btn-logout').style.display='none';
-    // pantalla de acceso
-    document.getElementById('step-welcome').style.display='block';
-    document.getElementById('profile').style.display='none';
-    document.getElementById('profile-done').style.display='none';
-    document.getElementById('progress').style.display='none';
-    document.getElementById('modules').style.display='none';
-    document.getElementById('eval').style.display='none';
-    return;
+    // vuelve a tab login al cerrar
+    setTab('login');
+    showLogin(); return;
   }
-
   CURRENT_UID = user.uid;
-  state = loadState(CURRENT_UID);
+  state = loadState(CURRENT_UID); // estado local por usuario
   $('#auth-user').textContent = user.email;
-
-  document.getElementById('verify-box').style.display = user.emailVerified ? 'none' : 'block';
-  $('#btn-logout').style.display='inline-flex';
-
-  // Cargar perfil/curso en segundo plano y pasar a la app
-  syncFromCloud(user).finally(()=>{});
+  if(!user.emailVerified){
+    $('#verify-box').style.display='block';
+    $('#btn-logout').style.display='none';
+    showLogin(); return;
+  }
+  await syncFromCloud(user);
   showCourse();
 });
 
-/* ======= REGISTRO (sin prechequeo) ======= */
+/* ======= Registro / Login ======= */
 document.getElementById('btn-register-2').addEventListener('click', async ()=>{
-  const email = normalizeEmail(document.getElementById('reg-email').value);
-  const pass  = (document.getElementById('reg-pass').value || '').trim();
-  const pass2 = (document.getElementById('reg-pass2').value || '').trim();
+  const email= (document.getElementById('reg-email').value||'').trim();
+  const pass  = (document.getElementById('reg-pass').value||'').trim();
+  const pass2 = (document.getElementById('reg-pass2').value||'').trim();
   if(!email || !pass || !pass2) return msg('Completa todos los campos.');
-  if(pass !== pass2) return msg('Las contraseñas no coinciden.');
+  if(pass!==pass2) return msg('Las contraseñas no coinciden.');
 
   try{
-    const { user } = await auth.createUserWithEmailAndPassword(email, pass);
-
-    // Enviar verificación inmediata (evita "link expirado" por dominios)
-    try{
-      await user.sendEmailVerification();
-      msg('Cuenta creada. Te enviamos el correo de verificación (revisa Spam).');
-    }catch(_){
-      try{
-        await auth.currentUser?.sendEmailVerification();
-        msg('Cuenta creada. Te enviamos el correo de verificación (revisa Spam).');
-      }catch(e2){
-        msg('Cuenta creada. No se pudo enviar automáticamente, usa “Reenviar verificación”.');
-      }
+    const methods = await auth.fetchSignInMethodsForEmail(email);
+    if(methods && methods.length){
+      setTab('login');
+      document.getElementById('login-email').value = email;
+      return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.');
     }
 
-    // Inicializa progreso en la nube (no bloquea)
-    db.collection('users').doc(user.uid).collection('courses').doc('soulmv')
-      .set({}, { merge:true }).catch(()=>{});
+    const { user } = await auth.createUserWithEmailAndPassword(email, pass);
+    if (auth.currentUser?.uid !== user.uid) await auth.updateCurrentUser(user);
 
-    // UI
+    // Base en Firestore (no bloquea)
+    db.collection('users').doc(user.uid).collection('courses').doc('soulmv').set({}, { merge:true }).catch(()=>{});
+
+    // Envío AUTOMÁTICO de verificación (con reintentos cortos)
+    const actionCodeSettings = { url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1', handleCodeInApp:false };
+    let sent=false;
+    try { await user.sendEmailVerification(actionCodeSettings); sent=true; } catch(_){}
+    if(!sent && auth.currentUser){ try{ await auth.currentUser.sendEmailVerification(actionCodeSettings); sent=true; }catch(_){ } }
+    if(!sent){ await new Promise(r=>setTimeout(r,1200)); try{ await auth.currentUser?.sendEmailVerification(actionCodeSettings); sent=true; }catch(_){} }
+
+    msg(sent
+      ? 'Cuenta creada. Te enviamos el correo de verificación (revisa Spam).'
+      : 'Cuenta creada. No se pudo enviar automáticamente, usa “Reenviar verificación”.');
+
     document.getElementById('verify-box').style.display='block';
     setTab('login');
     document.getElementById('login-email').value = email;
     startVerifyPolling();
-  }catch(e){
-    if(e.code === 'auth/email-already-in-use'){
-      msg('Correo ya registrado. Usa Iniciar sesión.');
-      setTab('login'); document.getElementById('login-email').value = email;
-    }else if(e.code === 'auth/weak-password'){
-      msg('La contraseña es muy corta (mínimo 6).');
-    }else{
-      msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
-    }
-  }
+
+  }catch(e){ msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.'); }
 });
 
-/* ======= LOGIN robusto (sin pre-chequeo) ======= */
 document.getElementById('btn-login').addEventListener('click', async ()=>{
-  const email = normalizeEmail(document.getElementById('login-email').value);
-  const pass  = (document.getElementById('login-pass').value || '').trim();
+  const email=(document.getElementById('login-email').value||'').trim();
+  const pass =(document.getElementById('login-pass').value||'').trim();
   if(!email || !pass) return msg('Ingresa correo y contraseña.');
-
   try{
     await auth.signInWithEmailAndPassword(email, pass);
-
-    const u = auth.currentUser;
-    if(u && !u.emailVerified){
-      msg('Sesión iniciada. Verifica tu correo para completar el acceso.');
-      document.getElementById('verify-box').style.display='block';
-    }else{
-      msg('Sesión iniciada.');
-      document.getElementById('verify-box').style.display='none';
-    }
-    showCourse();
+    msg('Sesión iniciada.');
   }catch(e){
-    if(e.code === 'auth/user-not-found'){
+    if (e.code==='auth/user-not-found') {
       msg('Correo no registrado.');
-      setTab('reg'); document.getElementById('reg-email').value = email;
-    }else if(
-      e.code === 'auth/wrong-password' ||
-      e.code === 'auth/invalid-credential' ||
-      e.code === 'auth/invalid-login-credentials'
-    ){
+      setTab('reg');
+      document.getElementById('reg-email').value = email;
+    } else if (e.code==='auth/wrong-password' || e.code==='auth/invalid-credential' || e.code==='auth/invalid-login-credentials') {
       msg('Contraseña incorrecta.');
-    }else if(e.code === 'auth/too-many-requests'){
-      msg(MSGS[e.code]);
-    }else if(e.code === 'auth/account-exists-with-different-credential'){
-      msg('Ya existe una cuenta con otro método (Google, etc.). Usa ese proveedor.');
-    }else{
+    } else {
       msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
     }
   }
 });
 
 document.getElementById('btn-reset').addEventListener('click', async ()=>{
-  const email = normalizeEmail(document.getElementById('login-email').value);
+  const email=(document.getElementById('login-email').value||'').trim();
   if(!email) return msg('Escribe tu correo para enviarte el enlace.');
   try{ await auth.sendPasswordResetEmail(email); msg('Te enviamos un correo para restablecer la contraseña.'); }
   catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.'); }
@@ -440,37 +396,37 @@ function startVerifyPolling(){
   }, 8000);
 }
 document.getElementById('btn-check-verify').addEventListener('click', async ()=>{
-  if(auth.currentUser){
-    await auth.currentUser.reload();
-    if(auth.currentUser.emailVerified){ document.getElementById('verify-box').style.display='none'; showCourse(); }
-  }
+  if(auth.currentUser){ await auth.currentUser.reload(); if(auth.currentUser.emailVerified){ document.getElementById('verify-box').style.display='none'; showCourse(); } }
 });
 document.getElementById('btn-resend-verify').addEventListener('click', async ()=>{
   try{
-    await auth.currentUser?.sendEmailVerification();
-    msg('Te enviamos el correo de verificación (revisa Spam).');
-    startVerifyPolling();
+    const actionCodeSettings = { url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1', handleCodeInApp:false };
+    if(auth.currentUser){
+      await auth.currentUser.sendEmailVerification(actionCodeSettings);
+      msg('Te enviamos el correo de verificación (revisa Spam).');
+      startVerifyPolling();
+    }else{ msg('Primero inicia sesión.'); }
   }catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.'); }
 });
 if(new URLSearchParams(location.search).get('verified')) startVerifyPolling();
 
 /* ======= Vistas ======= */
-function refreshProfileUI(){
-  const completed = profileComplete();
-  document.getElementById('profile').style.display      = completed ? 'none' : 'block';
-  document.getElementById('profile-done').style.display = completed ? 'flex' : 'none';
-  document.getElementById('pf-help').textContent = completed
-    ? 'Puedes actualizar tus datos cuando quieras.'
-    : 'Completa todos los campos para habilitar los módulos.';
-}
 function showCourse(){
-  if(!auth.currentUser){ return; }
+  if(!auth.currentUser || !auth.currentUser.emailVerified){ return; }
   document.getElementById('step-welcome').style.display='none';
+  document.getElementById('profile').style.display='block';
   document.getElementById('btn-logout').style.display='inline-flex';
-  loadProfile().finally(()=>{
-    refreshProfileUI();
+  // Cargar perfil y activar módulos de inmediato si está completo
+  loadProfile().then(()=>{
     toggleCourse(profileComplete());
   });
+}
+function showLogin(){
+  document.getElementById('step-welcome').style.display='block';
+  document.getElementById('profile').style.display='none';
+  document.getElementById('progress').style.display='none';
+  document.getElementById('modules').style.display='none';
+  document.getElementById('eval').style.display='none';
 }
 function profileComplete(){
   const p = state.profile || {};
@@ -482,16 +438,14 @@ function toggleCourse(enabled){
     document.getElementById('modules').style.display='grid';
     document.getElementById('eval').style.display='block';
     renderModules(); updateProgress();
+    document.getElementById('pf-help').textContent = 'Puedes actualizar tus datos cuando quieras.';
   }else{
     document.getElementById('progress').style.display='none';
     document.getElementById('modules').style.display='none';
     document.getElementById('eval').style.display='none';
+    document.getElementById('pf-help').textContent = 'Completa todos los campos para habilitar los módulos.';
   }
 }
-document.getElementById('btn-edit-profile').addEventListener('click', ()=>{
-  document.getElementById('profile').style.display='block';
-  document.getElementById('profile-done').style.display='none';
-});
 
 /* ======= Módulos (YouTube) ======= */
 const players = {};
@@ -501,7 +455,7 @@ function renderModules(){
     const done = !!(state[m.id]?.done);
     const locked = idx>0 && !state[MODULOS[idx-1].id]?.done;
     const card=document.createElement('article'); card.className='card module';
-    card.innerHTML=`
+    card.innerHTML=
       <div class="num">${idx+1}</div>
       <div class="meta">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
@@ -510,14 +464,14 @@ function renderModules(){
         </div>
         <p class="muted" style="margin:6px 0 10px">Debes ver el video completo para marcar el módulo como terminado.</p>
         <div class="yt-wrap" id="wrap-${m.id}">
-          ${locked?`<div style="position:absolute;inset:0;display:grid;place-content:center;color:#fff;background:rgba(0,0,0,.6);text-align:center;padding:20px">Completa primero el módulo ${idx}.<br><small>(bloqueado)</small></div>`:''}
+          ${locked?<div style="position:absolute;inset:0;display:grid;place-content:center;color:#fff;background:rgba(0,0,0,.6);text-align:center;padding:20px">Completa primero el módulo ${idx}.<br><small>(bloqueado)</small></div>:''}
           <div id="player-${m.id}"></div>
         </div>
         <div style="display:flex;gap:8px;margin-top:10px">
           <button class="btn btn-muted" data-restart="${m.id}">Reiniciar</button>
           <button class="btn ${done?'btn-success':'btn-primary'}" data-complete="${m.id}" ${done?'':'disabled'}>${done?'Completado ✓':'Marcar como completado'}</button>
         </div>
-      </div>`;
+      </div>;
     wrap.appendChild(card);
   });
   wrap.querySelectorAll('[data-restart]').forEach(b=>b.addEventListener('click',e=>{
@@ -532,14 +486,14 @@ function renderModules(){
 window.onYouTubeIframeAPIReady = function(){
   MODULOS.forEach((m,idx)=>{
     const disabled = idx>0 && !state[MODULOS[idx-1].id]?.done;
-    players[m.id] = new YT.Player(`player-${m.id}`,{
+    players[m.id] = new YT.Player(player-${m.id},{
       height:'360', width:'640', videoId:m.yt,
       playerVars:{rel:0,modestbranding:1,controls:1,disablekb:1},
       events:{
         onReady:(ev)=>{ if(disabled){ ev.target.stopVideo(); } },
         onStateChange:(ev)=>{
           if(ev.data===YT.PlayerState.ENDED){
-            const btn=document.querySelector(`[data-complete="${m.id}"]`);
+            const btn=document.querySelector([data-complete="${m.id}"]);
             if(btn){ btn.disabled=false; btn.classList.remove('btn-primary'); btn.classList.add('btn-success'); btn.textContent='Marcar como completado'; }
           }
           if(ev.data===YT.PlayerState.PLAYING){
@@ -561,7 +515,7 @@ function updateProgress(){
   const done =MODULOS.filter(m=>state[m.id]?.done).length;
   const pct  =Math.round((done/total)*100);
   document.getElementById('bar').style.width=pct+'%';
-  document.getElementById('progress-label').textContent=`${pct}% completado (${done}/${total})`;
+  document.getElementById('progress-label').textContent=${pct}% completado (${done}/${total});
   const allDone=(done===total);
   document.getElementById('btn-start-quiz').disabled=!allDone;
   const passed=state.quiz?.passed;
@@ -571,23 +525,23 @@ function renderQuiz(){
   const wrap=document.getElementById('quiz'); wrap.innerHTML='';
   QUESTIONS.forEach((q,idx)=>{
     const card=document.createElement('div'); card.className='card'; card.style.marginBottom='12px';
-    const opts=q.options.map(o=>`
+    const opts=q.options.map(o=>
       <label style="display:flex;gap:8px;align-items:center;margin:6px 0">
         <input type="radio" name="${q.id}" value="${o.key}">
         <span>${o.key}) ${o.label}</span>
-      </label>`).join('');
-    card.innerHTML=`<strong>${idx+1}. ${q.text}</strong><div style="margin-top:6px">${opts}</div>`;
+      </label>).join('');
+    card.innerHTML=<strong>${idx+1}. ${q.text}</strong><div style="margin-top:6px">${opts}</div>;
     wrap.appendChild(card);
   });
   const submit=document.createElement('button'); submit.className='btn btn-primary'; submit.textContent='Enviar evaluación';
   submit.addEventListener('click', gradeQuiz); wrap.appendChild(submit);
 }
 function gradeQuiz(){
-  let correct=0; QUESTIONS.forEach(q=>{ const c=document.querySelector(`input[name="${q.id}"]:checked`); if(c && c.value===q.correct) correct++; });
+  let correct=0; QUESTIONS.forEach(q=>{ const c=document.querySelector(input[name="${q.id}"]:checked); if(c && c.value===q.correct) correct++; });
   const scorePct=Math.round((correct/QUESTIONS.length)*100);
   state.quiz={correct,total:QUESTIONS.length,scorePct,passed:scorePct>=PASS_PCT}; saveState(CURRENT_UID,state);
   const result=document.getElementById('quiz-result'); result.style.display='block';
-  result.textContent=`Resultado: ${correct}/${QUESTIONS.length} (${scorePct}%). ${state.quiz.passed?'✅ Aprobado':'❌ No aprobado'}.`;
+  result.textContent=Resultado: ${correct}/${QUESTIONS.length} (${scorePct}%). ${state.quiz.passed?'✅ Aprobado':'❌ No aprobado'}.;
   if(state.quiz.passed){ document.getElementById('btn-cert').disabled=false; }
   setTimeout(syncToCloud,300);
   window.scrollTo({ top: result.offsetTop-80, behavior:'smooth' });
@@ -601,7 +555,7 @@ document.getElementById('btn-cert')?.addEventListener('click', ()=>{
   const preferName = state.profile?.name || auth.currentUser?.displayName || '';
   document.getElementById('cert-nombre').textContent = preferName;
   const f=new Date(); const fecha=f.toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'});
-  document.getElementById('cert-fecha').textContent=`Fecha: ${fecha}`;
+  document.getElementById('cert-fecha').textContent=Fecha: ${fecha};
   document.getElementById('certificado').classList.add('show'); setTimeout(()=>window.print(),400);
 });
 
@@ -650,28 +604,22 @@ async function loadProfile(){
   }catch(e){ console.warn('Perfil no disponible',e); }
 }
 async function saveProfile(){
-  const name=($('#pf-name').value||'').trim();
-  const iddoc=($('#pf-id').value||'').trim();
-  const spec =($('#pf-spec').value||'').trim();
+  const name=(document.getElementById('pf-name').value||'').trim();
+  const iddoc=(document.getElementById('pf-id').value||'').trim();
+  const spec =(document.getElementById('pf-spec').value||'').trim();
   if(!name || !iddoc || !spec){
     document.getElementById('pf-msg').textContent='Completa nombre, cédula/pasaporte y especialidad.';
     return;
   }
-  // Optimista (UI responde sin esperar a la nube)
-  state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
-  document.getElementById('pf-msg').textContent='Guardando…';
-  toggleCourse(true);
-  refreshProfileUI();
-
   try{
     const uid=auth.currentUser?.uid; if(!uid) return;
-    db.collection('users').doc(uid).collection('profile').doc('main')
-      .set(state.profile,{merge:true})
-      .then(()=>{ document.getElementById('pf-msg').textContent='✅ Perfil guardado.'; })
-      .catch(()=>{ document.getElementById('pf-msg').textContent='Guardado local. No se pudo sincronizar ahora.'; });
-  }catch(_){
-    document.getElementById('pf-msg').textContent='Guardado local. No se pudo sincronizar ahora.';
-  }
+    await db.collection('users').doc(uid).collection('profile').doc('main').set({name,iddoc,spec},{merge:true});
+    state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
+    if(name){ await auth.currentUser.updateProfile({displayName:name}); }
+    document.getElementById('pf-msg').textContent='✅ Perfil guardado.';
+    // Activa módulos inmediatamente (sin esperar a la nube)
+    toggleCourse(true);
+  }catch(e){ document.getElementById('pf-msg').textContent='No se pudo guardar: '+(MSGS[e.code]||e.message); }
 }
 document.getElementById('btn-save-profile').addEventListener('click', saveProfile);
 </script>
