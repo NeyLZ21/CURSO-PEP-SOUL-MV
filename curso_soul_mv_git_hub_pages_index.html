@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Inducción Soul MV • Hospital</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --brand:#781C38;/* rojo vino HVQ */
+      --ink:#1f2937;--muted:#6b7280;--bg:#f8fafc;--card:#ffffff;--ok:#15803d;--warn:#b45309
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+    .container{max-width:980px;margin:auto;padding:24px}
+    header{display:flex;gap:16px;align-items:center;margin:12px 0 20px}
+    header .logo{width:48px;height:48px;border-radius:12px;background:var(--brand);display:grid;place-content:center;color:#fff;font-weight:800}
+    h1{font-size:clamp(22px,3.5vw,34px);margin:0}
+    .subtitle{color:var(--muted);margin-top:4px}
+    .card{background:var(--card);border-radius:18px;box-shadow:0 10px 24px rgba(0,0,0,.06);padding:20px}
+    .grid{display:grid;gap:16px}
+    .grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    @media (max-width:800px){.grid.cols-2{grid-template-columns:1fr}}
+    button, .btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor:pointer;font-weight:600}
+    .btn-primary{background:var(--brand);color:#fff}
+    .btn-muted{background:#e5e7eb;color:#111827}
+    .btn-success{background:var(--ok);color:#fff}
+    .btn[disabled]{opacity:.5;cursor:not-allowed}
+    .badge{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:600;background:#eef2ff;color:#3730a3}
+    .progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}
+    .progress>span{display:block;height:100%;background:var(--brand);width:0}
+    .module{display:flex;gap:16px;align-items:flex-start}
+    .module .num{flex:0 0 auto;width:36px;height:36px;border-radius:10px;background:#f3f4f6;display:grid;place-content:center;font-weight:700}
+    .module .meta{flex:1}
+    .yt-wrap{position:relative;padding-top:56.25%;border-radius:16px;overflow:hidden;background:#000;margin-top:12px}
+    .yt-wrap iframe,.yt-wrap video{position:absolute;inset:0;width:100%;height:100%;border:0}
+    .muted{color:var(--muted)}
+    .footer{margin-top:24px;color:var(--muted);font-size:13px}
+    /* Certificado print */
+    #certificado{display:none}
+    #certificado.show{display:block}
+    @media print{
+      body{background:#fff}
+      .no-print{display:none !important}
+      #certificado{display:block}
+    }
+    .cert-card{background:#fff;border:4px solid var(--brand);border-radius:20px;padding:40px;text-align:center}
+    .cert-title{font-size:28px;font-weight:800;margin:0 0 10px;color:var(--brand)}
+    .cert-name{font-size:26px;font-weight:800;margin:8px 0}
+    .cert-meta{color:#374151;margin-top:10px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="no-print">
+      <div class="logo">HV</div>
+      <div>
+        <h1>Inducción a Soul MV</h1>
+        <div class="subtitle">Curso para nuevos médicos • Hospital Vozandes</div>
+      </div>
+    </header>
+
+    <!-- Inicio / Registro -->
+    <section id="step-welcome" class="card no-print">
+      <div class="grid cols-2" style="align-items:center">
+        <div>
+          <h2 style="margin:0 0 6px">Bienvenido(a)</h2>
+          <p class="muted" style="margin:0 0 14px">Completa tu nombre y correo institucional. Estos datos se usarán en la evaluación y en el certificado.</p>
+          <div class="grid">
+            <label>Nombre y apellido<br>
+              <input id="inp-nombre" type="text" placeholder="Ej.: María Pérez" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb" required>
+            </label>
+            <label>Correo institucional<br>
+              <input id="inp-email" type="email" placeholder="usuario@hospital.org" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb" required>
+            </label>
+            <button class="btn btn-primary" id="btn-start">Iniciar curso</button>
+          </div>
+          <p class="muted" style="margin-top:8px;font-size:12px">Progreso guardado en este navegador (localmente).</p>
+        </div>
+        <div class="card" style="background:#fff7f7;border:1px dashed #fda4af">
+          <div class="badge" title="Requisito"><span>ℹ️</span> Requisitos</div>
+          <ul>
+            <li>Tener acceso a Internet</li>
+            <li>Iniciar sesión con tu correo institucional para la evaluación</li>
+            <li>Completar todos los videos para habilitar el cuestionario</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Progreso -->
+    <section id="progress" class="no-print" style="display:none;margin:18px 0">
+      <div class="card">
+        <div class="grid cols-2" style="align-items:center">
+          <div>
+            <strong>Progreso del curso</strong>
+            <div class="muted" id="progress-label">0% completado</div>
+          </div>
+          <div class="progress"><span id="bar" style="width:0%"></span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Módulos -->
+    <section id="modules" class="grid no-print" style="display:none">
+      <!-- Los módulos se generan por JS -->
+    </section>
+
+    <!-- Evaluación + Certificado -->
+    <section id="eval" class="card no-print" style="display:none;margin-top:16px">
+      <h2 style="margin-top:0">Evaluación final</h2>
+      <p class="muted">Responde el cuestionario. Se habilita cuando completes todos los módulos.</p>
+      <div class="grid cols-2">
+        <div>
+          <button id="btn-eval" class="btn btn-primary" disabled>Ir al cuestionario</button>
+          <p class="muted" style="font-size:12px">El cuestionario se abrirá en una nueva pestaña (Google/Microsoft Forms). Debes aprobar con 80%.</p>
+        </div>
+        <div>
+          <button id="btn-cert" class="btn btn-success" disabled>Mostrar certificado</button>
+          <p class="muted" style="font-size:12px">Disponible cuando completes los módulos y confirmes haber enviado la evaluación.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Certificado imprimible -->
+    <section id="certificado" class="container">
+      <div class="cert-card">
+        <div class="cert-title">Certificado de participación</div>
+        <p>Otorgado a</p>
+        <div class="cert-name" id="cert-nombre">Nombre Apellido</div>
+        <p>por completar el curso <strong>Inducción a Soul MV</strong>.</p>
+        <div class="cert-meta">
+          <div id="cert-fecha"></div>
+          <div>Hospital Vozandes • Formación Interna</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer no-print">© <span id="year"></span> Hospital Vozandes — Inducción Soul MV</div>
+  </div>
+
+  <!-- YouTube API para detectar fin de video -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script>
+    // ===== CONFIGURACIÓN =====
+    // 1) Pon aquí tus módulos y videos (IDs de YouTube). Puedes añadir o quitar.
+    const MODULOS = [
+      { id: 'mod1', titulo: 'Navegación básica en Soul MV', yt: 'dQw4w9WgXcQ', duracion: '10:05' },
+      { id: 'mod2', titulo: 'Prescripción y órdenes médicas', yt: 'l482T0yNkeo', duracion: '08:40' },
+      { id: 'mod3', titulo: 'Auditoría médica – honorarios', yt: '9bZkp7q19f0', duracion: '12:10' }
+    ];
+
+    // 2) URL del cuestionario (Google/Microsoft Forms) con soportes de pre-llenado.
+    // Reemplaza por tu enlace real. Puedes usar campos prefill como ?entry.123=name&entry.456=email
+    const FORM_URL_BASE = 'https://docs.google.com/forms/d/e/TU_FORM_ID/viewform';
+    const REQUIERE_APROBAR = true; // Sólo informativo visual (no valida notas desde aquí)
+
+    // ===== FIN CONFIGURACIÓN =====
+
+    const $ = sel => document.querySelector(sel);
+    const storeKey = 'soulmv_curso_v1';
+    const state = JSON.parse(localStorage.getItem(storeKey) || '{}');
+
+    function save(){ localStorage.setItem(storeKey, JSON.stringify(state)); }
+
+    function init(){
+      $('#year').textContent = new Date().getFullYear();
+      const nombre = state.nombre || '';
+      const email = state.email || '';
+      if(nombre && email){
+        $('#inp-nombre').value = nombre; $('#inp-email').value = email;
+        startCourse();
+      }
+    }
+
+    // Construye tarjetas de módulos
+    const players = {}; // refs a reproductores de YouTube
+    function renderModules(){
+      const wrap = $('#modules');
+      wrap.innerHTML = '';
+      MODULOS.forEach((m, idx) => {
+        const done = state[m.id]?.done;
+        const locked = idx>0 && !state[MODULOS[idx-1].id]?.done; // bloquear si previo no terminado
+        const card = document.createElement('article');
+        card.className = 'card module';
+        card.innerHTML = `
+          <div class="num">${idx+1}</div>
+          <div class="meta">
+            <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+              <h3 style="margin:0">${m.titulo}</h3>
+              <span class="badge">${m.duracion}</span>
+            </div>
+            <p class="muted" style="margin:6px 0 10px">Debes ver el video completo para marcar el módulo como terminado.</p>
+            <div class="yt-wrap" id="wrap-${m.id}">
+              ${locked ? `<div style="position:absolute;inset:0;display:grid;place-content:center;color:#fff;background:rgba(0,0,0,.6);text-align:center;padding:20px">Completa primero el módulo ${idx}.<br><small>(bloqueado)</small></div>` : ''}
+              <div id="player-${m.id}"></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <button class="btn btn-muted" data-restart="${m.id}">Reiniciar</button>
+              <button class="btn ${done?'btn-success':'btn-primary'}" data-complete="${m.id}" ${done?'':'disabled'}>${done?'Completado ✓':'Marcar como completado'}</button>
+            </div>
+          </div>
+        `;
+        wrap.appendChild(card);
+      })
+
+      // Botones
+      wrap.querySelectorAll('[data-restart]').forEach(b=>b.addEventListener('click', e=>{
+        const id = e.currentTarget.getAttribute('data-restart');
+        players[id]?.seekTo(0,true);
+      }))
+      wrap.querySelectorAll('[data-complete]').forEach(b=>b.addEventListener('click', e=>{
+        const id = e.currentTarget.getAttribute('data-complete');
+        state[id] = state[id] || {}; state[id].done = true; save(); updateProgress(); renderModules();
+      }))
+    }
+
+    // YouTube API setup
+    window.onYouTubeIframeAPIReady = function(){
+      // Crea un player por módulo
+      MODULOS.forEach((m, idx) => {
+        const disabled = idx>0 && !state[MODULOS[idx-1].id]?.done;
+        players[m.id] = new YT.Player(`player-${m.id}`, {
+          height: '360', width: '640', videoId: m.yt,
+          playerVars: {rel:0,modestbranding:1,controls:1,disablekb:1},
+          events: {
+            'onReady': (ev)=>{ if(disabled){ev.target.stopVideo();} },
+            'onStateChange': (ev)=>{
+              // Al finalizar el video, habilitamos el botón "Marcar como completado"
+              if(ev.data === YT.PlayerState.ENDED){
+                const btn = document.querySelector(`[data-complete="${m.id}"]`);
+                if(btn){ btn.disabled = false; btn.classList.remove('btn-primary'); btn.classList.add('btn-success'); btn.textContent = 'Marcar como completado'; }
+              }
+              // Bloquear adelantos: si intenta saltar demasiado, lo regresamos
+              if(ev.data === YT.PlayerState.PLAYING){
+                try{
+                  const t = ev.target.getCurrentTime();
+                  const last = state[m.id]?.t || 0;
+                  if(t > last + 30){ ev.target.seekTo(last, true); }
+                  state[m.id] = state[m.id] || {}; state[m.id].t = t; save();
+                }catch(err){}
+              }
+            }
+          }
+        });
+      })
+    }
+
+    function updateProgress(){
+      const total = MODULOS.length;
+      const done = MODULOS.filter(m=>state[m.id]?.done).length;
+      const pct = Math.round((done/total)*100);
+      $('#bar').style.width = pct+'%';
+      $('#progress-label').textContent = `${pct}% completado (${done}/${total})`;
+      const allDone = done===total;
+      $('#btn-eval').disabled = !allDone;
+    }
+
+    // Inicio del curso
+    function startCourse(){
+      const nombre = ($('#inp-nombre').value||'').trim();
+      const email = ($('#inp-email').value||'').trim();
+      if(!nombre || !email){ return alert('Completa tu nombre y correo.'); }
+      state.nombre = nombre; state.email = email; save();
+      $('#step-welcome').style.display='none';
+      $('#progress').style.display='block';
+      $('#modules').style.display='grid';
+      $('#eval').style.display='block';
+      renderModules();
+      updateProgress();
+    }
+
+    $('#btn-start').addEventListener('click', startCourse);
+
+    // Enlace a evaluación con prefill
+    $('#btn-eval').addEventListener('click', ()=>{
+      const params = new URLSearchParams({
+        // Ajusta las keys de prefill a tu formulario
+        'entry.123456': state.nombre || '',
+        'entry.654321': state.email || ''
+      });
+      const url = FORM_URL_BASE + (FORM_URL_BASE.includes('?')?'&':'?') + params.toString();
+      window.open(url, '_blank');
+      // Habilita botón de certificado tras abrir evaluación
+      $('#btn-cert').disabled = false;
+    });
+
+    // Certificado (para imprimir/guardar PDF)
+    $('#btn-cert').addEventListener('click', ()=>{
+      // Rellena datos y muestra sección certificado, luego abre diálogo de impresión
+      $('#cert-nombre').textContent = state.nombre || '';
+      const f = new Date();
+      const fecha = f.toLocaleDateString('es-EC', {year:'numeric',month:'long',day:'numeric'});
+      $('#cert-fecha').textContent = `Fecha: ${fecha}`;
+      $('#certificado').classList.add('show');
+      setTimeout(()=>window.print(), 400);
+    });
+
+    // Autoinit
+    init();
+  </script>
+</body>
+</html>
