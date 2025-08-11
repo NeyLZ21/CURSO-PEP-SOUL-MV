@@ -259,7 +259,7 @@ const MSGS = {
 const msg = (t)=>{ const el=$('#auth-msg'); if(el) el.textContent=t; };
 
 let CURRENT_UID = null;
-function keyFor(uid){ return soulmv_${uid||'anon'}; }
+function keyFor(uid){ return `soulmv_${uid||'anon'}`; }
 function loadState(uid){ try{ return JSON.parse(localStorage.getItem(keyFor(uid))||'{}'); }catch{ return {}; } }
 function saveState(uid, st){ localStorage.setItem(keyFor(uid), JSON.stringify(st)); }
 let state = {}; // por usuario
@@ -455,7 +455,7 @@ function renderModules(){
     const done = !!(state[m.id]?.done);
     const locked = idx>0 && !state[MODULOS[idx-1].id]?.done;
     const card=document.createElement('article'); card.className='card module';
-    card.innerHTML=
+    card.innerHTML=`
       <div class="num">${idx+1}</div>
       <div class="meta">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
@@ -464,14 +464,14 @@ function renderModules(){
         </div>
         <p class="muted" style="margin:6px 0 10px">Debes ver el video completo para marcar el módulo como terminado.</p>
         <div class="yt-wrap" id="wrap-${m.id}">
-          ${locked?<div style="position:absolute;inset:0;display:grid;place-content:center;color:#fff;background:rgba(0,0,0,.6);text-align:center;padding:20px">Completa primero el módulo ${idx}.<br><small>(bloqueado)</small></div>:''}
+          ${locked?`<div style="position:absolute;inset:0;display:grid;place-content:center;color:#fff;background:rgba(0,0,0,.6);text-align:center;padding:20px">Completa primero el módulo ${idx}.<br><small>(bloqueado)</small></div>`:''}
           <div id="player-${m.id}"></div>
         </div>
         <div style="display:flex;gap:8px;margin-top:10px">
           <button class="btn btn-muted" data-restart="${m.id}">Reiniciar</button>
           <button class="btn ${done?'btn-success':'btn-primary'}" data-complete="${m.id}" ${done?'':'disabled'}>${done?'Completado ✓':'Marcar como completado'}</button>
         </div>
-      </div>;
+      </div>`;
     wrap.appendChild(card);
   });
   wrap.querySelectorAll('[data-restart]').forEach(b=>b.addEventListener('click',e=>{
@@ -486,14 +486,14 @@ function renderModules(){
 window.onYouTubeIframeAPIReady = function(){
   MODULOS.forEach((m,idx)=>{
     const disabled = idx>0 && !state[MODULOS[idx-1].id]?.done;
-    players[m.id] = new YT.Player(player-${m.id},{
+    players[m.id] = new YT.Player(`player-${m.id}`,{
       height:'360', width:'640', videoId:m.yt,
       playerVars:{rel:0,modestbranding:1,controls:1,disablekb:1},
       events:{
         onReady:(ev)=>{ if(disabled){ ev.target.stopVideo(); } },
         onStateChange:(ev)=>{
           if(ev.data===YT.PlayerState.ENDED){
-            const btn=document.querySelector([data-complete="${m.id}"]);
+            const btn=document.querySelector(`[data-complete="${m.id}"]`);
             if(btn){ btn.disabled=false; btn.classList.remove('btn-primary'); btn.classList.add('btn-success'); btn.textContent='Marcar como completado'; }
           }
           if(ev.data===YT.PlayerState.PLAYING){
@@ -515,7 +515,7 @@ function updateProgress(){
   const done =MODULOS.filter(m=>state[m.id]?.done).length;
   const pct  =Math.round((done/total)*100);
   document.getElementById('bar').style.width=pct+'%';
-  document.getElementById('progress-label').textContent=${pct}% completado (${done}/${total});
+  document.getElementById('progress-label').textContent=`${pct}% completado (${done}/${total})`;
   const allDone=(done===total);
   document.getElementById('btn-start-quiz').disabled=!allDone;
   const passed=state.quiz?.passed;
@@ -525,23 +525,23 @@ function renderQuiz(){
   const wrap=document.getElementById('quiz'); wrap.innerHTML='';
   QUESTIONS.forEach((q,idx)=>{
     const card=document.createElement('div'); card.className='card'; card.style.marginBottom='12px';
-    const opts=q.options.map(o=>
+    const opts=q.options.map(o=>`
       <label style="display:flex;gap:8px;align-items:center;margin:6px 0">
         <input type="radio" name="${q.id}" value="${o.key}">
         <span>${o.key}) ${o.label}</span>
-      </label>).join('');
-    card.innerHTML=<strong>${idx+1}. ${q.text}</strong><div style="margin-top:6px">${opts}</div>;
+      </label>`).join('');
+    card.innerHTML=`<strong>${idx+1}. ${q.text}</strong><div style="margin-top:6px">${opts}</div>`;
     wrap.appendChild(card);
   });
   const submit=document.createElement('button'); submit.className='btn btn-primary'; submit.textContent='Enviar evaluación';
   submit.addEventListener('click', gradeQuiz); wrap.appendChild(submit);
 }
 function gradeQuiz(){
-  let correct=0; QUESTIONS.forEach(q=>{ const c=document.querySelector(input[name="${q.id}"]:checked); if(c && c.value===q.correct) correct++; });
+  let correct=0; QUESTIONS.forEach(q=>{ const c=document.querySelector(`input[name="${q.id}"]:checked`); if(c && c.value===q.correct) correct++; });
   const scorePct=Math.round((correct/QUESTIONS.length)*100);
   state.quiz={correct,total:QUESTIONS.length,scorePct,passed:scorePct>=PASS_PCT}; saveState(CURRENT_UID,state);
   const result=document.getElementById('quiz-result'); result.style.display='block';
-  result.textContent=Resultado: ${correct}/${QUESTIONS.length} (${scorePct}%). ${state.quiz.passed?'✅ Aprobado':'❌ No aprobado'}.;
+  result.textContent=`Resultado: ${correct}/${QUESTIONS.length} (${scorePct}%). ${state.quiz.passed?'✅ Aprobado':'❌ No aprobado'}.`;
   if(state.quiz.passed){ document.getElementById('btn-cert').disabled=false; }
   setTimeout(syncToCloud,300);
   window.scrollTo({ top: result.offsetTop-80, behavior:'smooth' });
@@ -555,7 +555,7 @@ document.getElementById('btn-cert')?.addEventListener('click', ()=>{
   const preferName = state.profile?.name || auth.currentUser?.displayName || '';
   document.getElementById('cert-nombre').textContent = preferName;
   const f=new Date(); const fecha=f.toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'});
-  document.getElementById('cert-fecha').textContent=Fecha: ${fecha};
+  document.getElementById('cert-fecha').textContent=`Fecha: ${fecha}`;
   document.getElementById('certificado').classList.add('show'); setTimeout(()=>window.print(),400);
 });
 
