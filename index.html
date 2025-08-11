@@ -1,146 +1,679 @@
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-import {
-  getAuth,
-  onAuthStateChanged,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  sendEmailVerification,
-  signOut
-} from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
-import {
-  getFirestore,
-  doc,
-  setDoc
-} from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Inducción a Soul MV • Hospital Vozandes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--brand:#781C38;--ink:#1f2937;--muted:#6b7280;--bg:#f8fafc;--card:#ffffff;--ok:#15803d}
+*{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+.container{max-width:980px;margin:auto;padding:24px}
+header{display:flex;gap:16px;align-items:center;margin:12px 0 20px}
+header .logo{width:48px;height:48px;border-radius:12px;background:var(--brand);display:grid;place-content:center;color:#fff;font-weight:800}
+h1{font-size:clamp(22px,3.5vw,34px);margin:0}.subtitle{color:var(--muted);margin-top:4px}
+.card{background:var(--card);border-radius:18px;box-shadow:0 10px 24px rgba(0,0,0,.06);padding:20px}
+.grid{display:grid;gap:16px}.grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))} @media (max-width:800px){.grid.cols-2{grid-template-columns:1fr}}
+button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor:pointer;font-weight:600}
+.btn-primary{background:var(--brand);color:#fff}.btn-muted{background:#e5e7eb;color:#111827}.btn-success{background:var(--ok);color:#fff}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.badge{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:600;background:#eef2ff;color:#3730a3}
+.progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}.progress>span{display:block;height:100%;background:var(--brand);width:0}
+.module{display:flex;gap:16px;align-items:flex-start}.module .num{flex:0 0 auto;width:36px;height:36px;border-radius:10px;background:#f3f4f6;display:grid;place-content:center;font-weight:700}.module .meta{flex:1}
+.yt-wrap{position:relative;padding-top:56.25%;border-radius:16px;overflow:hidden;background:#000;margin-top:12px}
+.yt-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.muted{color:var(--muted)} .footer{margin-top:24px;color:var(--muted);font-size:13px}
+#certificado{display:none} #certificado.show{display:block}
+@media print{.no-print{display:none !important} #certificado{display:block}}
+.cert-card{background:#fff;border:4px solid var(--brand);border-radius:20px;padding:40px;text-align:center}
+.cert-title{font-size:28px;font-weight:800;margin:0 0 10px;color:var(--brand)} .cert-name{font-size:26px;font-weight:800;margin:8px 0}
+.cert-meta{color:#374151;margin-top:10px}
+.input-wrap{position:relative} .input-wrap input{width:100%;padding:12px 40px 12px 12px;border-radius:12px;border:1px solid #e5e7eb}
+.eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;border:0;background:transparent;font-size:16px}
+.alert{border-radius:12px;padding:12px 14px;font-size:14px}
+.alert-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
+#profile-done{display:none;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:#ecfdf5;color:#065f46;margin:12px 0}
+#profile-done button{background:#065f46;color:#fff;border-radius:10px;padding:6px 10px}
+</style>
+</head>
+<body>
+<div class="container">
+  <header class="no-print">
+    <div class="logo">HV</div>
+    <div style="flex:1">
+      <h1>Inducción a Soul MV</h1>
+      <div class="subtitle">Curso para nuevos médicos • Hospital Vozandes</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span id="auth-user" class="muted" style="font-size:13px"></span>
+      <button id="btn-logout" class="btn btn-muted" style="display:none">Cerrar sesión</button>
+    </div>
+  </header>
 
+  <!-- Acceso -->
+  <section id="step-welcome" class="card no-print">
+    <div class="grid cols-2" style="align-items:start">
+      <div>
+        <h2 style="margin:0 0 6px">Acceso</h2>
+        <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña. Te pediremos verificar el correo antes de iniciar el curso. Tu progreso quedará guardado en la nube.</p>
+
+        <!-- Honeypots anti-autofill de nombres -->
+        <input type="text" name="full-name" autocomplete="name" style="display:none" tabindex="-1" aria-hidden="true">
+        <input type="text" name="given-name" autocomplete="given-name" style="display:none" tabindex="-1" aria-hidden="true">
+        <input type="text" name="family-name" autocomplete="family-name" style="display:none" tabindex="-1" aria-hidden="true">
+
+        <div class="grid" id="auth-forms" autocomplete="off">
+          <div style="display:flex; gap:8px; margin-bottom:8px">
+            <button id="tab-login" class="btn btn-primary" type="button">Iniciar sesión</button>
+            <button id="tab-register" class="btn btn-muted" type="button">Registrarme</button>
+          </div>
+
+          <!-- LOGIN -->
+          <div id="form-login">
+            <label>Correo electrónico<br>
+              <input id="login-email" name="login_email" type="email" placeholder="usuario@dominio.com"
+                     style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb"
+                     required autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false">
+            </label>
+            <label>Contraseña<br>
+              <div class="input-wrap">
+                <input id="login-pass" name="current-password" type="password" placeholder="••••••••" required autocomplete="current-password">
+                <button type="button" class="eye" data-eye="#login-pass" aria-label="Mostrar/ocultar">👁️</button>
+              </div>
+            </label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-primary" id="btn-login" type="button">Confirmar</button>
+              <button class="btn" id="btn-reset" type="button" style="background:#e5e7eb">Restablecer contraseña</button>
+            </div>
+          </div>
+
+          <!-- REGISTRO -->
+          <div id="form-register" style="display:none">
+            <label>Correo electrónico<br>
+              <input id="reg-email" name="register_email" type="email" placeholder="usuario@dominio.com"
+                     style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb"
+                     required autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false">
+            </label>
+            <label>Contraseña<br>
+              <div class="input-wrap">
+                <input id="reg-pass" name="new-password" type="password" placeholder="Mínimo 6 caracteres" required autocomplete="new-password">
+                <button type="button" class="eye" data-eye="#reg-pass" aria-label="Mostrar/ocultar">👁️</button>
+              </div>
+            </label>
+            <label>Confirmar contraseña<br>
+              <div class="input-wrap">
+                <input id="reg-pass2" name="new-password2" type="password" placeholder="Repite la contraseña" required autocomplete="new-password">
+                <button type="button" class="eye" data-eye="#reg-pass2" aria-label="Mostrar/ocultar">👁️</button>
+              </div>
+            </label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-muted" id="btn-register-2" type="button">Crear cuenta</button>
+            </div>
+          </div>
+
+          <div id="auth-msg" class="muted" style="min-height:18px"></div>
+        </div>
+
+        <div id="verify-box" class="alert alert-warn" style="display:none;margin-top:10px">
+          <strong>Verifica tu correo:</strong> te enviamos un email de verificación. Confírmalo y vuelve a esta pantalla para continuar.
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="btn-check-verify" class="btn btn-primary" type="button">Ya verifiqué mi correo</button>
+            <button id="btn-resend-verify" class="btn btn-muted" type="button">Reenviar verificación</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="background:#fff7f7;border:1px dashed #fda4af">
+        <div class="badge"><span>ℹ️</span> Requisitos</div>
+        <ul>
+          <li>Tener acceso a Internet</li>
+          <li>Completar todos los videos para habilitar el cuestionario</li>
+          <li>Correo válido (cualquier dominio) y verificado</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Perfil -->
+  <section id="profile" class="card no-print" style="display:none;margin:18px 0">
+    <h2 style="margin:0 0 8px">Mi perfil</h2>
+    <p class="muted" id="pf-help">Completa todos los campos para habilitar los módulos.</p>
+    <div class="grid cols-2">
+      <label>Nombre completo (para certificado)<br>
+        <input id="pf-name" type="text" required autocomplete="name" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
+      </label>
+      <label>Cédula o Pasaporte<br>
+        <input id="pf-id" type="text" required autocomplete="off" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
+      </label>
+      <label>Especialidad<br>
+        <input id="pf-spec" type="text" required autocomplete="off" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
+      </label>
+    </div>
+    <div class="actions" style="display:flex;gap:8px;margin-top:10px">
+      <button id="btn-save-profile" class="btn btn-primary" type="button">Guardar perfil</button>
+    </div>
+    <div id="pf-msg" class="muted" style="margin-top:6px"></div>
+  </section>
+
+  <!-- Barra compacta -->
+  <div id="profile-done" class="no-print">
+    <span>✅ Perfil listo.</span>
+    <button id="btn-edit-profile" type="button">Editar</button>
+  </div>
+
+  <!-- Progreso -->
+  <section id="progress" class="no-print" style="display:none;margin:18px 0">
+    <div class="card">
+      <div class="grid cols-2" style="align-items:center">
+        <div>
+          <strong>Progreso del curso</strong>
+          <div class="muted" id="progress-label">0% completado</div>
+        </div>
+        <div class="progress"><span id="bar" style="width:0%"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Módulos -->
+  <section id="modules" class="grid no-print" style="display:none"></section>
+
+  <!-- Evaluación + Certificado -->
+  <section id="eval" class="card no-print" style="display:none;margin-top:16px">
+    <h2 style="margin-top:0">Evaluación final</h2>
+    <p class="muted">Se habilita cuando completes todos los módulos.</p>
+
+    <div id="quiz-intro" class="grid cols-2">
+      <div>
+        <button id="btn-start-quiz" class="btn btn-primary" disabled type="button">Comenzar evaluación</button>
+        <p class="muted" style="font-size:12px">Debes aprobar con 80% para habilitar el certificado.</p>
+      </div>
+      <div>
+        <button id="btn-cert" class="btn btn-success" disabled type="button">Mostrar certificado</button>
+        <p class="muted" style="font-size:12px">Disponible cuando completes los módulos y apruebes la evaluación.</p>
+      </div>
+    </div>
+
+    <div id="quiz" style="display:none;margin-top:16px"></div>
+    <div id="quiz-result" class="muted" style="display:none;margin-top:10px"></div>
+  </section>
+
+  <!-- Certificado imprimible -->
+  <section id="certificado" class="container">
+    <div class="cert-card">
+      <div class="cert-title">Certificado de participación</div>
+      <p>Otorgado a</p>
+      <div class="cert-name" id="cert-nombre">Nombre Apellido</div>
+      <p>por completar el curso <strong>Inducción a Soul MV</strong>.</p>
+      <div class="cert-meta">
+        <div id="cert-fecha"></div>
+        <div>Hospital Vozandes • Formación Interna</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer no-print">© <span id="year"></span> Hospital Vozandes — Inducción Soul MV</div>
+</div>
+
+<!-- YouTube API -->
+<script src="https://www.youtube.com/iframe_api"></script>
+<!-- Firebase (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+/* ======= Config del curso ======= */
+const MODULOS = [
+  { id:'mod1', titulo:'Navegación básica en Soul MV', yt:'dQw4w9WgXcQ', duracion:'10:05' },
+  { id:'mod2', titulo:'Prescripción y órdenes médicas', yt:'l482T0yNkeo',  duracion:'08:40' },
+  { id:'mod3', titulo:'Auditoría médica – honorarios',  yt:'9bZkp7q19f0',  duracion:'12:10' }
+];
+const PASS_PCT = 80;
+const QUESTIONS = [
+  { id:'q1', text:'¿Qué módulo usas para registrar una prescripción?', options:[
+    {key:'A',label:'Módulo de Prescripción'},{key:'B',label:'Módulo de Citas'},{key:'C',label:'Módulo de Imagen'}], correct:'A'},
+  { id:'q2', text:'La auditoría de honorarios se valida contra:', options:[
+    {key:'A',label:'Notas de enfermería'},{key:'B',label:'Tarifario MSP y prescripciones cerradas'},{key:'C',label:'Epicrisis provisional'}], correct:'B'},
+  { id:'q3', text:'Para finalizar una nota clínica debes:', options:[
+    {key:'A',label:'Guardar borrador'},{key:'B',label:'Cerrar/Finalizar el documento (FECHADO)'},{key:'C',label:'Imprimir sin cerrar'}], correct:'B'}
+];
+
+/* ======= Firebase ======= */
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
-  authDomain: "TU_AUTH_DOMAIN",
-  projectId: "TU_PROJECT_ID",
-  storageBucket: "TU_STORAGE_BUCKET",
-  messagingSenderId: "TU_SENDER_ID",
-  appId: "TU_APP_ID"
+  apiKey: "AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",
+  authDomain: "induccion-pep-hvq.firebaseapp.com",
+  projectId: "induccion-pep-hvq",
+  storageBucket: "induccion-pep-hvq.firebasestorage.app",
+  messagingSenderId: "651724182766",
+  appId: "1:651724182766:web:4eec9be43e9e8e60dc0fff",
+  measurementId: "G-Z62L1CCYP1"
 };
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-let CURRENT_UID = null;
-
-/* ===== Helpers ===== */
-const $ = (sel) => document.querySelector(sel);
-function msg(txt) { alert(txt); }
+/* ======= Helpers ======= */
+const $ = s => document.querySelector(s);
+$('#year').textContent = new Date().getFullYear();
 function normalizeEmail(v){ return (v||'').trim().toLowerCase(); }
+const MSGS = {
+  'auth/email-already-in-use':'Correo ya registrado.',
+  'auth/invalid-email':'El formato del correo no es válido.',
+  'auth/missing-email':'Ingresa tu correo.',
+  'auth/missing-password':'Ingresa tu contraseña.',
+  'auth/weak-password':'La contraseña es muy corta (mínimo 6).',
+  'auth/user-not-found':'Correo no registrado.',
+  'auth/wrong-password':'Contraseña incorrecta.',
+  'auth/invalid-credential':'Contraseña incorrecta.',
+  'auth/invalid-login-credentials':'Contraseña incorrecta.',
+  'auth/too-many-requests':'Demasiados intentos. Intenta más tarde.',
+  'auth/network-request-failed':'Error de red. Revisa tu conexión.'
+};
+const msg = (t)=>{ const el=$('#auth-msg'); if(el) el.textContent=t; };
 
-/* ===== Listener de sesión ===== */
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    CURRENT_UID = null;
-    $("#auth-user").textContent = "";
-    $("#btn-logout").style.display = "none";
-    setTab("login");
+/* ======= Estado local ======= */
+let CURRENT_UID = null;
+function keyFor(uid){ return `soulmv_${uid||'anon'}`; }
+function loadState(uid){ try{ return JSON.parse(localStorage.getItem(keyFor(uid))||'{}'); }catch{ return {}; } }
+function saveState(uid, st){ localStorage.setItem(keyFor(uid), JSON.stringify(st)); }
+let state = {};
+
+/* ======= Tabs + ojitos ======= */
+function setTab(which){
+  const onLogin = which==='login';
+  $('#form-login').style.display = onLogin ? 'block' : 'none';
+  $('#form-register').style.display = onLogin ? 'none'  : 'block';
+  $('#tab-login').classList.toggle('btn-primary', onLogin);
+  $('#tab-login').classList.toggle('btn-muted',   !onLogin);
+  $('#tab-register').classList.toggle('btn-primary', !onLogin);
+  $('#tab-register').classList.toggle('btn-muted',   onLogin);
+}
+$('#tab-login').addEventListener('click', ()=>setTab('login'));
+$('#tab-register').addEventListener('click', ()=>setTab('reg'));
+setTab('login');
+document.querySelectorAll('.eye').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const inp = document.querySelector(btn.dataset.eye);
+    if(!inp) return; inp.type = inp.type==='password' ? 'text' : 'password';
+  });
+});
+
+/* ======= Auth listener (permite entrar aun sin verificación) ======= */
+auth.onAuthStateChanged(async (user)=>{
+  if(!user){
+    CURRENT_UID=null; state={}; $('#auth-user').textContent='';
+    $('#btn-logout').style.display='none';
+    // pantalla de acceso
+    document.getElementById('step-welcome').style.display='block';
+    document.getElementById('profile').style.display='none';
+    document.getElementById('profile-done').style.display='none';
+    document.getElementById('progress').style.display='none';
+    document.getElementById('modules').style.display='none';
+    document.getElementById('eval').style.display='none';
     return;
   }
 
   CURRENT_UID = user.uid;
-  $("#auth-user").textContent = user.email;
-  $("#btn-logout").style.display = "inline-flex";
-  $("#verify-box").style.display = user.emailVerified ? "none" : "block";
+  state = loadState(CURRENT_UID);
+  $('#auth-user').textContent = user.email;
 
-  // Cargar curso sin bloquear
+  document.getElementById('verify-box').style.display = user.emailVerified ? 'none' : 'block';
+  $('#btn-logout').style.display='inline-flex';
+
+  // Cargar perfil/curso en segundo plano y pasar a la app
+  syncFromCloud(user).finally(()=>{});
   showCourse();
 });
 
-/* ===== LOGIN ===== */
-$("#btn-login").addEventListener("click", async () => {
-  const email = normalizeEmail($("#login-email").value);
-  const pass = ($("#login-pass").value || "").trim();
-  if (!email || !pass) return msg("Ingresa correo y contraseña.");
+/* ======= REGISTRO (sin prechequeo) ======= */
+document.getElementById('btn-register-2').addEventListener('click', async ()=>{
+  const email = normalizeEmail(document.getElementById('reg-email').value);
+  const pass  = (document.getElementById('reg-pass').value || '').trim();
+  const pass2 = (document.getElementById('reg-pass2').value || '').trim();
+  if(!email || !pass || !pass2) return msg('Completa todos los campos.');
+  if(pass !== pass2) return msg('Las contraseñas no coinciden.');
 
-  try {
-    await signInWithEmailAndPassword(auth, email, pass);
+  try{
+    const { user } = await auth.createUserWithEmailAndPassword(email, pass);
+
+    // Enviar verificación inmediata (evita "link expirado" por dominios)
+    try{
+      await user.sendEmailVerification();
+      msg('Cuenta creada. Te enviamos el correo de verificación (revisa Spam).');
+    }catch(_){
+      try{
+        await auth.currentUser?.sendEmailVerification();
+        msg('Cuenta creada. Te enviamos el correo de verificación (revisa Spam).');
+      }catch(e2){
+        msg('Cuenta creada. No se pudo enviar automáticamente, usa “Reenviar verificación”.');
+      }
+    }
+
+    // Inicializa progreso en la nube (no bloquea)
+    db.collection('users').doc(user.uid).collection('courses').doc('soulmv')
+      .set({}, { merge:true }).catch(()=>{});
+
+    // UI
+    document.getElementById('verify-box').style.display='block';
+    setTab('login');
+    document.getElementById('login-email').value = email;
+    startVerifyPolling();
+  }catch(e){
+    if(e.code === 'auth/email-already-in-use'){
+      msg('Correo ya registrado. Usa Iniciar sesión.');
+      setTab('login'); document.getElementById('login-email').value = email;
+    }else if(e.code === 'auth/weak-password'){
+      msg('La contraseña es muy corta (mínimo 6).');
+    }else{
+      msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
+    }
+  }
+});
+
+/* ======= LOGIN robusto (sin pre-chequeo) ======= */
+document.getElementById('btn-login').addEventListener('click', async ()=>{
+  const email = normalizeEmail(document.getElementById('login-email').value);
+  const pass  = (document.getElementById('login-pass').value || '').trim();
+  if(!email || !pass) return msg('Ingresa correo y contraseña.');
+
+  try{
+    await auth.signInWithEmailAndPassword(email, pass);
+
     const u = auth.currentUser;
-    if (u && !u.emailVerified) {
-      msg("Sesión iniciada. Verifica tu correo para completar el acceso.");
-      $("#verify-box").style.display = "block";
-    } else {
-      msg("Sesión iniciada.");
-      $("#verify-box").style.display = "none";
+    if(u && !u.emailVerified){
+      msg('Sesión iniciada. Verifica tu correo para completar el acceso.');
+      document.getElementById('verify-box').style.display='block';
+    }else{
+      msg('Sesión iniciada.');
+      document.getElementById('verify-box').style.display='none';
     }
     showCourse();
-  } catch (e) {
-    if (e.code === "auth/user-not-found") {
-      msg("Correo no registrado.");
-      setTab("reg");
-      $("#reg-email").value = email;
-    } else if (
-      e.code === "auth/wrong-password" ||
-      e.code === "auth/invalid-credential" ||
-      e.code === "auth/invalid-login-credentials"
-    ) {
-      msg("Contraseña incorrecta.");
-    } else if (e.code === "auth/too-many-requests") {
-      msg("Demasiados intentos. Intenta más tarde.");
-    } else {
-      msg("Error: " + e.message);
+  }catch(e){
+    if(e.code === 'auth/user-not-found'){
+      msg('Correo no registrado.');
+      setTab('reg'); document.getElementById('reg-email').value = email;
+    }else if(
+      e.code === 'auth/wrong-password' ||
+      e.code === 'auth/invalid-credential' ||
+      e.code === 'auth/invalid-login-credentials'
+    ){
+      msg('Contraseña incorrecta.');
+    }else if(e.code === 'auth/too-many-requests'){
+      msg(MSGS[e.code]);
+    }else if(e.code === 'auth/account-exists-with-different-credential'){
+      msg('Ya existe una cuenta con otro método (Google, etc.). Usa ese proveedor.');
+    }else{
+      msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
     }
   }
 });
 
-/* ===== REGISTRO ===== */
-$("#btn-register-2").addEventListener("click", async () => {
-  const email = normalizeEmail($("#reg-email").value);
-  const pass = ($("#reg-pass").value || "").trim();
-  const pass2 = ($("#reg-pass2").value || "").trim();
-  if (!email || !pass || !pass2) return msg("Completa todos los campos.");
-  if (pass !== pass2) return msg("Las contraseñas no coinciden.");
+document.getElementById('btn-reset').addEventListener('click', async ()=>{
+  const email = normalizeEmail(document.getElementById('login-email').value);
+  if(!email) return msg('Escribe tu correo para enviarte el enlace.');
+  try{ await auth.sendPasswordResetEmail(email); msg('Te enviamos un correo para restablecer la contraseña.'); }
+  catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.'); }
+});
 
-  try {
-    const { user } = await createUserWithEmailAndPassword(auth, email, pass);
+document.getElementById('btn-logout').addEventListener('click', async ()=>{
+  await auth.signOut(); msg('Sesión cerrada.');
+});
 
-    // Guardar perfil en segundo plano
-    setDoc(doc(db, "users", user.uid, "courses", "soulmv"), {}, { merge: true });
-
-    // Enviar verificación inmediata
-    try {
-      await sendEmailVerification(user);
-      msg("Cuenta creada. Te enviamos el correo de verificación.");
-    } catch {
-      msg("Cuenta creada. No se pudo enviar automáticamente, usa 'Reenviar verificación'.");
+/* ======= Verificación ======= */
+let _verifyPoll;
+function startVerifyPolling(){
+  clearInterval(_verifyPoll);
+  const deadline = Date.now()+10*60*1000;
+  _verifyPoll = setInterval(async ()=>{
+    if(Date.now()>deadline){ clearInterval(_verifyPoll); return; }
+    if(auth.currentUser){
+      await auth.currentUser.reload();
+      if(auth.currentUser.emailVerified){
+        clearInterval(_verifyPoll);
+        document.getElementById('verify-box').style.display='none';
+        msg('¡Correo verificado! Entrando…');
+        showCourse();
+      }
     }
-
-    $("#verify-box").style.display = "block";
-    setTab("login");
-    $("#login-email").value = email;
-  } catch (e) {
-    if (e.code === "auth/email-already-in-use") {
-      msg("Correo ya registrado. Usa Iniciar sesión.");
-      setTab("login");
-      $("#login-email").value = email;
-    } else if (e.code === "auth/weak-password") {
-      msg("La contraseña es muy corta (mínimo 6 caracteres).");
-    } else {
-      msg("Error: " + e.message);
-    }
+  }, 8000);
+}
+document.getElementById('btn-check-verify').addEventListener('click', async ()=>{
+  if(auth.currentUser){
+    await auth.currentUser.reload();
+    if(auth.currentUser.emailVerified){ document.getElementById('verify-box').style.display='none'; showCourse(); }
   }
 });
+document.getElementById('btn-resend-verify').addEventListener('click', async ()=>{
+  try{
+    await auth.currentUser?.sendEmailVerification();
+    msg('Te enviamos el correo de verificación (revisa Spam).');
+    startVerifyPolling();
+  }catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.'); }
+});
+if(new URLSearchParams(location.search).get('verified')) startVerifyPolling();
 
-/* ===== LOGOUT ===== */
-$("#btn-logout").addEventListener("click", () => {
-  signOut(auth);
-  setTab("login");
+/* ======= Vistas ======= */
+function refreshProfileUI(){
+  const completed = profileComplete();
+  document.getElementById('profile').style.display      = completed ? 'none' : 'block';
+  document.getElementById('profile-done').style.display = completed ? 'flex' : 'none';
+  document.getElementById('pf-help').textContent = completed
+    ? 'Puedes actualizar tus datos cuando quieras.'
+    : 'Completa todos los campos para habilitar los módulos.';
+}
+function showCourse(){
+  if(!auth.currentUser){ return; }
+  document.getElementById('step-welcome').style.display='none';
+  document.getElementById('btn-logout').style.display='inline-flex';
+  loadProfile().finally(()=>{
+    refreshProfileUI();
+    toggleCourse(profileComplete());
+  });
+}
+function profileComplete(){
+  const p = state.profile || {};
+  return !!(p.name && p.iddoc && p.spec);
+}
+function toggleCourse(enabled){
+  if(enabled){
+    document.getElementById('progress').style.display='block';
+    document.getElementById('modules').style.display='grid';
+    document.getElementById('eval').style.display='block';
+    renderModules(); updateProgress();
+  }else{
+    document.getElementById('progress').style.display='none';
+    document.getElementById('modules').style.display='none';
+    document.getElementById('eval').style.display='none';
+  }
+}
+document.getElementById('btn-edit-profile').addEventListener('click', ()=>{
+  document.getElementById('profile').style.display='block';
+  document.getElementById('profile-done').style.display='none';
 });
 
-/* ===== Tabs ===== */
-function setTab(tab) {
-  document.querySelectorAll(".tab").forEach((el) => el.style.display = "none");
-  $("#" + tab).style.display = "block";
+/* ======= Módulos (YouTube) ======= */
+const players = {};
+function renderModules(){
+  const wrap=document.getElementById('modules'); wrap.innerHTML='';
+  MODULOS.forEach((m,idx)=>{
+    const done = !!(state[m.id]?.done);
+    const locked = idx>0 && !state[MODULOS[idx-1].id]?.done;
+    const card=document.createElement('article'); card.className='card module';
+    card.innerHTML=`
+      <div class="num">${idx+1}</div>
+      <div class="meta">
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+          <h3 style="margin:0">${m.titulo}</h3>
+          <span class="badge">${m.duracion||''}</span>
+        </div>
+        <p class="muted" style="margin:6px 0 10px">Debes ver el video completo para marcar el módulo como terminado.</p>
+        <div class="yt-wrap" id="wrap-${m.id}">
+          ${locked?`<div style="position:absolute;inset:0;display:grid;place-content:center;color:#fff;background:rgba(0,0,0,.6);text-align:center;padding:20px">Completa primero el módulo ${idx}.<br><small>(bloqueado)</small></div>`:''}
+          <div id="player-${m.id}"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-muted" data-restart="${m.id}">Reiniciar</button>
+          <button class="btn ${done?'btn-success':'btn-primary'}" data-complete="${m.id}" ${done?'':'disabled'}>${done?'Completado ✓':'Marcar como completado'}</button>
+        </div>
+      </div>`;
+    wrap.appendChild(card);
+  });
+  wrap.querySelectorAll('[data-restart]').forEach(b=>b.addEventListener('click',e=>{
+    const id=e.currentTarget.getAttribute('data-restart'); players[id]?.seekTo(0,true);
+  }));
+  wrap.querySelectorAll('[data-complete]').forEach(b=>b.addEventListener('click',e=>{
+    const id=e.currentTarget.getAttribute('data-complete');
+    state[id]=state[id]||{}; state[id].done=true; saveState(CURRENT_UID,state);
+    updateProgress(); renderModules(); setTimeout(syncToCloud,300);
+  }));
 }
+window.onYouTubeIframeAPIReady = function(){
+  MODULOS.forEach((m,idx)=>{
+    const disabled = idx>0 && !state[MODULOS[idx-1].id]?.done;
+    players[m.id] = new YT.Player(`player-${m.id}`,{
+      height:'360', width:'640', videoId:m.yt,
+      playerVars:{rel:0,modestbranding:1,controls:1,disablekb:1},
+      events:{
+        onReady:(ev)=>{ if(disabled){ ev.target.stopVideo(); } },
+        onStateChange:(ev)=>{
+          if(ev.data===YT.PlayerState.ENDED){
+            const btn=document.querySelector(`[data-complete="${m.id}"]`);
+            if(btn){ btn.disabled=false; btn.classList.remove('btn-primary'); btn.classList.add('btn-success'); btn.textContent='Marcar como completado'; }
+          }
+          if(ev.data===YT.PlayerState.PLAYING){
+            try{
+              const t=ev.target.getCurrentTime(); const last=state[m.id]?.t||0;
+              if(t>last+30){ ev.target.seekTo(last,true); }
+              state[m.id]=state[m.id]||{}; state[m.id].t=t; saveState(CURRENT_UID,state);
+            }catch(_){}
+          }
+        }
+      }
+    });
+  });
+};
 
-function showCourse() {
-  setTab("course");
+/* ======= Progreso / Quiz / Certificado ======= */
+function updateProgress(){
+  const total=MODULOS.length;
+  const done =MODULOS.filter(m=>state[m.id]?.done).length;
+  const pct  =Math.round((done/total)*100);
+  document.getElementById('bar').style.width=pct+'%';
+  document.getElementById('progress-label').textContent=`${pct}% completado (${done}/${total})`;
+  const allDone=(done===total);
+  document.getElementById('btn-start-quiz').disabled=!allDone;
+  const passed=state.quiz?.passed;
+  document.getElementById('btn-cert').disabled=!(allDone && passed);
 }
+function renderQuiz(){
+  const wrap=document.getElementById('quiz'); wrap.innerHTML='';
+  QUESTIONS.forEach((q,idx)=>{
+    const card=document.createElement('div'); card.className='card'; card.style.marginBottom='12px';
+    const opts=q.options.map(o=>`
+      <label style="display:flex;gap:8px;align-items:center;margin:6px 0">
+        <input type="radio" name="${q.id}" value="${o.key}">
+        <span>${o.key}) ${o.label}</span>
+      </label>`).join('');
+    card.innerHTML=`<strong>${idx+1}. ${q.text}</strong><div style="margin-top:6px">${opts}</div>`;
+    wrap.appendChild(card);
+  });
+  const submit=document.createElement('button'); submit.className='btn btn-primary'; submit.textContent='Enviar evaluación';
+  submit.addEventListener('click', gradeQuiz); wrap.appendChild(submit);
+}
+function gradeQuiz(){
+  let correct=0; QUESTIONS.forEach(q=>{ const c=document.querySelector(`input[name="${q.id}"]:checked`); if(c && c.value===q.correct) correct++; });
+  const scorePct=Math.round((correct/QUESTIONS.length)*100);
+  state.quiz={correct,total:QUESTIONS.length,scorePct,passed:scorePct>=PASS_PCT}; saveState(CURRENT_UID,state);
+  const result=document.getElementById('quiz-result'); result.style.display='block';
+  result.textContent=`Resultado: ${correct}/${QUESTIONS.length} (${scorePct}%). ${state.quiz.passed?'✅ Aprobado':'❌ No aprobado'}.`;
+  if(state.quiz.passed){ document.getElementById('btn-cert').disabled=false; }
+  setTimeout(syncToCloud,300);
+  window.scrollTo({ top: result.offsetTop-80, behavior:'smooth' });
+}
+document.getElementById('btn-start-quiz')?.addEventListener('click', ()=>{
+  document.getElementById('quiz-intro').style.display='none';
+  document.getElementById('quiz').style.display='block';
+  renderQuiz();
+});
+document.getElementById('btn-cert')?.addEventListener('click', ()=>{
+  const preferName = state.profile?.name || auth.currentUser?.displayName || '';
+  document.getElementById('cert-nombre').textContent = preferName;
+  const f=new Date(); const fecha=f.toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('cert-fecha').textContent=`Fecha: ${fecha}`;
+  document.getElementById('certificado').classList.add('show'); setTimeout(()=>window.print(),400);
+});
 
+/* ======= Perfil + Cloud sync ======= */
+async function userDoc(){
+  const uid=auth.currentUser?.uid; if(!uid) return null;
+  return db.collection('users').doc(uid).collection('courses').doc('soulmv');
+}
+async function syncFromCloud(user){
+  try{
+    const ref=await userDoc(); if(!ref) return;
+    const snap=await ref.get();
+    if(snap.exists){
+      const cloud=snap.data()||{};
+      MODULOS.forEach(m=>{
+        const localDone=!!(state[m.id]?.done);
+        const cloudDone=!!(cloud[m.id]?.done);
+        state[m.id]={done:(localDone||cloudDone)};
+      });
+      state.quiz = cloud.quiz || state.quiz;
+      saveState(CURRENT_UID,state);
+    }
+    const psnap=await db.collection('users').doc(user.uid).collection('profile').doc('main').get();
+    if(psnap.exists){ state.profile=psnap.data(); saveState(CURRENT_UID,state); }
+  }catch(e){ console.warn('No se pudo leer progreso/perfil',e); }
+}
+async function syncToCloud(){
+  try{
+    const ref=await userDoc(); if(!ref) return;
+    const payload={ quiz: state.quiz };
+    MODULOS.forEach(m=>{ payload[m.id]={done:!!(state[m.id]?.done)}; });
+    await ref.set(payload,{merge:true});
+    const uid=auth.currentUser?.uid; if(uid && state.profile){
+      await db.collection('users').doc(uid).collection('profile').doc('main').set(state.profile,{merge:true});
+    }
+  }catch(e){ console.warn('No se pudo guardar en la nube',e); }
+}
+async function loadProfile(){
+  try{
+    const uid=auth.currentUser?.uid; if(!uid) return;
+    const s=await db.collection('users').doc(uid).collection('profile').doc('main').get();
+    if(s.exists){ state.profile=s.data(); saveState(CURRENT_UID,state); }
+    document.getElementById('pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
+    document.getElementById('pf-id').value   = state.profile?.iddoc || '';
+    document.getElementById('pf-spec').value = state.profile?.spec  || '';
+  }catch(e){ console.warn('Perfil no disponible',e); }
+}
+async function saveProfile(){
+  const name=($('#pf-name').value||'').trim();
+  const iddoc=($('#pf-id').value||'').trim();
+  const spec =($('#pf-spec').value||'').trim();
+  if(!name || !iddoc || !spec){
+    document.getElementById('pf-msg').textContent='Completa nombre, cédula/pasaporte y especialidad.';
+    return;
+  }
+  // Optimista (UI responde sin esperar a la nube)
+  state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
+  document.getElementById('pf-msg').textContent='Guardando…';
+  toggleCourse(true);
+  refreshProfileUI();
+
+  try{
+    const uid=auth.currentUser?.uid; if(!uid) return;
+    db.collection('users').doc(uid).collection('profile').doc('main')
+      .set(state.profile,{merge:true})
+      .then(()=>{ document.getElementById('pf-msg').textContent='✅ Perfil guardado.'; })
+      .catch(()=>{ document.getElementById('pf-msg').textContent='Guardado local. No se pudo sincronizar ahora.'; });
+  }catch(_){
+    document.getElementById('pf-msg').textContent='Guardado local. No se pudo sincronizar ahora.';
+  }
+}
+document.getElementById('btn-save-profile').addEventListener('click', saveProfile);
 </script>
+</body>
+</html>
