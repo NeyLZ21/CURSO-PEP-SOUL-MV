@@ -1,715 +1,107 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Inducción Soul MV • Hospital</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inducción HVQ - Login</title>
   <style>
-    :root{
-      --brand:#781C38;/* rojo vino HVQ */
-      --ink:#1f2937;--muted:#6b7280;--bg:#f8fafc;--card:#ffffff;--ok:#15803d;--warn:#b45309
-    }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
-    .container{max-width:980px;margin:auto;padding:24px}
-    header{display:flex;gap:16px;align-items:center;margin:12px 0 20px}
-    header .logo{width:48px;height:48px;border-radius:12px;background:var(--brand);display:grid;place-content:center;color:#fff;font-weight:800}
-    h1{font-size:clamp(22px,3.5vw,34px);margin:0}
-    .subtitle{color:var(--muted);margin-top:4px}
-    .card{background:var(--card);border-radius:18px;box-shadow:0 10px 24px rgba(0,0,0,.06);padding:20px}
-    .grid{display:grid;gap:16px}
-    .grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
-    @media (max-width:800px){.grid.cols-2{grid-template-columns:1fr}}
-    button, .btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor:pointer;font-weight:600}
-    .btn-primary{background:var(--brand);color:#fff}
-    .btn-muted{background:#e5e7eb;color:#111827}
-    .btn-success{background:var(--ok);color:#fff}
-    .btn[disabled]{opacity:.5;cursor:not-allowed}
-    .badge{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:600;background:#eef2ff;color:#3730a3}
-    .progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}
-    .progress>span{display:block;height:100%;background:var(--brand);width:0}
-    .module{display:flex;gap:16px;align-items:flex-start}
-    .module .num{flex:0 0 auto;width:36px;height:36px;border-radius:10px;background:#f3f4f6;display:grid;place-content:center;font-weight:700}
-    .module .meta{flex:1}
-    .yt-wrap{position:relative;padding-top:56.25%;border-radius:16px;overflow:hidden;background:#000;margin-top:12px}
-    .yt-wrap iframe,.yt-wrap video{position:absolute;inset:0;width:100%;height:100%;border:0}
-    .muted{color:var(--muted)}
-    .footer{margin-top:24px;color:var(--muted);font-size:13px}
-    /* Certificado print */
-    #certificado{display:none}
-    #certificado.show{display:block}
-    @media print{
-      body{background:#fff}
-      .no-print{display:none !important}
-      #certificado{display:block}
-    }
-    .cert-card{background:#fff;border:4px solid var(--brand);border-radius:20px;padding:40px;text-align:center}
-    .cert-title{font-size:28px;font-weight:800;margin:0 0 10px;color:var(--brand)}
-    .cert-name{font-size:26px;font-weight:800;margin:8px 0}
-    .cert-meta{color:#374151;margin-top:10px}
-  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:50}
-    .modal{background:#fff;border-radius:18px;box-shadow:0 20px 48px rgba(0,0,0,.18);width:min(640px,92vw);padding:20px}
-    .modal h3{margin:0 0 8px}
-    .modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+    input { display: block; margin: 10px auto; padding: 8px; width: 250px; }
+    button { padding: 10px 20px; cursor: pointer; }
+    .oculto { display: none; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header class="no-print">
-      <div class="logo">HV</div>
-      <div style="flex:1">
-        <h1>Inducción a Soul MV</h1>
-        <div class="subtitle">Curso para nuevos médicos • Hospital Vozandes</div>
-      </div>
-      <div id="auth-area" style="display:flex;gap:8px;align-items:center">
-        <span id="auth-user" class="muted" style="font-size:13px"></span>
-        <button id="btn-logout" class="btn btn-muted" style="display:none">Cerrar sesión</button>
-      </div>
-    </header>
 
-    <!-- Inicio / Registro / Login -->
-    <section id="step-welcome" class="card no-print">
-      <div class="grid cols-2" style="align-items:start">
-        <div>
-          <h2 style="margin:0 0 6px">Acceso</h2>
-          <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña. Te pediremos verificar el correo antes de iniciar el curso. Tu progreso quedará guardado en la nube.</p>
+  <h2>Registro / Login</h2>
 
-          <div id="auth-forms" class="grid">
-            <label>Correo electrónico<br>
-              <input id="auth-email" type="email" placeholder="usuario@dominio.com" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb" required>
-            </label>
-            <label>Contraseña<br>
-              <input id="auth-pass" type="password" placeholder="••••••••" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb" required>
-            </label>
-            <label>Nombre y apellido (solo para registro)<br>
-              <input id="auth-name" type="text" placeholder="Ej.: María Pérez" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
-            </label>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <button class="btn btn-primary" id="btn-login">Iniciar sesión</button>
-              <button class="btn btn-muted" id="btn-register">Registrarme</button>
-              <button class="btn" id="btn-reset" style="background:#e5e7eb">Restablecer contraseña</button>
-            </div>
-            <div id="auth-msg" class="muted" style="min-height:18px"></div>
-          </div>
-        </div>
-        <div class="card" style="background:#fff7f7;border:1px dashed #fda4af">
-          <div class="badge" title="Requisito"><span>ℹ️</span> Requisitos</div>
-          <ul>
-            <li>Tener acceso a Internet</li>
-            <li>Completar todos los videos para habilitar el cuestionario</li>
-            <li>Correo válido (cualquier dominio) y verificado</li>
-          </ul>
-        </div>
-      </div>
-      <div id="verify-box" class="card" style="display:none;margin-top:12px;background:#fffbeb;border:1px solid #fde68a">
-        <strong>Verifica tu correo</strong>
-        <p class="muted">Te enviamos un correo de verificación. Confirma tu cuenta y luego presiona el botón para volver a comprobar.</p>
-        <button id="btn-check-verify" class="btn btn-primary">Ya verifiqué mi correo</button>
-        <button id="btn-resend-verify" class="btn btn-muted">Reenviar verificación</button>
-      </div>
-    </section>
-
-    <section id="profile" class="card no-print" style="display:none;margin:18px 0">
-      <h2 style="margin:0 0 8px">Mi perfil</h2>
-      <div class="grid cols-2">
-        <label>Nombre completo (para certificado)<br>
-          <input id="pf-name" type="text" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
-        </label>
-        <label>Cédula o Pasaporte<br>
-          <input id="pf-id" type="text" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
-        </label>
-        <label>Especialidad<br>
-          <input id="pf-spec" type="text" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
-        </label>
-      </div>
-      <div class="actions" style="display:flex;gap:8px;margin-top:10px">
-        <button id="btn-save-profile" class="btn btn-primary">Guardar perfil</button>
-      </div>
-      <div id="pf-msg" class="muted" style="margin-top:6px"></div>
-    </section>
-
-    <section id="progress" class="no-print" style="display:none;margin:18px 0"> class="no-print" style="display:none;margin:18px 0">
-      <div class="card">
-        <div class="grid cols-2" style="align-items:center">
-          <div>
-            <strong>Progreso del curso</strong>
-            <div class="muted" id="progress-label">0% completado</div>
-          </div>
-          <div class="progress"><span id="bar" style="width:0%"></span></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Módulos -->
-    <section id="modules" class="grid no-print" style="display:none">
-      <!-- Los módulos se generan por JS -->
-    </section>
-
-    <!-- Evaluación + Certificado -->
-    <section id="eval" class="card no-print" style="display:none;margin-top:16px">
-      <h2 style="margin-top:0">Evaluación final</h2>
-      <p class="muted">Responde el cuestionario. Se habilita cuando completes todos los módulos.</p>
-
-      <div id="quiz-intro" class="grid cols-2">
-        <div>
-          <button id="btn-start-quiz" class="btn btn-primary" disabled>Comenzar evaluación</button>
-          <p class="muted" style="font-size:12px">Debes aprobar con 80% para habilitar el certificado.</p>
-        </div>
-        <div>
-          <button id="btn-cert" class="btn btn-success" disabled>Mostrar certificado</button>
-          <p class="muted" style="font-size:12px">Disponible cuando completes los módulos y apruebes la evaluación.</p>
-        </div>
-      </div>
-
-      <div id="quiz" style="display:none;margin-top:16px">
-        <!-- El cuestionario se genera por JS -->
-      </div>
-      <div id="quiz-result" class="muted" style="display:none;margin-top:10px"></div>
-    </section>
-
-    <!-- MODAL REGISTRO: datos adicionales -->
-    <div id="modal-register" class="modal-backdrop">
-      <div class="modal">
-        <h3>Completa tu registro</h3>
-        <p class="muted" style="margin:0 0 10px">Ingresa tus datos tal como deben aparecer en el certificado.</p>
-        <div class="grid cols-2">
-          <label>Nombre completo<br>
-            <input id="rg-name" type="text" placeholder="Ej.: María Pérez" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
-          </label>
-          <label>Cédula o pasaporte<br>
-            <input id="rg-id" type="text" placeholder="Documento" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
-          </label>
-          <label>Especialidad<br>
-            <input id="rg-spec" type="text" placeholder="Ej.: Medicina Interna" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
-          </label>
-        </div>
-        <div class="actions">
-          <button id="rg-cancel" class="btn btn-muted">Cancelar</button>
-          <button id="rg-save" class="btn btn-primary">Crear cuenta</button>
-        </div>
-        <div id="rg-msg" class="muted" style="margin-top:6px"></div>
-      </div>
-    </div>
-
-    <!-- Certificado imprimible -->
-    <section id="certificado" class="container">
-      <div class="cert-card">
-        <div class="cert-title">Certificado de participación</div>
-        <p>Otorgado a</p>
-        <div class="cert-name" id="cert-nombre">Nombre Apellido</div>
-        <p>por completar el curso <strong>Inducción a Soul MV</strong>.</p>
-        <div class="cert-meta">
-          <div id="cert-fecha"></div>
-          <div>Hospital Vozandes • Formación Interna</div>
-        </div>
-      </div>
-    </section>
-
-    <div class="footer no-print">© <span id="year"></span> Hospital Vozandes — Inducción Soul MV</div>
+  <!-- Registro -->
+  <div id="registro">
+    <h3>Crear cuenta</h3>
+    <input type="email" id="emailRegistro" placeholder="Correo electrónico">
+    <input type="password" id="passwordRegistro" placeholder="Contraseña">
+    <button onclick="registrar()">Registrarse</button>
   </div>
 
-  <!-- YouTube API para detectar fin de video -->
-  <script src="https://www.youtube.com/iframe_api"></script>
-  <!-- Firebase (compat) -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <!-- Login -->
+  <div id="login">
+    <h3>Iniciar sesión</h3>
+    <input type="email" id="emailLogin" placeholder="Correo electrónico">
+    <input type="password" id="passwordLogin" placeholder="Contraseña">
+    <button onclick="login()">Entrar</button>
+  </div>
+
+  <!-- Área protegida -->
+  <div id="contenido" class="oculto">
+    <h3>Bienvenido</h3>
+    <p>Has iniciado sesión y tu correo está verificado ✅</p>
+    <button onclick="logout()">Cerrar sesión</button>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js"></script>
+
   <script>
-    // ===== CONFIGURACIÓN =====
-    // 1) Define aquí tus módulos y videos (IDs de YouTube)
-    const MODULOS = [
-      { id: 'mod1', titulo: 'Navegación básica en Soul MV', yt: 'dQw4w9WgXcQ', duracion: '10:05' },
-      { id: 'mod2', titulo: 'Prescripción y órdenes médicas', yt: 'l482T0yNkeo', duracion: '08:40' },
-      { id: 'mod3', titulo: 'Auditoría médica – honorarios', yt: '9bZkp7q19f0', duracion: '12:10' }
-    ];
-
-    // 2) Preguntas del cuestionario interno (puedes editar libremente)
-    const PASS_PCT = 80; // porcentaje mínimo para aprobar
-    const QUESTIONS = [
-      {
-        id: 'q1',
-        text: '¿Qué módulo del sistema usas para registrar una prescripción?',
-        options: [
-          { key: 'A', label: 'Módulo de Prescripción' },
-          { key: 'B', label: 'Módulo de Citas' },
-          { key: 'C', label: 'Módulo de Imagen' }
-        ],
-        correct: 'A'
-      },
-      {
-        id: 'q2',
-        text: 'La auditoría de honorarios se valida contra:',
-        options: [
-          { key: 'A', label: 'Notas de enfermería' },
-          { key: 'B', label: 'Tarifario MSP y prescripciones cerradas' },
-          { key: 'C', label: 'Epicrisis provisional' }
-        ],
-        correct: 'B'
-      },
-      {
-        id: 'q3',
-        text: 'Para finalizar una nota clínica debes:',
-        options: [
-          { key: 'A', label: 'Guardar borrador' },
-          { key: 'B', label: 'Cerrar/Finalizar el documento (FECHADO)' },
-          { key: 'C', label: 'Imprimir sin cerrar' }
-        ],
-        correct: 'B'
-      }
-    ];
-    // ===== FIN CONFIGURACIÓN =====
-
-    // ===== FIREBASE CONFIG (rellena con tus datos) =====
+    // Configuración de Firebase (tu config real)
     const firebaseConfig = {
-      apiKey: "TU_API_KEY",
-      authDomain: "TU_PROYECTO.firebaseapp.com",
-      projectId: "TU_PROYECTO",
-      storageBucket: "TU_PROYECTO.appspot.com",
-      messagingSenderId: "",
-      appId: ""
+      apiKey: "AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",
+      authDomain: "induccion-pep-hvq.firebaseapp.com",
+      projectId: "induccion-pep-hvq",
+      storageBucket: "induccion-pep-hvq.firebasestorage.app",
+      messagingSenderId: "651724182766",
+      appId: "1:651724182766:web:4eec9be43e9e8e60dc0fff",
+      measurementId: "G-Z62L1CCYP1"
     };
-    firebase.initializeApp(firebaseConfig);
+
+    // Inicializar Firebase
+    const app = firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
-    const db = firebase.firestore();
 
-    const $ = sel => document.querySelector(sel);
-    const storeKey = 'soulmv_curso_v1'; // progreso local (fallback)
-    const state = JSON.parse(localStorage.getItem(storeKey) || '{}');
+    // Registro
+    function registrar() {
+      const email = document.getElementById("emailRegistro").value;
+      const password = document.getElementById("passwordRegistro").value;
+      auth.createUserWithEmailAndPassword(email, password)
+        .then(userCredential => {
+          userCredential.user.sendEmailVerification();
+          alert("Registro exitoso. Verifica tu correo antes de iniciar sesión.");
+        })
+        .catch(error => alert(error.message));
+    }
 
-    function save(){ localStorage.setItem(storeKey, JSON.stringify(state)); }
-
-    function init(){
-      $('#year').textContent = new Date().getFullYear();
-      // Listener de auth
-      auth.onAuthStateChanged(async (user)=>{
-        if(user){
-          $('#auth-user').textContent = user.email + (user.emailVerified?' (verificado)':' (no verificado)');
-          $('#btn-logout').style.display = 'inline-flex';
-          // Si no verificado, mostrar caja de verificación
-          if(!user.emailVerified){
-            $('#verify-box').style.display = 'block';
-            $('#step-welcome').style.display = 'block';
-            $('#progress').style.display = 'none';
-            $('#modules').style.display = 'none';
-            $('#eval').style.display = 'none';
-            return;
+    // Login
+    function login() {
+      const email = document.getElementById("emailLogin").value;
+      const password = document.getElementById("passwordLogin").value;
+      auth.signInWithEmailAndPassword(email, password)
+        .then(userCredential => {
+          if (userCredential.user.emailVerified) {
+            mostrarContenido();
           } else {
-            $('#verify-box').style.display = 'none';
+            alert("Debes verificar tu correo antes de entrar.");
+            auth.signOut();
           }
-          // Cargar progreso en la nube y fusionar con local
-          await syncFromCloud(user);
-          showCourse();
-        } else {
-          $('#auth-user').textContent = '';
-          $('#btn-logout').style.display = 'none';
-          $('#step-welcome').style.display = 'block';
-          $('#progress').style.display = 'none';
-          $('#modules').style.display = 'none';
-          $('#eval').style.display = 'none';
-        }
+        })
+        .catch(error => alert(error.message));
+    }
+
+    // Logout
+    function logout() {
+      auth.signOut().then(() => {
+        document.getElementById("contenido").classList.add("oculto");
+        document.getElementById("login").classList.remove("oculto");
+        document.getElementById("registro").classList.remove("oculto");
       });
     }
+
+    // Mostrar contenido protegido
+    function mostrarContenido() {
+      document.getElementById("contenido").classList.remove("oculto");
+      document.getElementById("login").classList.add("oculto");
+      document.getElementById("registro").classList.add("oculto");
     }
-
-    // Construye tarjetas de módulos
-    const players = {}; // refs a reproductores de YouTube
-    function renderModules(){
-      const wrap = $('#modules');
-      wrap.innerHTML = '';
-      MODULOS.forEach((m, idx) => {
-        const done = state[m.id]?.done;
-        const locked = idx>0 && !state[MODULOS[idx-1].id]?.done; // bloquear si previo no terminado
-        const card = document.createElement('article');
-        card.className = 'card module';
-        card.innerHTML = `
-          <div class="num">${idx+1}</div>
-          <div class="meta">
-            <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
-              <h3 style="margin:0">${m.titulo}</h3>
-              <span class="badge">${m.duracion}</span>
-            </div>
-            <p class="muted" style="margin:6px 0 10px">Debes ver el video completo para marcar el módulo como terminado.</p>
-            <div class="yt-wrap" id="wrap-${m.id}">
-              ${locked ? `<div style="position:absolute;inset:0;display:grid;place-content:center;color:#fff;background:rgba(0,0,0,.6);text-align:center;padding:20px">Completa primero el módulo ${idx}.<br><small>(bloqueado)</small></div>` : ''}
-              <div id="player-${m.id}"></div>
-            </div>
-            <div style="display:flex;gap:8px;margin-top:10px">
-              <button class="btn btn-muted" data-restart="${m.id}">Reiniciar</button>
-              <button class="btn ${done?'btn-success':'btn-primary'}" data-complete="${m.id}" ${done?'':'disabled'}>${done?'Completado ✓':'Marcar como completado'}</button>
-            </div>
-          </div>
-        `;
-        wrap.appendChild(card);
-      })
-
-      // Botones
-      wrap.querySelectorAll('[data-restart]').forEach(b=>b.addEventListener('click', e=>{
-        const id = e.currentTarget.getAttribute('data-restart');
-        players[id]?.seekTo(0,true);
-      }))
-      wrap.querySelectorAll('[data-complete]').forEach(b=>b.addEventListener('click', e=>{
-        const id = e.currentTarget.getAttribute('data-complete');
-        state[id] = state[id] || {}; state[id].done = true; save(); updateProgress(); renderModules();
-      }))
-    }
-
-    // YouTube API setup
-    window.onYouTubeIframeAPIReady = function(){
-      // Crea un player por módulo
-      MODULOS.forEach((m, idx) => {
-        const disabled = idx>0 && !state[MODULOS[idx-1].id]?.done;
-        players[m.id] = new YT.Player(`player-${m.id}`, {
-          height: '360', width: '640', videoId: m.yt,
-          playerVars: {rel:0,modestbranding:1,controls:1,disablekb:1},
-          events: {
-            'onReady': (ev)=>{ if(disabled){ev.target.stopVideo();} },
-            'onStateChange': (ev)=>{
-              // Al finalizar el video, habilitamos el botón "Marcar como completado"
-              if(ev.data === YT.PlayerState.ENDED){
-                const btn = document.querySelector(`[data-complete="${m.id}"]`);
-                if(btn){ btn.disabled = false; btn.classList.remove('btn-primary'); btn.classList.add('btn-success'); btn.textContent = 'Marcar como completado'; }
-              }
-              // Bloquear adelantos: si intenta saltar demasiado, lo regresamos
-              if(ev.data === YT.PlayerState.PLAYING){
-                try{
-                  const t = ev.target.getCurrentTime();
-                  const last = state[m.id]?.t || 0;
-                  if(t > last + 30){ ev.target.seekTo(last, true); }
-                  state[m.id] = state[m.id] || {}; state[m.id].t = t; save();
-                }catch(err){}
-              }
-            }
-          }
-        });
-      })
-    }
-
-    function updateProgress(){
-      const total = MODULOS.length;
-      const done = MODULOS.filter(m=>state[m.id]?.done).length;
-      const pct = Math.round((done/total)*100);
-      $('#bar').style.width = pct+'%';
-      $('#progress-label').textContent = `${pct}% completado (${done}/${total})`;
-      const allDone = done===total;
-      $('#btn-eval').disabled = !allDone;
-    }
-
-    // Inicio del curso
-    function startCourse(){
-      const nombre = ($('#inp-nombre').value||'').trim();
-      const email = ($('#inp-email').value||'').trim();
-      if(!nombre || !email){ return alert('Completa tu nombre y correo.'); }
-      state.nombre = nombre; state.email = email; save();
-      $('#step-welcome').style.display='none';
-      $('#progress').style.display='block';
-      $('#modules').style.display='grid';
-      $('#eval').style.display='block';
-      renderModules();
-      updateProgress();
-    }
-
-    // reemplazado por login/registro
-
-    // Enlace a evaluación con prefill
-    function updateProgress(){
-      const total = MODULOS.length;
-      const done = MODULOS.filter(m=>state[m.id]?.done).length;
-      const pct = Math.round((done/total)*100);
-      $('#bar').style.width = pct+'%';
-      $('#progress-label').textContent = `${pct}% completado (${done}/${total})`;
-      const allDone = done===total;
-      // habilita comenzar quiz cuando terminen todos los módulos
-      const btnStartQuiz = $('#btn-start-quiz');
-      if(btnStartQuiz) btnStartQuiz.disabled = !allDone;
-      // habilita certificado si aprobó
-      const passed = state.quiz?.passed;
-      $('#btn-cert').disabled = !(allDone && passed);
-    }
-      const url = FORM_URL_BASE + (FORM_URL_BASE.includes('?')?'&':'?') + params.toString();
-      window.open(url, '_blank');
-      // Habilita botón de certificado tras abrir evaluación
-      $('#btn-cert').disabled = false;
-    });
-
-    // Certificado (para imprimir/guardar PDF)
-    $('#btn-cert').addEventListener('click', ()=>{
-      // Rellena datos y muestra sección certificado, luego abre diálogo de impresión
-      $('#cert-nombre').textContent = state.nombre || '';
-      const f = new Date();
-      const fecha = f.toLocaleDateString('es-EC', {year:'numeric',month:'long',day:'numeric'});
-      $('#cert-fecha').textContent = `Fecha: ${fecha}`;
-      $('#certificado').classList.add('show');
-      setTimeout(()=>window.print(), 400);
-    });
-
-    // Autoinit
-    init();
-      // === Quiz interno ===
-    function renderQuiz(){
-      const wrap = $('#quiz');
-      wrap.innerHTML = '';
-      QUESTIONS.forEach((q, idx)=>{
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.style.marginBottom = '12px';
-        const opts = q.options.map(o=>`
-          <label style="display:flex;gap:8px;align-items:center;margin:6px 0">
-            <input type="radio" name="${q.id}" value="${o.key}">
-            <span>${o.key}) ${o.label}</span>
-          </label>`).join('');
-        card.innerHTML = `
-          <strong>${idx+1}. ${q.text}</strong>
-          <div style="margin-top:6px">${opts}</div>
-        `;
-        wrap.appendChild(card);
-      });
-      const submit = document.createElement('button');
-      submit.className = 'btn btn-primary';
-      submit.textContent = 'Enviar evaluación';
-      submit.addEventListener('click', gradeQuiz);
-      wrap.appendChild(submit);
-    }
-
-    function gradeQuiz(){
-      let correct = 0;
-      QUESTIONS.forEach(q=>{
-        const chosen = document.querySelector(`input[name="${q.id}"]:checked`);
-        if(chosen && chosen.value === q.correct){ correct++; }
-      });
-      const scorePct = Math.round((correct/QUESTIONS.length)*100);
-      state.quiz = { correct, total: QUESTIONS.length, scorePct, passed: scorePct >= PASS_PCT };
-      save();
-      const result = $('#quiz-result');
-      result.style.display = 'block';
-      result.textContent = `Resultado: ${correct}/${QUESTIONS.length} (${scorePct}%). ${state.quiz.passed ? '✅ Aprobado' : '❌ No aprobado'}.`;
-      if(state.quiz.passed){ $('#btn-cert').disabled = false; }
-      window.scrollTo({ top: result.offsetTop-80, behavior:'smooth' });
-    }
-
-    $('#btn-start-quiz')?.addEventListener('click', ()=>{
-      $('#quiz-intro').style.display = 'none';
-      $('#quiz').style.display = 'block';
-      renderQuiz();
-    });
-
-    // Autoinit ya llamado antes
-      // === Auth handlers ===
-    $('#btn-register').addEventListener('click', async ()=>{
-      const email = ($('#auth-email').value||'').trim();
-      const pass = ($('#auth-pass').value||'').trim();
-      const name = ($('#auth-name').value||'').trim();
-      if(!email || !pass || !name){ return msg('Completa correo, contraseña y nombre.'); }
-      try{
-        const { user } = await auth.createUserWithEmailAndPassword(email, pass);
-        await user.updateProfile({ displayName: name });
-        await auth.currentUser.sendEmailVerification();
-        msg('Registro exitoso. Te enviamos un correo para verificar tu cuenta.');
-        // guarda nombre en local por si acaso
-        state.nombre = name; state.email = email; save();
-        $('#verify-box').style.display = 'block';
-      }catch(e){ msg('Error al registrar: '+e.message); }
-    });
-
-    $('#btn-login').addEventListener('click', async ()=>{
-      const email = ($('#auth-email').value||'').trim();
-      const pass = ($('#auth-pass').value||'').trim();
-      if(!email || !pass){ return msg('Ingresa correo y contraseña.'); }
-      try{
-        await auth.signInWithEmailAndPassword(email, pass);
-        msg('Sesión iniciada.');
-      }catch(e){ msg('Error al iniciar sesión: '+e.message); }
-    });
-
-    $('#btn-reset').addEventListener('click', async ()=>{
-      const email = ($('#auth-email').value||'').trim();
-      if(!email){ return msg('Escribe tu correo para enviarte el enlace.'); }
-      try{ await auth.sendPasswordResetEmail(email); msg('Te enviamos un correo para restablecer la contraseña.'); }
-      catch(e){ msg('No se pudo enviar: '+e.message); }
-    });
-
-    $('#btn-check-verify').addEventListener('click', async ()=>{
-      if(auth.currentUser){ await auth.currentUser.reload(); }
-    });
-    $('#btn-resend-verify').addEventListener('click', async ()=>{
-      if(auth.currentUser){ await auth.currentUser.sendEmailVerification(); msg('Correo de verificación reenviado.'); }
-    });
-    $('#btn-logout').addEventListener('click', async ()=>{ await auth.signOut(); msg('Sesión cerrada. Tu progreso queda guardado.'); });
-
-    function msg(t){ const el=$('#auth-msg'); el.textContent=t; }
-
-    function showCourse(){
-      // Usar nombre del perfil si existe
-      if(auth.currentUser?.displayName){ state.nombre = auth.currentUser.displayName; save(); }
-      state.email = auth.currentUser?.email || state.email; save();
-      $('#step-welcome').style.display='none';
-      $('#progress').style.display='block';
-      $('#modules').style.display='grid';
-      $('#eval').style.display='block';
-      renderModules();
-      updateProgress();
-    }
-
-    // === Cloud sync (Firestore) ===
-    async function userDoc(){
-      const uid = auth.currentUser?.uid; if(!uid) return null;
-      return db.collection('users').doc(uid).collection('courses').doc('soulmv');
-    }
-    async function syncFromCloud(user){
-      try{
-        const ref = await userDoc(); if(!ref) return;
-        const snap = await ref.get();
-        if(snap.exists){
-          const cloud = snap.data()||{};
-          // Fusionar (tomar el mayor avance)
-          MODULOS.forEach(m=>{
-            const localDone = !!(state[m.id]?.done);
-            const cloudDone = !!(cloud[m.id]?.done);
-            state[m.id] = { done: localDone || cloudDone };
-          });
-          state.quiz = cloud.quiz || state.quiz;
-          state.nombre = user.displayName || state.nombre;
-          state.email = user.email || state.email;
-          save();
-        }
-      }catch(e){ console.warn('No se pudo leer progreso en la nube', e); }
-    }
-    async function syncToCloud(){
-      try{
-        const ref = await userDoc(); if(!ref) return;
-        const payload = { quiz: state.quiz };
-        MODULOS.forEach(m=>{ payload[m.id] = { done: !!(state[m.id]?.done) }; });
-        await ref.set(payload, { merge: true });
-      }catch(e){ console.warn('No se pudo guardar en la nube', e); }
-    }
-
-    // Guardar en la nube cada vez que marcamos completado o calificamos
-    document.addEventListener('click', (e)=>{
-      if(e.target?.matches('[data-complete]')){ setTimeout(syncToCloud, 300); }
-    });
-
-    const _gradeOrig = gradeQuiz;
-    gradeQuiz = function(){ _gradeOrig(); syncToCloud(); };
-
-    // Autoinit
-    init();
-      // === Helpers modal ===
-    const modal = {
-      el: document.getElementById('modal-register'),
-      open(){ this.el.style.display='flex'; },
-      close(){ this.el.style.display='none'; }
-    };
-    document.getElementById('rg-cancel')?.addEventListener('click', ()=>modal.close());
-
-    // === Login que verifica existencia del correo ===
-    $('#btn-login').addEventListener('click', async ()=>{
-      const email = ($('#auth-email').value||'').trim();
-      const pass = ($('#auth-pass').value||'').trim();
-      if(!email || !pass){ return msg('Ingresa correo y contraseña.'); }
-      try{
-        const methods = await auth.fetchSignInMethodsForEmail(email);
-        if(!methods || methods.length===0){
-          // no existe → pedir datos y registrar
-          $('#rg-name').value = $('#auth-name').value || '';
-          modal.open();
-          const once = async ()=>{
-            document.getElementById('rg-save').removeEventListener('click', once);
-            const name = ($('#rg-name').value||'').trim();
-            const iddoc = ($('#rg-id').value||'').trim();
-            const spec = ($('#rg-spec').value||'').trim();
-            if(!name || !iddoc || !spec){ $('#rg-msg').textContent='Completa todos los campos.'; return; }
-            try{
-              const { user } = await auth.createUserWithEmailAndPassword(email, pass);
-              await user.updateProfile({ displayName: name });
-              await db.collection('users').doc(user.uid).collection('courses').doc('soulmv').set({});
-              await db.collection('users').doc(user.uid).collection('profile').doc('main').set({ name, iddoc, spec }, { merge:true });
-              state.profile = { name, iddoc, spec }; save();
-              await user.sendEmailVerification();
-              modal.close();
-              msg('Cuenta creada. Te enviamos email de verificación.');
-              $('#verify-box').style.display='block';
-            }catch(e){ $('#rg-msg').textContent = 'Error al crear cuenta: '+e.message; }
-          };
-          document.getElementById('rg-save').addEventListener('click', once);
-          return;
-        }
-        // existe → iniciar sesión
-        await auth.signInWithEmailAndPassword(email, pass);
-        msg('Sesión iniciada.');
-      }catch(e){ msg('Error: '+e.message); }
-    });
-
-    // === Cargar/Guardar perfil ===
-    async function loadProfile(){
-      try{
-        const uid = auth.currentUser?.uid; if(!uid) return;
-        const snap = await db.collection('users').doc(uid).collection('profile').doc('main').get();
-        if(snap.exists){
-          state.profile = snap.data(); save();
-        }
-        $('#pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
-        $('#pf-id').value = state.profile?.iddoc || '';
-        $('#pf-spec').value = state.profile?.spec || '';
-      }catch(e){ console.warn('Perfil no disponible', e); }
-    }
-    async function saveProfile(){
-      try{
-        const uid = auth.currentUser?.uid; if(!uid) return;
-        const name = ($('#pf-name').value||'').trim();
-        const iddoc = ($('#pf-id').value||'').trim();
-        const spec = ($('#pf-spec').value||'').trim();
-        await db.collection('users').doc(uid).collection('profile').doc('main').set({ name, iddoc, spec }, { merge:true });
-        state.profile = { name, iddoc, spec }; save();
-        if(name) { await auth.currentUser.updateProfile({ displayName: name }); }
-        $('#pf-msg').textContent = 'Perfil guardado.';
-      }catch(e){ $('#pf-msg').textContent = 'No se pudo guardar: '+e.message; }
-    }
-    $('#btn-save-profile').addEventListener('click', saveProfile);
-
-    // Mostrar sección perfil cuando esté logeado y verificado
-    function showCourse(){
-      if(auth.currentUser?.emailVerified){
-        $('#profile').style.display='block';
-        loadProfile();
-      }
-      // resto queda igual
-      if(auth.currentUser?.displayName){ state.nombre = auth.currentUser.displayName; save(); }
-      state.email = auth.currentUser?.email || state.email; save();
-      $('#step-welcome').style.display='none';
-      $('#progress').style.display='block';
-      $('#modules').style.display='grid';
-      $('#eval').style.display='block';
-      renderModules();
-      updateProgress();
-    }
-
-    // Usar nombre del perfil para el certificado si existe
-    const _certBtn = document.getElementById('btn-cert');
-    _certBtn?.addEventListener('click', ()=>{
-      const preferName = state.profile?.name || state.nombre || auth.currentUser?.displayName || '';
-      document.getElementById('cert-nombre').textContent = preferName;
-      const f = new Date();
-      const fecha = f.toLocaleDateString('es-EC', {year:'numeric',month:'long',day:'numeric'});
-      document.getElementById('cert-fecha').textContent = `Fecha: ${fecha}`;
-      document.getElementById('certificado').classList.add('show');
-      setTimeout(()=>window.print(), 400);
-    });
-
-    // Incluir perfil en sync cloud
-    const _syncToCloud = syncToCloud;
-    syncToCloud = async function(){
-      await _syncToCloud();
-      try{
-        const uid = auth.currentUser?.uid; if(!uid) return;
-        if(state.profile){
-          await db.collection('users').doc(uid).collection('profile').doc('main').set(state.profile, { merge:true });
-        }
-      }catch(e){ console.warn('Perfil no guardado', e); }
-    }
-
-    // Autoinit ya está definido arriba
   </script>
+
 </body>
 </html>
