@@ -37,6 +37,13 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 /* Avisos */
 .alert{border-radius:12px;padding:12px 14px;font-size:14px}
 .alert-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
+
+/* Spinner “Guardando…” */
+.saving::after{
+  content:''; display:inline-block; width:14px; height:14px; margin-left:8px;
+  border:2px solid #9ca3af; border-top-color:transparent; border-radius:999px; animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -299,8 +306,8 @@ auth.onAuthStateChanged((user)=>{
   state = loadState(CURRENT_UID);
   $('#auth-user').textContent = user.email || '';
   document.getElementById('verify-box').style.display='none';
-  showCourse();
-  syncFromCloud(user).catch(()=>{});
+  showCourse();                 // Mostrar rápido
+  syncFromCloud(user).catch(()=>{}); // Nube en background
 });
 
 /* ======= Registro ======= */
@@ -326,7 +333,7 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
     // Base en Firestore (no bloquea)
     db.collection('users').doc(user.uid).collection('courses').doc('soulmv').set({}, { merge:true }).catch(()=>{});
 
-    // Envío AUTOMÁTICO de verificación con reintentos
+    // Verificación con reintentos
     const actionCodeSettings = { url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1', handleCodeInApp:false };
     let sent=false;
     for(let i=0;i<3 && !sent;i++){
@@ -337,7 +344,6 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
       ? 'Cuenta creada. Te enviamos el correo de verificación (revisa Spam).'
       : 'Cuenta creada. No se pudo enviar automáticamente, usa “Reenviar verificación”.');
 
-    // Mostrar solo al registrarse
     document.getElementById('verify-box').style.display='block';
     setTab('login');
     document.getElementById('login-email').value = email;
@@ -345,7 +351,7 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
   }catch(e){ msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.'); }
 });
 
-/* ======= Login robusto (sin exigir verificación) ======= */
+/* ======= Login robusto ======= */
 document.getElementById('btn-login').addEventListener('click', async ()=>{
   const email=(document.getElementById('login-email').value||'').trim().toLowerCase();
   const pass =(document.getElementById('login-pass').value||'').trim();
@@ -394,18 +400,38 @@ document.getElementById('btn-logout').addEventListener('click', async ()=>{
   await auth.signOut(); msg('Sesión cerrada.');
 });
 
-/* ======= Vistas ======= */
+/* ======= Vistas / flujo de primer ingreso ======= */
 function showCourse(){
-  if(!auth.currentUser){ return; }
+  if(!auth.currentUser) return;
+
+  // Oculta acceso, muestra perfil y decide según estado local (rápido)
   document.getElementById('step-welcome').style.display='none';
-  document.getElementById('profile').style.display='block';
   document.getElementById('btn-logout').style.display='inline-flex';
-  // Muestra y luego completa datos
-  loadProfile().then(()=>{
-    toggleCourse(profileComplete());
-  }).catch(()=>{});
+  document.getElementById('profile').style.display='block';
+
+  // Con lo local decido la UI inicial
+  if (profileComplete()) {
+    toggleCourse(true);
+    setProfileReadonly(true);
+    document.getElementById('pf-help').textContent = 'Puedes actualizar tus datos cuando quieras.';
+  } else {
+    toggleCourse(false);
+    setProfileReadonly(false);
+    document.getElementById('pf-help').textContent = 'Completa todos los campos para habilitar los módulos.';
+  }
+
+  // Render inicial
   renderModules(); updateProgress();
+
+  // A continuación sincronizo perfil en background y revalido
+  loadProfile().then(()=>{
+    const complete = profileComplete();
+    toggleCourse(complete);
+    setProfileReadonly(complete);
+    if(complete){ document.getElementById('pf-help').textContent='Puedes actualizar tus datos cuando quieras.'; }
+  }).catch(()=>{});
 }
+
 function showLogin(){
   document.getElementById('step-welcome').style.display='block';
   document.getElementById('profile').style.display='none';
@@ -422,23 +448,18 @@ function toggleCourse(enabled){
     document.getElementById('progress').style.display='block';
     document.getElementById('modules').style.display='grid';
     document.getElementById('eval').style.display='block';
-    document.getElementById('pf-help').textContent = 'Puedes actualizar tus datos cuando quieras.';
-    // si hay perfil, solo botón Modificar
-    setProfileReadonly(true);
   }else{
     document.getElementById('progress').style.display='none';
     document.getElementById('modules').style.display='none';
     document.getElementById('eval').style.display='none';
-    document.getElementById('pf-help').textContent = 'Completa todos los campos para habilitar los módulos.';
-    setProfileReadonly(false);
   }
 }
 
-/* ======= Perfil: Ver / Modificar ======= */
+/* ======= Perfil: Ver / Modificar / Guardado rápido ======= */
 function setProfileReadonly(ro){
   ['pf-name','pf-id','pf-spec'].forEach(id=>{
     const el=document.getElementById(id);
-    el.readOnly=ro; el.style.background=ro?'#e5edff':'#fff';
+    el.readOnly=ro; el.style.background=ro?'#eef2ff':'#fff';
   });
   document.getElementById('btn-edit-profile').style.display = ro ? 'inline-flex' : 'none';
   document.getElementById('btn-save-profile').style.display = ro ? 'none' : 'inline-flex';
@@ -447,6 +468,60 @@ document.getElementById('btn-edit-profile').addEventListener('click', ()=>{
   setProfileReadonly(false);
   document.getElementById('pf-help').textContent='Edita tus datos y guarda los cambios.';
 });
+
+async function loadProfile(){
+  // Relleno inmediato con local (rápido)
+  document.getElementById('pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
+  document.getElementById('pf-id').value   = state.profile?.iddoc || '';
+  document.getElementById('pf-spec').value = state.profile?.spec  || '';
+
+  // Intento nube en background
+  try{
+    const uid=auth.currentUser?.uid; if(!uid) return;
+    const s=await db.collection('users').doc(uid).collection('profile').doc('main').get();
+    if(s.exists){
+      state.profile=s.data(); saveState(CURRENT_UID,state);
+      document.getElementById('pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
+      document.getElementById('pf-id').value   = state.profile?.iddoc || '';
+      document.getElementById('pf-spec').value = state.profile?.spec  || '';
+    }
+  }catch(e){ console.warn('Perfil no disponible',e); }
+}
+
+async function saveProfile(){
+  const name=(document.getElementById('pf-name').value||'').trim();
+  const iddoc=(document.getElementById('pf-id').value||'').trim();
+  const spec =(document.getElementById('pf-spec').value||'').trim();
+  const pfMsg=document.getElementById('pf-msg');
+  const btn=document.getElementById('btn-save-profile');
+
+  if(!name || !iddoc || !spec){
+    pfMsg.textContent='Completa nombre, cédula/pasaporte y especialidad.'; return;
+  }
+
+  // UI optimista: guardar local + habilitar curso + feedback
+  state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
+  pfMsg.classList.add('saving'); pfMsg.textContent='Guardando…';
+  btn.disabled=true;
+  toggleCourse(true);
+  setProfileReadonly(true);
+  try{ if(name){ await auth.currentUser.updateProfile({displayName:name}); } }catch(_){}
+
+  // Enviar a Firestore sin bloquear UI
+  (async()=>{
+    try{
+      const uid=auth.currentUser?.uid; if(!uid) throw new Error('Sin UID');
+      await db.collection('users').doc(uid).collection('profile').doc('main').set(state.profile,{merge:true});
+      pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Perfil guardado.';
+    }catch(e){
+      pfMsg.classList.remove('saving');
+      pfMsg.textContent='No se pudo guardar en la nube ahora; tus datos quedan guardados localmente.';
+      console.warn('Guardar perfil falló',e);
+    }finally{
+      btn.disabled=false;
+    }
+  })();
+}
 document.getElementById('btn-save-profile').addEventListener('click', saveProfile);
 
 /* ======= Módulos (YouTube) ======= */
@@ -562,7 +637,7 @@ document.getElementById('btn-cert')?.addEventListener('click', ()=>{
   document.getElementById('certificado').classList.add('show'); setTimeout(()=>window.print(),400);
 });
 
-/* ======= Perfil + Cloud sync ======= */
+/* ======= Cloud sync reutilizable ======= */
 async function userDoc(){
   const uid=auth.currentUser?.uid; if(!uid) return null;
   return db.collection('users').doc(uid).collection('courses').doc('soulmv');
@@ -583,12 +658,6 @@ async function syncFromCloud(user){
     }
     const psnap=await db.collection('users').doc(user.uid).collection('profile').doc('main').get();
     if(psnap.exists){ state.profile=psnap.data(); saveState(CURRENT_UID,state); }
-    // si ya hay perfil, bloquear campos y mostrar "Modificar"
-    if(profileComplete()){ setProfileReadonly(true); }
-    // rellenar inputs
-    document.getElementById('pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
-    document.getElementById('pf-id').value   = state.profile?.iddoc || '';
-    document.getElementById('pf-spec').value = state.profile?.spec  || '';
   }catch(e){ console.warn('No se pudo leer progreso/perfil',e); }
 }
 async function syncToCloud(){
@@ -601,35 +670,6 @@ async function syncToCloud(){
       await db.collection('users').doc(uid).collection('profile').doc('main').set(state.profile,{merge:true});
     }
   }catch(e){ console.warn('No se pudo guardar en la nube',e); }
-}
-async function loadProfile(){
-  try{
-    const uid=auth.currentUser?.uid; if(!uid) return;
-    const s=await db.collection('users').doc(uid).collection('profile').doc('main').get();
-    if(s.exists){ state.profile=s.data(); saveState(CURRENT_UID,state); }
-    document.getElementById('pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
-    document.getElementById('pf-id').value   = state.profile?.iddoc || '';
-    document.getElementById('pf-spec').value = state.profile?.spec  || '';
-    if(profileComplete()) setProfileReadonly(true);
-  }catch(e){ console.warn('Perfil no disponible',e); }
-}
-async function saveProfile(){
-  const name=(document.getElementById('pf-name').value||'').trim();
-  const iddoc=(document.getElementById('pf-id').value||'').trim();
-  const spec =(document.getElementById('pf-spec').value||'').trim();
-  if(!name || !iddoc || !spec){
-    document.getElementById('pf-msg').textContent='Completa nombre, cédula/pasaporte y especialidad.';
-    return;
-  }
-  try{
-    const uid=auth.currentUser?.uid; if(!uid) return;
-    await db.collection('users').doc(uid).collection('profile').doc('main').set({name,iddoc,spec},{merge:true});
-    state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
-    if(name){ await auth.currentUser.updateProfile({displayName:name}); }
-    document.getElementById('pf-msg').textContent='✅ Perfil guardado.';
-    toggleCourse(true);
-    setProfileReadonly(true);
-  }catch(e){ document.getElementById('pf-msg').textContent='No se pudo guardar: '+(MSGS[e.code]||e.message); }
 }
 </script>
 </body>
