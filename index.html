@@ -158,7 +158,6 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
       <div>
         <label>Especialidad</label>
         <div class="combo" id="spec-combo">
-          <!-- Anti-autofill fuerte -->
           <input id="spec-input" type="search"
             placeholder="Escribe para buscar..."
             autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
@@ -216,11 +215,25 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-<!-- Carga la lista generada desde tu Excel -->
-<script src="especialidades_modulos_from_excel.js"></script>
-
 <script>
-/* ======= Videos por módulo (usa GENERALIDADES si el título no está) ======= */
+/* ============= Carga del catálogo desde JSON (sin cache) ============= */
+let ESPECIALIDADES = [];
+let MAPA_MODULOS = {};
+let catalogoReady = (async function cargarCatalogo(){
+  try{
+    const res = await fetch('especialidades_modulos_from_excel.json', { cache:'no-store' });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    ESPECIALIDADES = Array.isArray(data.ESPECIALIDADES) ? data.ESPECIALIDADES : [];
+    MAPA_MODULOS  = data.MAPA_MODULOS || {};
+  }catch(err){
+    console.error('No se pudo cargar el catálogo:', err);
+    alert('No se pudo cargar la lista de especialidades. Verifica el archivo "especialidades_modulos_from_excel.json".');
+    ESPECIALIDADES = []; MAPA_MODULOS = {};
+  }
+})();
+
+/* ============= Videos por módulo (fallback GENERALIDADES) ============= */
 const MOD_VIDEOS = {
   "ANESTESIOLOGÍA":["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0","3JZ_D3ELwOQ","kXYiU_JCYtU"],
   "CENTRO QUIRÚRGICO":["l482T0yNkeo","9bZkp7q19f0","3JZ_D3ELwOQ","kXYiU_JCYtU","CevxZvSJLk8"],
@@ -230,7 +243,7 @@ const MOD_VIDEOS = {
   "HOSPITALIZACIÓN-HDD":["CevxZvSJLk8","RgKAFK5djSk","OPf0YbXqDm0","YVkUvmDQ3HY","hTWKbfoikeg"]
 };
 
-/* ======= Firebase ======= */
+/* ============= Firebase ============= */
 const firebaseConfig = {
   apiKey: "AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",
   authDomain: "induccion-pep-hvq.firebaseapp.com",
@@ -244,10 +257,9 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-/* ======= Utils/estado ======= */
+/* ============= Helpers/estado ============= */
 const $ = s => document.querySelector(s);
 $('#year').textContent = new Date().getFullYear();
-
 const MSGS = {
   'auth/email-already-in-use':'Ese correo ya tiene una cuenta. Usa Iniciar sesión.',
   'auth/invalid-email':'El formato del correo no es válido.',
@@ -269,12 +281,11 @@ function keyFor(uid){ return `soulmv_${uid||'anon'}`; }
 function loadState(uid){ try{ return JSON.parse(localStorage.getItem(keyFor(uid))||'{}'); }catch{ return {}; } }
 function saveState(uid, st){ localStorage.setItem(keyFor(uid), JSON.stringify(st)); }
 let state = {};
-
 let justRegistered = false;
 let unsubProfile = null;
 let savingProfile = false;
 
-/* ======= Tabs + ojitos ======= */
+/* ============= Tabs + ojitos ============= */
 function setTab(which){
   const onLogin = which==='login';
   $('#form-login').style.display = onLogin ? 'block' : 'none';
@@ -294,51 +305,44 @@ document.querySelectorAll('.eye').forEach(btn=>{
   });
 });
 
-/* ======= Anti-autofill + combo de especialidad ======= */
+/* ============= Combo de especialidad (estricto + anti-autofill) ============= */
 const specCombo = $('#spec-combo'), specInput = $('#spec-input'), specList = $('#spec-list');
-
-// aleatoriza el name para que Chrome no autocomplemente
-specInput.setAttribute('name', 'spec-' + Date.now());
-// algunos navegadores respetan más este valor “raro”
-specInput.setAttribute('autocomplete','new-password');
-
+function isSpecValid(v){ return Array.isArray(ESPECIALIDADES) && ESPECIALIDADES.includes(v); }
 function renderSpecList(filter=''){
   const f = (filter||'').trim().toLowerCase();
-  const base = (typeof ESPECIALIDADES!=='undefined' && Array.isArray(ESPECIALIDADES)) ? ESPECIALIDADES : [];
+  const base = Array.isArray(ESPECIALIDADES) ? ESPECIALIDADES : [];
   const opts = base.filter(x=>x.toLowerCase().includes(f));
-  specList.innerHTML = opts.map(x=>`<div class="item" data-v="${x}">${x}</div>`).join('')
-    || `<div class="item" data-v="">(sin resultados)</div>`;
+  specList.innerHTML = opts.length
+    ? opts.map(x=>`<div class="item" data-v="${x}">${x}</div>`).join('')
+    : `<div class="item" data-v="">(sin resultados)</div>`;
 }
-
 function valueOnlyIfValid(){
-  const base = (typeof ESPECIALIDADES!=='undefined' && Array.isArray(ESPECIALIDADES)) ? ESPECIALIDADES : [];
   const v=(specInput.value||'').trim();
-  if(!base.includes(v)) specInput.value='';
+  if(!isSpecValid(v)) specInput.value='';
+}
+function setupCombo(){
+  // anti-autofill fuerte
+  specInput.setAttribute('name','spec-'+Date.now());
+  specInput.setAttribute('autocomplete','new-password');
+
+  specInput.addEventListener('focus', ()=>{
+    valueOnlyIfValid();
+    specCombo.classList.add('show');
+    renderSpecList(specInput.value);
+  });
+  specInput.addEventListener('input', ()=>renderSpecList(specInput.value));
+  specInput.addEventListener('blur', valueOnlyIfValid);
+  document.addEventListener('click', (e)=>{ if(!specCombo.contains(e.target)) specCombo.classList.remove('show'); });
+  specList.addEventListener('mousedown', (e)=>{ // mousedown evita que el blur borre antes de seleccionar
+    const it=e.target.closest('.item'); if(!it) return;
+    const v=it.dataset.v; if(v){ specInput.value=v; }
+    specCombo.classList.remove('show');
+  });
 }
 
-specInput.addEventListener('focus', ()=>{
-  valueOnlyIfValid();
-  specCombo.classList.add('show');
-  renderSpecList(specInput.value);
-});
-specInput.addEventListener('input', ()=>renderSpecList(specInput.value));
-specInput.addEventListener('blur', valueOnlyIfValid);
-document.addEventListener('click', (e)=>{ if(!specCombo.contains(e.target)) specCombo.classList.remove('show'); });
-specList.addEventListener('mousedown', (e)=>{ // mousedown evita interferencia del blur
-  const it=e.target.closest('.item'); if(!it) return;
-  const v=it.dataset.v; if(v){ specInput.value=v; }
-  specCombo.classList.remove('show');
-});
-
-/* ======= Guard: verifica que se cargó el JS del Excel ======= */
-window.addEventListener('load', ()=>{
-  if(typeof ESPECIALIDADES==='undefined' || !Array.isArray(ESPECIALIDADES) || ESPECIALIDADES.length===0){
-    alert('No se cargó la lista de especialidades desde el Excel. Verifica que "especialidades_modulos_from_excel.js" esté disponible.');
-  }
-});
-
-/* ======= Auth listener ======= */
+/* ============= Auth listener (espera catálogo) ============= */
 auth.onAuthStateChanged(async (user)=>{
+  await catalogoReady; // ¡importante!
   if(!user){
     CURRENT_UID=null; state={}; $('#auth-user').textContent='';
     $('#btn-logout').style.display='none';
@@ -359,11 +363,12 @@ auth.onAuthStateChanged(async (user)=>{
     $('#verify-box').style.display='none';
   }
 
+  setupCombo(); // ahora que ya cargó el catálogo
   showCourse();
   syncFromCloud(user).catch(()=>{});
 });
 
-/* ======= Registro ======= */
+/* ============= Registro / Login / Reset / Logout ============= */
 $('#btn-register-2').addEventListener('click', async ()=>{
   const email= ($('#reg-email').value||'').trim().toLowerCase();
   const pass  = ($('#reg-pass').value||'').trim();
@@ -403,7 +408,6 @@ $('#btn-resend-verify').addEventListener('click', async ()=>{
   }catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.','#auth-msg'); }
 });
 
-/* ======= Login robusto ======= */
 $('#btn-login').addEventListener('click', async ()=>{
   const email=($('#login-email').value||'').trim().toLowerCase();
   const pass =( $('#login-pass').value||'').trim();
@@ -417,7 +421,7 @@ $('#btn-login').addEventListener('click', async ()=>{
     msg('Sesión iniciada.');
     $('#verify-box').style.display='none';
     justRegistered=false;
-    showCourse();
+    await catalogoReady; setupCombo(); showCourse();
     syncFromCloud(u).catch(()=>{});
   }catch(e){
     let methods=[]; try{ methods = await auth.fetchSignInMethodsForEmail(email); }catch(_){}
@@ -429,7 +433,6 @@ $('#btn-login').addEventListener('click', async ()=>{
   }finally{ btn.disabled=false; }
 });
 
-/* ======= Reset contraseña ======= */
 $('#btn-reset').addEventListener('click', async ()=>{
   const email=($('#login-email').value||'').trim().toLowerCase();
   if(!email) return msg('Escribe tu correo para enviarte el enlace.');
@@ -441,23 +444,17 @@ $('#btn-reset').addEventListener('click', async ()=>{
     msg('Te enviamos un correo para restablecer la contraseña.');
   }catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.'); }
 });
-
-/* ======= Logout ======= */
 $('#btn-logout').addEventListener('click', async ()=>{ await auth.signOut(); msg('Sesión cerrada.'); });
 
-/* ======= Vistas / flujo ======= */
+/* ============= Vistas / flujo ============= */
 function showCourse(){
   if(!auth.currentUser) return;
   $('#step-welcome').style.display='none';
   $('#btn-logout').style.display='inline-flex';
   $('#profile').style.display='block';
 
-  // Solo rellenar si es válido
-  if (state.profile?.spec && Array.isArray(ESPECIALIDADES) && ESPECIALIDADES.includes(state.profile.spec)){
-    $('#spec-input').value = state.profile.spec;
-  } else {
-    $('#spec-input').value = '';
-  }
+  const currentSpec = state.profile?.spec || '';
+  $('#spec-input').value = isSpecValid(currentSpec) ? currentSpec : '';
 
   if (profileComplete()) {
     toggleCourse(true);
@@ -473,30 +470,11 @@ function showCourse(){
   startProfileRealtime();
   loadProfile().then(()=>{ const c=profileComplete(); toggleCourse(c); setProfileReadonly(c); if(c) $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.'; }).catch(()=>{});
 }
+function showLogin(){ $('#step-welcome').style.display='block'; $('#profile').style.display='none'; $('#progress').style.display='none'; $('#modules').style.display='none'; }
+function profileComplete(){ const p = state.profile || {}; return !!(p.name && p.iddoc && isSpecValid(p.spec||'')); }
+function toggleCourse(enabled){ $('#progress').style.display= enabled?'block':'none'; $('#modules').style.display= enabled?'grid':'none'; }
 
-function showLogin(){
-  $('#step-welcome').style.display='block';
-  $('#profile').style.display='none';
-  $('#progress').style.display='none';
-  $('#modules').style.display='none';
-}
-
-function profileComplete(){
-  const p = state.profile || {};
-  return !!(p.name && p.iddoc && p.spec && Array.isArray(ESPECIALIDADES) && ESPECIALIDADES.includes(p.spec));
-}
-
-function toggleCourse(enabled){
-  if(enabled){
-    $('#progress').style.display='block';
-    $('#modules').style.display='grid';
-  }else{
-    $('#progress').style.display='none';
-    $('#modules').style.display='none';
-  }
-}
-
-/* ======= Perfil realtime/guardado ======= */
+/* ============= Perfil realtime/guardar ============= */
 function setProfileReadonly(ro){
   ['pf-name','pf-id','spec-input'].forEach(id=>{
     const el=document.getElementById(id);
@@ -518,10 +496,7 @@ function startProfileRealtime(){
     if($('#pf-name').readOnly){
       $('#pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
       $('#pf-id').value   = state.profile?.iddoc || '';
-      // nunca escribir una especialidad que no esté en la lista
-      if (Array.isArray(ESPECIALIDADES) && ESPECIALIDADES.includes(state.profile?.spec||'')) {
-        $('#spec-input').value = state.profile.spec;
-      }
+      if(isSpecValid(state.profile?.spec||'')) $('#spec-input').value = state.profile.spec;
     }
 
     if (savingProfile){
@@ -545,11 +520,7 @@ async function loadProfile(){
       state.profile=s.data(); saveState(CURRENT_UID,state);
       $('#pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
       $('#pf-id').value   = state.profile?.iddoc || '';
-      if (Array.isArray(ESPECIALIDADES) && ESPECIALIDADES.includes(state.profile?.spec||'')) {
-        $('#spec-input').value = state.profile.spec;
-      } else {
-        $('#spec-input').value = '';
-      }
+      $('#spec-input').value = isSpecValid(state.profile?.spec||'') ? state.profile.spec : '';
     }
   }catch(e){ console.warn('Perfil no disponible',e); }
 }
@@ -561,7 +532,7 @@ async function saveProfile(){
   const pfMsg=$('#pf-msg'); const btn=$('#btn-save-profile');
 
   if(!name || !iddoc || !spec){ pfMsg.textContent='Completa nombre, cédula/pasaporte y especialidad.'; return; }
-  if(!(Array.isArray(ESPECIALIDADES) && ESPECIALIDADES.includes(spec))){ pfMsg.textContent='Selecciona la especialidad desde la lista (no es texto libre).'; return; }
+  if(!isSpecValid(spec)){ pfMsg.textContent='Selecciona la especialidad desde la lista (no es texto libre).'; return; }
 
   state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
   pfMsg.classList.add('saving'); pfMsg.textContent='Guardando…';
@@ -581,12 +552,9 @@ async function saveProfile(){
 }
 $('#btn-save-profile').addEventListener('click', saveProfile);
 
-/* ======= Módulos por especialidad ======= */
+/* ============= Módulos por especialidad ============= */
 const players = {};
-function currentModules(){
-  const spec = state.profile?.spec || '';
-  return (typeof MAPA_MODULOS!=='undefined' && MAPA_MODULOS[spec]) ? MAPA_MODULOS[spec] : [];
-}
+function currentModules(){ const spec = state.profile?.spec || ''; return (MAPA_MODULOS[spec]||[]); }
 function renderModules(){
   const wrap=$('#modules'); wrap.innerHTML='';
   const mods = currentModules();
@@ -661,10 +629,10 @@ function renderModules(){
     }
   });
 
-  wrap.querySelectorAll('[data-quiz]').forEach(b=>b.addEventListener('click', (e)=>openQuiz(e.currentTarget.getAttribute('data-quiz')) ));
+  $('#modules').querySelectorAll('[data-quiz]').forEach(b=>b.addEventListener('click', (e)=>openQuiz(e.currentTarget.getAttribute('data-quiz')) ));
 }
 
-/* ======= Evaluaciones (dummy) ======= */
+/* ============= Evaluaciones (demo) ============= */
 function questionsFor(moduleTitle){
   return [
     { id:'q1', text:`${moduleTitle}: ¿Pregunta 1?`, options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}], correct:'A'},
@@ -714,7 +682,7 @@ function openQuiz(moduleTitle){
   };
 }
 
-/* ======= Progreso y Certificado ======= */
+/* ============= Progreso y Certificado ============= */
 function updateProgress(){
   const mods = currentModules();
   const totalMods = mods.length;
@@ -742,7 +710,7 @@ function updateProgress(){
   }
 }
 
-/* ======= Cloud sync ======= */
+/* ============= Cloud sync ============= */
 async function userDoc(){ const uid=auth.currentUser?.uid; if(!uid) return null; return db.collection('users').doc(uid).collection('courses').doc('soulmv'); }
 async function syncFromCloud(user){
   try{
