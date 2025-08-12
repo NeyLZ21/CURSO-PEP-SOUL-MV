@@ -10,7 +10,7 @@
 <style>
 :root{--brand:#781C38;--ink:#1f2937;--muted:#6b7280;--bg:#f8fafc;--card:#ffffff;--ok:#15803d}
 *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
-.container{max-width:980px;margin:auto;padding:24px}
+.container{max-width:1000px;margin:auto;padding:24px}
 header{display:flex;gap:16px;align-items:center;margin:12px 0 20px}
 header .logo{width:48px;height:48px;border-radius:12px;background:var(--brand);display:grid;place-content:center;color:#fff;font-weight:800}
 h1{font-size:clamp(22px,3.5vw,34px);margin:0}.subtitle{color:var(--muted);margin-top:4px}
@@ -25,30 +25,38 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .yt-wrap{position:relative;padding-top:56.25%;border-radius:16px;overflow:hidden;background:#000;margin-top:12px}
 .yt-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .muted{color:var(--muted)} .footer{margin-top:24px;color:var(--muted);font-size:13px}
-small.note{color:var(--muted);font-size:12px}
+
 /* Certificado */
 #certificado{display:none} #certificado.show{display:block}
 @media print{.no-print{display:none !important} #certificado{display:block}}
 .cert-card{background:#fff;border:4px solid var(--brand);border-radius:20px;padding:40px;text-align:center}
 .cert-title{font-size:28px;font-weight:800;margin:0 0 10px;color:var(--brand)} .cert-name{font-size:26px;font-weight:800;margin:8px 0}
 .cert-meta{color:#374151;margin-top:10px}
+
 /* Inputs con ojito */
 .input-wrap{position:relative} .input-wrap input{width:100%;padding:12px 40px 12px 12px;border-radius:12px;border:1px solid #e5e7eb}
 .eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;border:0;background:transparent;font-size:16px}
+
 /* Avisos */
 .alert{border-radius:12px;padding:12px 14px;font-size:14px}
 .alert-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
+
 /* Spinner “Guardando…” */
-.saving::after{content:''; display:inline-block; width:14px; height:14px; margin-left:8px; border:2px solid #9ca3af; border-top-color:transparent; border-radius:999px; animation:spin .8s linear infinite}
+.saving::after{
+  content:''; display:inline-block; width:14px; height:14px; margin-left:8px;
+  border:2px solid #9ca3af; border-top-color:transparent; border-radius:999px; animation:spin .8s linear infinite;
+}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* Subvideos grid */
-.videos-grid{display:grid;gap:12px}
-@media (min-width:780px){.videos-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.video-item{background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:12px}
-.video-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.done-pill{background:#dcfce7;color:#065f46;border-radius:999px;padding:2px 8px;font-size:12px;font-weight:700}
-.pending-pill{background:#fee2e2;color:#991b1b;border-radius:999px;padding:2px 8px;font-size:12px;font-weight:700}
-.quiz-wrap{margin-top:12px;border-top:1px dashed #e5e7eb;padding-top:12px}
+
+/* Combobox (buscador de especialidad) */
+.combo{position:relative}
+.combo input{width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb}
+.combo .list{position:absolute;z-index:20;top:100%;left:0;right:0;background:#fff;border:1px solid #e5e7eb;border-radius:12px;margin-top:6px;max-height:260px;overflow:auto;box-shadow:0 10px 24px rgba(0,0,0,.08);display:none}
+.combo.open .list{display:block}
+.combo .opt{padding:10px 12px;cursor:pointer}
+.combo .opt:hover,.combo .opt[aria-selected="true"]{background:#f3f4f6}
+.small{font-size:12px;color:var(--muted)}
+hr.sep{border:0;border-top:1px solid #e5e7eb;margin:10px 0}
 </style>
 </head>
 <body>
@@ -70,7 +78,7 @@ small.note{color:var(--muted);font-size:12px}
     <div class="grid cols-2" style="align-items:start">
       <div>
         <h2 style="margin:0 0 6px">Acceso</h2>
-        <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña. Te pediremos verificar el correo <strong>solo al registrarte</strong>. Tu progreso quedará guardado en la nube.</p>
+        <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña. <strong>Debes verificar el correo para ingresar al curso.</strong> Tu progreso quedará guardado en la nube.</p>
 
         <div class="grid" id="auth-forms">
           <div style="display:flex; gap:8px; margin-bottom:8px">
@@ -122,6 +130,7 @@ small.note{color:var(--muted);font-size:12px}
 
         <div id="verify-box" class="alert alert-warn" style="display:none;margin-top:10px">
           <strong>Verifica tu correo:</strong> te enviamos un email de verificación. Confírmalo y vuelve a esta pantalla para continuar.
+          <div class="small">Si ya verificaste, pulsa “Ya verifiqué mi correo”.</div>
           <div style="display:flex;gap:8px;margin-top:8px">
             <button id="btn-check-verify" class="btn btn-primary">Ya verifiqué mi correo</button>
             <button id="btn-resend-verify" class="btn btn-muted">Reenviar verificación</button>
@@ -133,8 +142,8 @@ small.note{color:var(--muted);font-size:12px}
         <div class="badge"><span>ℹ️</span> Requisitos</div>
         <ul>
           <li>Tener acceso a Internet</li>
-          <li>Completar los módulos requeridos por tu especialidad</li>
-          <li>Correo válido (cualquier dominio)</li>
+          <li>Completar todos los videos y evaluaciones de tu especialidad</li>
+          <li>Correo válido y verificado</li>
         </ul>
       </div>
     </div>
@@ -151,11 +160,14 @@ small.note{color:var(--muted);font-size:12px}
       <label>Cédula o Pasaporte<br>
         <input id="pf-id" type="text" required style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
       </label>
-      <label>Especialidad<br>
-        <input id="pf-spec" type="text" list="spec-list" placeholder="Escribe para buscar..." required style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
-        <datalist id="spec-list"></datalist>
-        <small class="note">Selecciona de la lista. Esto define los módulos que verás.</small>
-      </label>
+      <div>
+        <label>Especialidad</label>
+        <div id="spec-combo" class="combo">
+          <input id="pf-spec" type="text" placeholder="Escribe para buscar..." autocomplete="off">
+          <div class="list" id="spec-list"></div>
+        </div>
+        <div class="small">Selecciona de la lista. Esto define los módulos que verás.</div>
+      </div>
     </div>
     <div class="actions" style="display:flex;gap:8px;margin-top:10px">
       <button id="btn-edit-profile" class="btn btn-muted" style="display:none">Modificar</button>
@@ -164,29 +176,25 @@ small.note{color:var(--muted);font-size:12px}
     <div id="pf-msg" class="muted" style="margin-top:6px"></div>
   </section>
 
-  <!-- Progreso global -->
+  <!-- Resumen -->
   <section id="progress" class="no-print" style="display:none;margin:18px 0">
     <div class="card">
-      <div class="grid cols-2" style="align-items:center">
-        <div>
-          <strong>Progreso del curso</strong>
-          <div class="muted" id="progress-label">0% completado</div>
-        </div>
-        <div class="progress"><span id="bar" style="width:0%"></span></div>
+      <div>
+        <strong>Progreso del curso</strong>
+        <div class="small" id="progress-extra">0% completado</div>
       </div>
+      <div class="progress" style="margin-top:10px"><span id="bar" style="width:0%"></span></div>
     </div>
   </section>
 
-  <!-- Módulos por especialidad -->
+  <!-- Módulos -->
   <section id="modules" class="grid no-print" style="display:none"></section>
 
   <!-- Certificado -->
-  <section id="eval" class="card no-print" style="display:none;margin-top:16px">
-    <h2 style="margin-top:0">Certificado</h2>
-    <p class="muted">Se habilita cuando completes y apruebes <strong>todos</strong> los módulos requeridos por tu especialidad.</p>
-    <div>
-      <button id="btn-cert" class="btn btn-success" disabled>Emitir certificado</button>
-    </div>
+  <section id="cert-area" class="card no-print" style="display:none;margin-top:16px">
+    <h2 style="margin:0 0 8px">Certificado</h2>
+    <p class="muted">Se habilita cuando completes todos los módulos (videos + evaluaciones) de tu especialidad.</p>
+    <button id="btn-cert" class="btn btn-success" disabled>Mostrar certificado</button>
   </section>
 
   <!-- Certificado imprimible -->
@@ -214,53 +222,28 @@ small.note{color:var(--muted);font-size:12px}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
-/* ======= Definición de Especialidades → Módulos =======
-   Amplía esta lista con tu Excel. Si una especialidad no aparece,
-   no cargará módulos. */
-const SPECIALTY_MODULES = {
-  "ACUPUNTURA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "ALERGOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "ANESTESIOLOGIA": ["GENERALIDADES","ANESTESIOLOGÍA"],
-  "CARDIOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "CARDIOLOGIA HEMODINAMIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  // 👇 Agrega aquí el resto de filas de tu Excel
-};
+/* ================== 1) Catálogo por especialidad =================== */
+/* Reemplaza/expande SPECIALTY_MAP con tu lista completa */
+const SAMPLE_VIDS = ["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0","kXYiU_JCYtU","60ItHLz5WEA"]; // 5 ids demo
+const mk = (titulo) => ({ titulo, videos: [...SAMPLE_VIDS] });
 
-/* ======= Videos por módulo (5 IDs de prueba por módulo)
-   Si un módulo no está en este banco, usará los genéricos. */
-const GENERIC_VIDEOS = ["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0","J---aiyznGQ","3GwjfUFyY6M"];
-const MODULE_VIDEO_BANK = {
-  "GENERALIDADES": ["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0","J---aiyznGQ","3GwjfUFyY6M"],
-  "HOSPITALIZACIÓN-HDD": ["9bZkp7q19f0","l482T0yNkeo","dQw4w9WgXcQ","J---aiyznGQ","3GwjfUFyY6M"],
-  "CONSULTA EXTERNA": ["J---aiyznGQ","3GwjfUFyY6M","dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0"],
-  "ANESTESIOLOGÍA": ["l482T0yNkeo","3GwjfUFyY6M","J---aiyznGQ","9bZkp7q19f0","dQw4w9WgXcQ"]
+const SPECIALTY_MAP = {
+  "MEDICINA INTERNA": [
+    mk("Generalidades"), mk("Hospitalización"), mk("HDD"), mk("Consulta externa")
+  ],
+  "CARDIOLOGIA": [
+    mk("Ingreso y epicrisis"), mk("Orden médica y prescripción"), mk("Protocolos cardiología"), mk("Alta y referencias")
+  ],
+  "ANESTESIOLOGIA": [
+    mk("Preanestesia"), mk("Registro intraoperatorio"), mk("Analgesia postoperatoria"), mk("Notas y auditoría")
+  ],
+  "ACUPUNTURA": [ mk("Generalidades"), mk("Registro de procedimiento"), mk("Indicaciones y cuidados") ],
+  "MEDICINA INTERNA 44": [ mk("Generalidades"), mk("Hospitalización") ] // ejemplo de tu lista
 };
+// Lista para el buscador
+const SPECIALTIES = Object.keys(SPECIALTY_MAP).sort();
 
-/* ======= Banco de preguntas por módulo (3 por demo) ======= */
-const MODULE_QUIZ_BANK = {
-  "GENERALIDADES":[
-    {id:"g1",text:"¿Dónde se verifica el perfil del médico?",options:[{key:'A',label:'En Ajustes'},{key:'B',label:'En Mi perfil'},{key:'C',label:'En Auditoría'}],correct:'B'},
-    {id:"g2",text:"Para emitir certificado, debes:",options:[{key:'A',label:'Aprobar todos los módulos requeridos'},{key:'B',label:'Ver 1 video'},{key:'C',label:'Contactar TI'}],correct:'A'},
-    {id:"g3",text:"¿Cómo se guarda el progreso?",options:[{key:'A',label:'Solo local'},{key:'B',label:'Solo nube'},{key:'C',label:'Local y nube'}],correct:'C'}
-  ],
-  "HOSPITALIZACIÓN-HDD":[
-    {id:"h1",text:"Para cerrar nota clínica en HDD:",options:[{key:'A',label:'Guardar borrador'},{key:'B',label:'Finalizar documento'},{key:'C',label:'Imprimir sin cerrar'}],correct:'B'},
-    {id:"h2",text:"Las órdenes médicas se registran en:",options:[{key:'A',label:'Módulo de Prescripción'},{key:'B',label:'Imágenes'},{key:'C',label:'Citas'}],correct:'A'},
-    {id:"h3",text:"Auditoría de honorarios valida contra:",options:[{key:'A',label:'Epicrisis provisional'},{key:'B',label:'Tarifario MSP y prescripciones cerradas'},{key:'C',label:'Anexos'}],correct:'B'}
-  ],
-  "CONSULTA EXTERNA":[
-    {id:"c1",text:"Para agendar paciente usas:",options:[{key:'A',label:'Citas'},{key:'B',label:'Prescripción'},{key:'C',label:'HDD'}],correct:'A'},
-    {id:"c2",text:"Para prescribir:",options:[{key:'A',label:'Imagen'},{key:'B',label:'Prescripción'},{key:'C',label:'Auditoría'}],correct:'B'},
-    {id:"c3",text:"Para firmar una nota:",options:[{key:'A',label:'Cerrar/Finalizar'},{key:'B',label:'Guardar borrador'},{key:'C',label:'Exportar a PDF'}],correct:'A'}
-  ],
-  "ANESTESIOLOGÍA":[
-    {id:"a1",text:"¿Qué módulo revisas antes de quirófano?",options:[{key:'A',label:'Generalidades'},{key:'B',label:'Anestesiología'},{key:'C',label:'HDD'}],correct:'B'},
-    {id:"a2",text:"El consentimiento informado debe:",options:[{key:'A',label:'Quedar firmado'},{key:'B',label:'Quedar en borrador'},{key:'C',label:'No es necesario'}],correct:'A'},
-    {id:"a3",text:"Control de vía aérea se documenta en:",options:[{key:'A',label:'Nota de anestesia'},{key:'B',label:'Citas'},{key:'C',label:'Imagen'}],correct:'A'}
-  ]
-};
-
-/* ======= Firebase ======= */
+/* ================== 2) Firebase =================== */
 const firebaseConfig = {
   apiKey: "AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",
   authDomain: "induccion-pep-hvq.firebaseapp.com",
@@ -274,9 +257,10 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-/* ======= Estado + helpers ======= */
+/* ================== 3) Estado/Helpers =================== */
 const $ = s => document.querySelector(s);
 $('#year').textContent = new Date().getFullYear();
+
 const MSGS = {
   'auth/email-already-in-use':'Ese correo ya tiene una cuenta. Usa Iniciar sesión.',
   'auth/invalid-email':'El formato del correo no es válido.',
@@ -299,18 +283,55 @@ function loadState(uid){ try{ return JSON.parse(localStorage.getItem(keyFor(uid)
 function saveState(uid, st){ localStorage.setItem(keyFor(uid), JSON.stringify(st)); }
 let state = {}; // por usuario
 
-/* Realtime perfil */
-let unsubProfile = null;
-let savingProfile = false;
+// progreso por módulo -> { [moduleKey]: { videosSeen: {videoId:true}, evalPassed: bool } }
+function ensureProgressStruct(){ state.progress = state.progress || {}; }
 
-/* ======= Población de la datalist de especialidad ======= */
-const specListEl = document.getElementById('spec-list');
-(function fillSpecs(){
-  const specs = Object.keys(SPECIALTY_MODULES).sort();
-  specListEl.innerHTML = specs.map(s=>`<option value="${s}"></option>`).join('');
+/* ================== 4) Combobox de especialidad (controlado) =================== */
+(function initCombo(){
+  const root = $('#spec-combo');
+  const input = $('#pf-spec');
+  const list = $('#spec-list');
+  let selected = null;
+
+  function renderList(filter=""){
+    list.innerHTML = "";
+    const f = filter.trim().toLowerCase();
+    const items = SPECIALTIES.filter(s => s.toLowerCase().includes(f));
+    items.forEach((txt, i)=>{
+      const div = document.createElement('div');
+      div.className='opt';
+      div.textContent = txt;
+      div.setAttribute('role','option');
+      div.addEventListener('click',()=>{
+        selected = txt;
+        input.value = txt;
+        input.dataset.valid = "1";
+        root.classList.remove('open');
+      });
+      list.appendChild(div);
+    });
+    if(items.length===0){
+      const none = document.createElement('div');
+      none.className='opt'; none.style.color='#9ca3af'; none.textContent='Sin resultados';
+      none.style.cursor='default';
+      list.appendChild(none);
+    }
+  }
+  renderList();
+
+  input.addEventListener('focus', ()=>{ root.classList.add('open'); renderList(input.value); });
+  input.addEventListener('input', ()=>{ root.classList.add('open'); input.dataset.valid=""; renderList(input.value); });
+  document.addEventListener('click', (e)=>{ if(!root.contains(e.target)) root.classList.remove('open'); });
+
+  // Validación estricta al perder foco
+  input.addEventListener('blur', ()=>{
+    setTimeout(()=>{
+      if(!SPECIALTIES.includes(input.value)) { input.value=""; input.dataset.valid=""; selected=null; }
+    }, 150);
+  });
 })();
 
-/* ======= Tabs + ojitos ======= */
+/* ================== 5) UI básica =================== */
 function setTab(which){
   const onLogin = which==='login';
   $('#form-login').style.display = onLogin ? 'block' : 'none';
@@ -330,29 +351,36 @@ document.querySelectorAll('.eye').forEach(btn=>{
   });
 });
 
-/* ======= Auth listener ======= */
-auth.onAuthStateChanged((user)=>{
+/* ================== 6) Auth/Flujo de verificación =================== */
+auth.onAuthStateChanged(async (user)=>{
   if(!user){
     CURRENT_UID=null; state={}; $('#auth-user').textContent='';
     $('#btn-logout').style.display='none';
-    document.getElementById('verify-box').style.display='none';
-    setTab('login'); showLogin();
-    if (unsubProfile) { try{unsubProfile();}catch(_){} unsubProfile=null; }
-    return;
+    $('#verify-box').style.display='none';
+    setTab('login'); showLogin(); return;
   }
   CURRENT_UID = user.uid;
   state = loadState(CURRENT_UID);
   $('#auth-user').textContent = user.email || '';
-  document.getElementById('verify-box').style.display='none';
-  showCourse();                 // UI rápida
+
+  // Si no está verificado, muestro aviso y bloqueo curso
+  await user.reload();
+  if(!user.emailVerified){
+    showLogin(); // oculta todo
+    $('#verify-box').style.display='block';
+    return;
+  }
+
+  // verificado: entro al curso
+  $('#verify-box').style.display='none';
+  showCourse();
   syncFromCloud(user).catch(()=>{});
 });
 
-/* ======= Registro ======= */
 document.getElementById('btn-register-2').addEventListener('click', async ()=>{
-  const email= (document.getElementById('reg-email').value||'').trim().toLowerCase();
-  const pass  = (document.getElementById('reg-pass').value||'').trim();
-  const pass2 = (document.getElementById('reg-pass2').value||'').trim();
+  const email= ($('#reg-email').value||'').trim().toLowerCase();
+  const pass  = ($('#reg-pass').value||'').trim();
+  const pass2 = ($('#reg-pass2').value||'').trim();
   if(!email || !pass || !pass2) return msg('Completa todos los campos.');
   if(!emailOk(email)) return msg('El formato del correo no es válido.');
   if(pass!==pass2) return msg('Las contraseñas no coinciden.');
@@ -361,66 +389,50 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
     const methods = await auth.fetchSignInMethodsForEmail(email);
     if(methods && methods.length){
       setTab('login');
-      document.getElementById('login-email').value = email;
+      $('#login-email').value = email;
       return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.');
     }
-
     const { user } = await auth.createUserWithEmailAndPassword(email, pass);
     if (auth.currentUser?.uid !== user.uid) await auth.updateCurrentUser(user);
 
-    // Base en Firestore (no bloquea)
-    db.collection('users').doc(user.uid).collection('courses').doc('soulmv').set({}, { merge:true }).catch(()=>{});
-
-    // Verificación
-    const actionCodeSettings = { url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1', handleCodeInApp:false };
-    let sent=false;
-    for(let i=0;i<3 && !sent;i++){
-      try { await auth.currentUser.sendEmailVerification(actionCodeSettings); sent=true; }
-      catch(_){ try{ await auth.currentUser.reload(); }catch(_){} await new Promise(r=>setTimeout(r, 600*(i+1))); }
-    }
-    msg(sent? 'Cuenta creada. Te enviamos el correo de verificación (revisa Spam).' : 'Cuenta creada. No se pudo enviar automáticamente, usa “Reenviar verificación”.');
-
-    document.getElementById('verify-box').style.display='block';
+    // envía verificación
+    const actionCodeSettings = { url: location.href.split('?')[0]+'?verified=1', handleCodeInApp:false };
+    await auth.currentUser.sendEmailVerification(actionCodeSettings).catch(()=>{});
+    msg('Cuenta creada. Te enviamos el correo de verificación (revisa Spam).');
+    $('#verify-box').style.display='block';
     setTab('login');
-    document.getElementById('login-email').value = email;
-
+    $('#login-email').value = email;
   }catch(e){ msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.'); }
 });
 
-/* ======= Login robusto ======= */
 document.getElementById('btn-login').addEventListener('click', async ()=>{
-  const email=(document.getElementById('login-email').value||'').trim().toLowerCase();
-  const pass =(document.getElementById('login-pass').value||'').trim();
+  const email=($('#login-email').value||'').trim().toLowerCase();
+  const pass =($('#login-pass').value||'').trim();
   if(!email || !pass) return msg('Ingresa correo y contraseña.');
   if(!emailOk(email)) return msg('El formato del correo no es válido.');
-  const btn=document.getElementById('btn-login'); btn.disabled=true;
-
+  const btn=$('#btn-login'); btn.disabled=true;
   try{
     const cred = await auth.signInWithEmailAndPassword(email, pass);
-    const u = cred.user || auth.currentUser;
+    await cred.user.reload();
+    if(!cred.user.emailVerified){
+      msg('Correo no verificado. Revisa tu email y confirma.');
+      $('#verify-box').style.display='block';
+      showLogin();
+      return;
+    }
     msg('Sesión iniciada.');
-    document.getElementById('verify-box').style.display='none';
-    showCourse();
-    syncFromCloud(u).catch(()=>{});
+    $('#verify-box').style.display='none';
+    showCourse(); syncFromCloud(cred.user).catch(()=>{});
   }catch(e){
     let methods=[]; try{ methods = await auth.fetchSignInMethodsForEmail(email); }catch(_){}
-    if(!methods || methods.length===0){
-      msg('Correo no registrado.');
-      setTab('reg'); document.getElementById('reg-email').value = email;
-    }else if(
-      e.code==='auth/wrong-password' ||
-      e.code==='auth/invalid-credential' ||
-      e.code==='auth/invalid-login-credentials'
-    ){ msg('Contraseña incorrecta.'); }
-    else if(e.code==='auth/too-many-requests'){ msg('Demasiados intentos. Intenta más tarde.'); }
-    else if(e.code==='auth/invalid-email'){ msg('El formato del correo no es válido.'); }
-    else{ msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.'); }
+    if(!methods || methods.length===0){ msg('Correo no registrado.'); setTab('reg'); $('#reg-email').value = email; }
+    else if(['auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials'].includes(e.code)){ msg('Contraseña incorrecta.'); }
+    else msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
   }finally{ btn.disabled=false; }
 });
 
-/* ======= Reset contraseña ======= */
 document.getElementById('btn-reset').addEventListener('click', async ()=>{
-  const email=(document.getElementById('login-email').value||'').trim().toLowerCase();
+  const email=($('#login-email').value||'').trim().toLowerCase();
   if(!email) return msg('Escribe tu correo para enviarte el enlace.');
   if(!emailOk(email)) return msg('El formato del correo no es válido.');
   try{
@@ -431,391 +443,291 @@ document.getElementById('btn-reset').addEventListener('click', async ()=>{
   }catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.'); }
 });
 
-/* ======= Logout ======= */
-document.getElementById('btn-logout').addEventListener('click', async ()=>{
-  await auth.signOut(); msg('Sesión cerrada.');
+document.getElementById('btn-check-verify').addEventListener('click', async ()=>{
+  if(auth.currentUser){ await auth.currentUser.reload(); if(auth.currentUser.emailVerified){ $('#verify-box').style.display='none'; showCourse(); } else { msg('Aún no se ha verificado. Revisa tu correo.'); } }
+});
+document.getElementById('btn-resend-verify').addEventListener('click', async ()=>{
+  try{
+    const actionCodeSettings = { url: location.href.split('?')[0]+'?verified=1', handleCodeInApp:false };
+    if(auth.currentUser){
+      await auth.currentUser.sendEmailVerification(actionCodeSettings);
+      msg('Te enviamos el correo de verificación (revisa Spam).');
+    }else{ msg('Primero inicia sesión.'); }
+  }catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.'); }
 });
 
-/* ======= Vistas ======= */
+document.getElementById('btn-logout').addEventListener('click', async ()=>{ await auth.signOut(); msg('Sesión cerrada.'); });
+
+/* ================== 7) Vistas y Perfil =================== */
 function showCourse(){
   if(!auth.currentUser) return;
-  document.getElementById('step-welcome').style.display='none';
-  document.getElementById('btn-logout').style.display='inline-flex';
-  document.getElementById('profile').style.display='block';
+  $('#step-welcome').style.display='none';
+  $('#btn-logout').style.display='inline-flex';
+  $('#profile').style.display='block';
+  $('#cert-area').style.display='block';
 
   if (profileComplete()) {
-    toggleCourse(true);
     setProfileReadonly(true);
-    document.getElementById('pf-help').textContent = 'Puedes actualizar tus datos cuando quieras.';
+    $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.';
+    buildModulesForSpec(state.profile.spec);
+    $('#modules').style.display='grid';
+    $('#progress').style.display='block';
   } else {
-    toggleCourse(false);
     setProfileReadonly(false);
-    document.getElementById('pf-help').textContent = 'Completa todos los campos para habilitar los módulos.';
+    $('#pf-help').textContent='Completa todos los campos para habilitar los módulos.';
+    $('#modules').style.display='none';
+    $('#progress').style.display='none';
   }
 
-  renderModules(); updateProgress();
-  startProfileRealtime();
-
-  loadProfile().then(()=>{
-    const complete = profileComplete();
-    toggleCourse(complete);
-    setProfileReadonly(complete);
-    if(complete){ document.getElementById('pf-help').textContent='Puedes actualizar tus datos cuando quieras.'; }
-  }).catch(()=>{});
+  updateTotalsAndProgress();
 }
 
 function showLogin(){
-  document.getElementById('step-welcome').style.display='block';
-  document.getElementById('profile').style.display='none';
-  document.getElementById('progress').style.display='none';
-  document.getElementById('modules').style.display='none';
-  document.getElementById('eval').style.display='none';
-}
-function profileComplete(){
-  const p = state.profile || {};
-  return !!(p.name && p.iddoc && p.spec);
-}
-function toggleCourse(enabled){
-  if(enabled){
-    document.getElementById('progress').style.display='block';
-    document.getElementById('modules').style.display='grid';
-    document.getElementById('eval').style.display='block';
-  }else{
-    document.getElementById('progress').style.display='none';
-    document.getElementById('modules').style.display='none';
-    document.getElementById('eval').style.display='none';
-  }
+  $('#step-welcome').style.display='block';
+  $('#profile').style.display='none';
+  $('#modules').style.display='none';
+  $('#progress').style.display='none';
+  $('#cert-area').style.display='none';
 }
 
-/* ======= Perfil: realtime / editar / guardar ======= */
+function profileComplete(){
+  const p = state.profile || {};
+  return !!(p.name && p.iddoc && p.spec && SPECIALTIES.includes(p.spec));
+}
+
 function setProfileReadonly(ro){
   ['pf-name','pf-id','pf-spec'].forEach(id=>{
     const el=document.getElementById(id);
-    el.readOnly=ro; el.style.background=ro?'#eef2ff':'#fff';
+    el.readOnly = (id==='pf-spec') ? true : ro;   // spec solo se cambia al pulsar Modificar
+    el.style.background= ro ? '#eef2ff' : '#fff';
   });
-  document.getElementById('btn-edit-profile').style.display = ro ? 'inline-flex' : 'none';
-  document.getElementById('btn-save-profile').style.display = ro ? 'none' : 'inline-flex';
+  $('#btn-edit-profile').style.display = ro ? 'inline-flex' : 'none';
+  $('#btn-save-profile').style.display  = ro ? 'none'       : 'inline-flex';
 }
-document.getElementById('btn-edit-profile').addEventListener('click', ()=>{
+$('#btn-edit-profile').addEventListener('click', ()=>{
   setProfileReadonly(false);
-  document.getElementById('pf-help').textContent='Edita tus datos y guarda los cambios.';
+  $('#pf-help').textContent='Edita tus datos y guarda los cambios.';
 });
 
-function startProfileRealtime(){
-  if (unsubProfile) { try{unsubProfile();}catch(_){} unsubProfile=null; }
-  const uid = auth.currentUser?.uid; if(!uid) return;
-  const ref = db.collection('users').doc(uid).collection('profile').doc('main');
-  unsubProfile = ref.onSnapshot((snap)=>{
-    if(!snap.exists) return;
-    state.profile = snap.data() || {};
-    saveState(CURRENT_UID, state);
-
-    const name = state.profile?.name || auth.currentUser?.displayName || '';
-    const iddoc= state.profile?.iddoc || '';
-    const spec = state.profile?.spec  || '';
-
-    if (document.getElementById('pf-name').readOnly){
-      document.getElementById('pf-name').value = name;
-      document.getElementById('pf-id').value   = iddoc;
-      document.getElementById('pf-spec').value = spec;
-    }
-
-    // Si veníamos guardando, cerrar spinner
-    if (savingProfile){
-      savingProfile = false;
-      const pfMsg = document.getElementById('pf-msg');
-      pfMsg.classList.remove('saving');
-      pfMsg.textContent = '✅ Perfil guardado.';
-      setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; }, 3000);
-      setProfileReadonly(true);
-      toggleCourse(profileComplete());
-      // regenerar módulos si cambió especialidad
-      renderModules(); updateProgress();
-    }
-  });
-}
-
+// Carga/guarda perfil
 async function loadProfile(){
-  document.getElementById('pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
-  document.getElementById('pf-id').value   = state.profile?.iddoc || '';
-  document.getElementById('pf-spec').value = state.profile?.spec  || '';
+  // cargar desde nube y reflejar
   try{
     const uid=auth.currentUser?.uid; if(!uid) return;
     const s=await db.collection('users').doc(uid).collection('profile').doc('main').get();
-    if(s.exists){
-      state.profile=s.data(); saveState(CURRENT_UID,state);
-      document.getElementById('pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
-      document.getElementById('pf-id').value   = state.profile?.iddoc || '';
-      document.getElementById('pf-spec').value = state.profile?.spec  || '';
-    }
-  }catch(e){ console.warn('Perfil no disponible',e); }
+    if(s.exists){ state.profile=s.data(); saveState(CURRENT_UID,state); }
+  }catch(_){}
+  // refleja UI (local o nube)
+  $('#pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
+  $('#pf-id').value   = state.profile?.iddoc || '';
+  $('#pf-spec').value = state.profile?.spec  || '';
 }
 
 async function saveProfile(){
-  const name=(document.getElementById('pf-name').value||'').trim();
-  const iddoc=(document.getElementById('pf-id').value||'').trim();
-  const spec =(document.getElementById('pf-spec').value||'').trim();
-  const pfMsg=document.getElementById('pf-msg');
-  const btn=document.getElementById('btn-save-profile');
+  const name=($('#pf-name').value||'').trim();
+  const iddoc=($('#pf-id').value||'').trim();
+  const spec =($('#pf-spec').value||'').trim();
+  const pfMsg=$('#pf-msg'); const btn=$('#btn-save-profile');
 
   if(!name || !iddoc || !spec) { pfMsg.textContent='Completa nombre, cédula/pasaporte y especialidad.'; return; }
-  if(!(spec in SPECIALTY_MODULES)){ pfMsg.textContent='Selecciona una especialidad de la lista.'; return; }
+  if(!SPECIALTIES.includes(spec)){ pfMsg.textContent='Selecciona una especialidad válida de la lista.'; return; }
 
   // UI optimista
   state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
   pfMsg.classList.add('saving'); pfMsg.textContent='Guardando…';
-  btn.disabled=true; savingProfile = true; toggleCourse(true); setProfileReadonly(true);
+  btn.disabled=true; setProfileReadonly(true);
   try{ if(name){ await auth.currentUser.updateProfile({displayName:name}); } }catch(_){}
 
   try{
     const uid=auth.currentUser?.uid; if(!uid) throw new Error('Sin UID');
-    const ref = db.collection('users').doc(uid).collection('profile').doc('main');
-    const payload = {...state.profile, updatedAt: firebase.firestore.FieldValue.serverTimestamp()};
-    const write = ref.set(payload,{merge:true});
+    await db.collection('users').doc(uid).collection('profile').doc('main')
+      .set({...state.profile, updatedAt: firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
 
-    write.then(()=>{
-      if (!savingProfile) return;
-      savingProfile = false;
-      pfMsg.classList.remove('saving');
-      pfMsg.textContent='✅ Perfil guardado.';
-      setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; }, 3000);
-      setProfileReadonly(true);
-      toggleCourse(profileComplete());
-      // regenerar por si cambió especialidad
-      renderModules(); updateProgress();
-    }).catch(()=>{
-      savingProfile = false;
-      pfMsg.classList.remove('saving');
-      pfMsg.textContent='No se pudo guardar en la nube; tus datos quedan localmente.';
-      setProfileReadonly(false);
-    });
-
-    await Promise.race([ write, new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),7000)) ]);
-
-  }catch(e){
-    if(e && e.message!=='timeout'){
-      savingProfile = false;
-      pfMsg.classList.remove('saving');
-      pfMsg.textContent='No se pudo guardar en la nube; tus datos quedan localmente.';
-      setProfileReadonly(false);
+    // Si cambió de especialidad, reseteo progreso de módulos
+    if(state.activeSpec !== spec){
+      state.progress={}; state.activeSpec=spec; saveState(CURRENT_UID,state);
+      buildModulesForSpec(spec);
     }
-  }finally{
-    btn.disabled=false;
-  }
-}
-document.getElementById('btn-save-profile').addEventListener('click', saveProfile);
 
-/* ======= Render dinámico de módulos por especialidad ======= */
-const players = {}; // clave: playerId -> YT.Player
-function modulesForCurrentSpec(){
-  const spec = state.profile?.spec || '';
-  return SPECIALTY_MODULES[spec] || [];
+    pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Perfil guardado.';
+    setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; }, 2000);
+    setProfileReadonly(true);
+    $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.';
+    $('#modules').style.display='grid';
+    $('#progress').style.display='block';
+    updateTotalsAndProgress();
+    syncToCloud().catch(()=>{});
+  }catch(e){
+    pfMsg.classList.remove('saving');
+    pfMsg.textContent='No se pudo guardar en la nube; intenta nuevamente.';
+    setProfileReadonly(false);
+  }finally{ btn.disabled=false; }
 }
-function moduleVideos(modName){
-  return MODULE_VIDEO_BANK[modName] || GENERIC_VIDEOS;
-}
+$('#btn-save-profile').addEventListener('click', saveProfile);
 
-function ensureProgressShape(){
-  state.progress = state.progress || {}; // progress por módulo
-  const mods = modulesForCurrentSpec();
-  mods.forEach(m=>{
-    state.progress[m] = state.progress[m] || { videos:{}, quiz:{passed:false,scorePct:0} };
-    const vids = moduleVideos(m);
-    vids.forEach((vid,idx)=>{
-      const key = `v${idx}`;
-      if(typeof state.progress[m].videos[key] === 'undefined'){
-        state.progress[m].videos[key] = false;
-      }
-    });
+/* ================== 8) Módulos por especialidad =================== */
+let players = {}; // {playerId: YT.Player}
+function buildModulesForSpec(spec){
+  const wrap=$('#modules'); wrap.innerHTML='';
+  if(!SPECIALTY_MAP[spec]){ wrap.innerHTML='<div class="card">No hay módulos definidos para esta especialidad.</div>'; return; }
+  ensureProgressStruct();
+
+  SPECIALTY_MAP[spec].forEach((mod, idx)=>{
+    const moduleKey = `${spec}__${idx}`;
+    state.progress[moduleKey] = state.progress[moduleKey] || { videosSeen:{}, evalPassed:false };
+
+    const card=document.createElement('article'); card.className='card module';
+    const vidsHtml = mod.videos.map((vidId,i)=>`
+      <div class="yt-wrap" style="margin-top:${i?8:12}px">
+        <div id="player-${moduleKey}-${vidId}"></div>
+      </div>`).join('');
+
+    card.innerHTML = `
+      <div class="num">${idx+1}</div>
+      <div class="meta">
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+          <h3 style="margin:0">${mod.titulo}</h3>
+          <span class="badge">${mod.videos.length} videos</span>
+        </div>
+        ${vidsHtml}
+        <hr class="sep">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-primary" data-eval="${moduleKey}">Evaluación del módulo</button>
+          <span class="small" id="mod-status-${moduleKey}"></span>
+        </div>
+      </div>`;
+    wrap.appendChild(card);
   });
+
+  // Botones de evaluación
+  wrap.querySelectorAll('[data-eval]').forEach(b=>{
+    b.addEventListener('click', (e)=> openModuleQuiz(e.currentTarget.getAttribute('data-eval')) );
+  });
+
+  // Si API ya cargó, instancio players; si no, se hará en onYouTubeIframeAPIReady
+  if(window.YT && YT.Player){ instantiatePlayersForSpec(spec); }
+  updateModuleBadges();
   saveState(CURRENT_UID,state);
 }
 
-function renderModules(){
-  const wrap=document.getElementById('modules'); wrap.innerHTML='';
-  const mods = modulesForCurrentSpec();
-  if(!mods.length){
-    wrap.style.display='none';
-    return;
-  }
-  wrap.style.display='grid';
-  ensureProgressShape();
-
-  mods.forEach((modName, modIdx)=>{
-    const vids = moduleVideos(modName);
-    const modState = state.progress[modName];
-    const allVideosDone = vids.every((_,i)=>!!modState.videos[`v${i}`]);
-    const quizPassed = !!modState.quiz?.passed;
-
-    const card=document.createElement('article'); card.className='card module';
-    card.innerHTML = `
-      <div class="num">${modIdx+1}</div>
-      <div class="meta">
-        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
-          <h3 style="margin:0">${modName}</h3>
-          <span class="badge">${vids.length} videos</span>
-        </div>
-        <p class="muted" style="margin:6px 0 10px">Debes completar los videos y aprobar la evaluación del módulo.</p>
-        <div class="videos-grid" id="vg-${cssSafe(modName)}"></div>
-
-        <div class="quiz-wrap">
-          <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap">
-            <div>
-              <strong>Evaluación del módulo</strong><br>
-              <small class="muted" id="qstate-${cssSafe(modName)}">${quizPassed? '✅ Aprobado' : 'Pendiente'}</small>
-            </div>
-            <button class="btn ${quizPassed?'btn-success':'btn-primary'}" id="btn-quiz-${cssSafe(modName)}">${quizPassed?'Repetir evaluación':'Iniciar evaluación'}</button>
-          </div>
-          <div id="quiz-${cssSafe(modName)}" style="display:none;margin-top:12px"></div>
-          <div id="quiz-result-${cssSafe(modName)}" class="muted" style="display:none;margin-top:10px"></div>
-        </div>
-      </div>
-    `;
-    wrap.appendChild(card);
-
-    // Render de videos
-    const vg = document.getElementById(`vg-${cssSafe(modName)}`);
-    vids.forEach((ytId, i)=>{
-      const vDone = !!modState.videos[`v${i}`];
-      const playerDivId = `player-${cssSafe(modName)}-${i}`;
-      const item = document.createElement('div'); item.className='video-item';
-      item.innerHTML = `
-        <div class="video-head">
-          <div><strong>Video ${i+1}</strong> <small class="muted">(${ytId})</small></div>
-          <span class="${vDone?'done-pill':'pending-pill'}">${vDone?'Completado':'Pendiente'}</span>
-        </div>
-        <div class="yt-wrap" style="margin-top:8px"><div id="${playerDivId}"></div></div>
-      `;
-      vg.appendChild(item);
-
-      // Crear reproductor (si API ya lista, onYouTubeIframeAPIReady lo gestionará igual)
-      createYTPlayer(playerDivId, ytId, modName, i);
-    });
-
-    // Botón de quiz
-    document.getElementById(`btn-quiz-${cssSafe(modName)}`).addEventListener('click', ()=>{
-      const panel = document.getElementById(`quiz-${cssSafe(modName)}`);
-      const isOpen = panel.style.display==='block';
-      panel.style.display = isOpen ? 'none' : 'block';
-      if(!isOpen) renderModuleQuiz(modName);
-    });
-  });
-
-  updateProgress();
-}
-
-function cssSafe(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-'); }
-
-/* ======= YouTube players ======= */
-function createYTPlayer(containerId, ytId, modName, vIdx){
-  // Si ya existe, no recrear
-  if(players[containerId]) return;
-  players[containerId] = new YT.Player(containerId,{
-    height:'360', width:'640', videoId: ytId,
-    playerVars:{rel:0,modestbranding:1,controls:1},
-    events:{
-      onStateChange:(ev)=>{
-        if(ev.data===YT.PlayerState.ENDED){
-          // marcar video done
-          state.progress = state.progress || {};
-          state.progress[modName] = state.progress[modName] || {videos:{},quiz:{passed:false,scorePct:0}};
-          state.progress[modName].videos[`v${vIdx}`] = true;
-          saveState(CURRENT_UID,state);
-          // actualizar UI pill
-          const head = ev.target.getIframe().closest('.video-item').querySelector('span');
-          head.className = 'done-pill';
-          head.textContent = 'Completado';
-          // sync
-          setTimeout(syncToCloud,300);
-          updateProgress();
+function instantiatePlayersForSpec(spec){
+  SPECIALTY_MAP[spec].forEach((mod, idx)=>{
+    const moduleKey = `${spec}__${idx}`;
+    mod.videos.forEach((vidId)=>{
+      const pid = `player-${moduleKey}-${vidId}`;
+      if(players[pid]) return;
+      players[pid] = new YT.Player(pid,{
+        height:'360', width:'640', videoId:vidId,
+        playerVars:{rel:0,modestbranding:1,controls:1,disablekb:1},
+        events:{
+          onStateChange:(ev)=>{
+            if(ev.data===YT.PlayerState.ENDED){
+              ensureProgressStruct();
+              state.progress[moduleKey] = state.progress[moduleKey] || {videosSeen:{}, evalPassed:false};
+              state.progress[moduleKey].videosSeen[vidId] = true;
+              saveState(CURRENT_UID,state);
+              updateModuleBadges(); updateTotalsAndProgress(); syncToCloud().catch(()=>{});
+            }
+          }
         }
-      }
-    }
+      });
+    });
   });
 }
 window.onYouTubeIframeAPIReady = function(){
-  // Cuando cargue la API, crear players para los contenedores existentes
-  Object.keys(players).forEach(k=>{ /* no-op, ya creados */ });
+  if(state.profile?.spec) instantiatePlayersForSpec(state.profile.spec);
 };
 
-/* ======= Quiz por módulo ======= */
-function renderModuleQuiz(modName){
-  const wrap=document.getElementById(`quiz-${cssSafe(modName)}`); wrap.innerHTML='';
-  const bank = MODULE_QUIZ_BANK[modName] || [
-    {id:"d1",text:`Pregunta demo 1 de ${modName}`,options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'A'},
-    {id:"d2",text:`Pregunta demo 2 de ${modName}`,options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'B'},
-    {id:"d3",text:`Pregunta demo 3 de ${modName}`,options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'C'}
+function updateModuleBadges(){
+  const spec = state.profile?.spec;
+  if(!spec) return;
+  SPECIALTY_MAP[spec].forEach((mod, idx)=>{
+    const moduleKey = `${spec}__${idx}`;
+    const prog = state.progress[moduleKey] || {videosSeen:{}, evalPassed:false};
+    const seen = Object.keys(prog.videosSeen||{}).length;
+    const status = (seen>=mod.videos.length ? '🎬 Videos vistos' : `🎬 ${seen}/${mod.videos.length} videos`) +
+                   ' • ' + (prog.evalPassed ? '📝 Evaluación aprobada' : '📝 Evaluación pendiente');
+    const el = document.getElementById(`mod-status-${moduleKey}`); if(el) el.textContent = status;
+  });
+}
+
+/* ================== 9) Evaluaciones =================== */
+const PASS_PCT = 80;
+function openModuleQuiz(moduleKey){
+  const spec = state.profile?.spec;
+  const idx = Number(moduleKey.split('__')[1]||0);
+  const mod = SPECIALTY_MAP[spec][idx];
+  const q = (txt,A,B,C,correct) => ({txt,opts:[{k:'A',t:A},{k:'B',t:B},{k:'C',t:C}],correct});
+  const QUESTIONS = [
+    q(`¿Qué sección de Soul MV relacionas más con “${mod.titulo}”?`,'Documentos','Órdenes','Evoluciones','B'),
+    q('Para finalizar una nota clínica debes:','Guardar borrador','Cerrar/Finalizar el documento (FECHADO)','Imprimir sin cerrar','B'),
+    q('Las auditorías se validan contra:','Notas de enfermería','Tarifarios y documentos cerrados','Epicrisis provisional','B')
   ];
-  bank.forEach((q,idx)=>{
-    const card=document.createElement('div'); card.className='card'; card.style.margin='8px 0';
-    const opts=q.options.map(o=>`
-      <label style="display:flex;gap:8px;align-items:center;margin:6px 0">
-        <input type="radio" name="${modName}_${q.id}" value="${o.key}">
-        <span>${o.key}) ${o.label}</span>
-      </label>`).join('');
-    card.innerHTML=`<strong>${idx+1}. ${q.text}</strong><div style="margin-top:6px">${opts}</div>`;
-    wrap.appendChild(card);
-  });
-  const submit=document.createElement('button'); submit.className='btn btn-primary'; submit.textContent='Enviar evaluación';
-  submit.addEventListener('click', ()=>gradeModuleQuiz(modName, bank));
-  wrap.appendChild(submit);
+
+  const wrap = document.createElement('div');
+  wrap.className='card';
+  wrap.style.position='fixed'; wrap.style.inset='10% 10%'; wrap.style.zIndex='50'; wrap.style.overflow='auto';
+  wrap.innerHTML = `
+    <h3 style="margin-top:0">Evaluación — ${mod.titulo}</h3>
+    ${QUESTIONS.map((qq,i)=>`
+      <div class="card" style="margin-bottom:12px">
+        <strong>${i+1}. ${qq.txt}</strong>
+        ${qq.opts.map(o=>`
+          <label style="display:flex;gap:8px;align-items:center;margin:6px 0">
+            <input type="radio" name="q${i}" value="${o.k}"> <span>${o.k}) ${o.t}</span>
+          </label>`).join('')}
+      </div>`).join('')}
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" id="send-quiz">Enviar</button>
+      <button class="btn btn-muted" id="close-quiz">Cancelar</button>
+    </div>`;
+  document.body.appendChild(wrap);
+
+  wrap.querySelector('#close-quiz').onclick=()=>document.body.removeChild(wrap);
+  wrap.querySelector('#send-quiz').onclick=()=>{
+    let correct=0;
+    QUESTIONS.forEach((qq,i)=>{
+      const c=wrap.querySelector(`input[name="q${i}"]:checked`);
+      if(c && c.value===qq.correct) correct++;
+    });
+    const pct=Math.round((correct/QUESTIONS.length)*100);
+    ensureProgressStruct();
+    state.progress[moduleKey] = state.progress[moduleKey] || {videosSeen:{}, evalPassed:false};
+    state.progress[moduleKey].evalPassed = (pct>=PASS_PCT);
+    saveState(CURRENT_UID,state); updateModuleBadges(); updateTotalsAndProgress(); syncToCloud().catch(()=>{});
+    alert(`Resultado: ${correct}/${QUESTIONS.length} (${pct}%). ${pct>=PASS_PCT?'✅ Aprobado':'❌ No aprobado'}`);
+    document.body.removeChild(wrap);
+  };
 }
 
-function gradeModuleQuiz(modName, bank){
-  let correct=0; bank.forEach(q=>{
-    const c=document.querySelector(`input[name="${modName}_${q.id}"]:checked`);
-    if(c && c.value===q.correct) correct++;
+/* ================== 10) Progreso y Certificado =================== */
+function updateTotalsAndProgress(){
+  const spec = state.profile?.spec;
+  if(!spec || !SPECIALTY_MAP[spec]){ $('#progress-extra').textContent=''; $('#bar').style.width='0%'; $('#btn-cert').disabled=true; return; }
+  ensureProgressStruct();
+
+  // totales
+  const modules = SPECIALTY_MAP[spec];
+  const totalVideos = modules.reduce((a,m)=>a+m.videos.length,0);
+  let seenVideos = 0, evalsDone = 0;
+
+  modules.forEach((m,idx)=>{
+    const k = `${spec}__${idx}`;
+    const p = state.progress[k] || {videosSeen:{}, evalPassed:false};
+    seenVideos += Math.min(Object.keys(p.videosSeen||{}).length, m.videos.length);
+    if(p.evalPassed) evalsDone++;
   });
-  const scorePct=Math.round((correct/bank.length)*100);
-  state.progress[modName].quiz = {passed:scorePct>=80, scorePct};
-  saveState(CURRENT_UID,state);
 
-  const r=document.getElementById(`quiz-result-${cssSafe(modName)}`); r.style.display='block';
-  r.textContent=`Resultado: ${correct}/${bank.length} (${scorePct}%). ${state.progress[modName].quiz.passed?'✅ Aprobado':'❌ No aprobado'}.`;
-  document.getElementById(`qstate-${cssSafe(modName)}`).textContent = state.progress[modName].quiz.passed? '✅ Aprobado' : 'Pendiente';
-  const btn=document.getElementById(`btn-quiz-${cssSafe(modName)}`);
-  btn.className = `btn ${state.progress[modName].quiz.passed?'btn-success':'btn-primary'}`;
-  btn.textContent = state.progress[modName].quiz.passed?'Repetir evaluación':'Iniciar evaluación';
+  const pct = Math.round(((seenVideos + evalsDone) / (totalVideos + modules.length)) * 100);
+  $('#progress-extra').textContent = `${pct}% completado — Videos ${seenVideos}/${totalVideos} • Evaluaciones ${evalsDone}/${modules.length}`;
+  $('#bar').style.width = pct+'%';
 
-  setTimeout(syncToCloud,300);
-  updateProgress();
+  const allVideos = (seenVideos===totalVideos);
+  const allEvals  = (evalsDone===modules.length);
+  $('#btn-cert').disabled = !(allVideos && allEvals);
 }
 
-/* ======= Progreso global y certificado ======= */
-function allRequiredDone(){
-  const mods = modulesForCurrentSpec();
-  if(!mods.length) return false;
-  return mods.every(m=>{
-    const vids = moduleVideos(m);
-    const ms = state.progress?.[m];
-    if(!ms) return false;
-    const videosOk = vids.every((_,i)=> !!ms.videos[`v${i}`]);
-    const quizOk = !!ms.quiz?.passed;
-    return videosOk && quizOk;
-  });
-}
-function updateProgress(){
-  const mods = modulesForCurrentSpec();
-  const totalVideos = mods.reduce((acc,m)=> acc + moduleVideos(m).length, 0);
-  let doneVideos = 0, doneQuizzes = 0;
-  mods.forEach(m=>{
-    const vids = moduleVideos(m);
-    const ms = state.progress?.[m] || {};
-    vids.forEach((_,i)=>{ if(ms.videos?.[`v${i}`]) doneVideos++; });
-    if(ms.quiz?.passed) doneQuizzes++;
-  });
-  const totalTasks = totalVideos + mods.length; // videos + 1 quiz por módulo
-  const doneTasks  = doneVideos + doneQuizzes;
-  const pct = totalTasks? Math.round((doneTasks/totalTasks)*100) : 0;
-
-  document.getElementById('bar').style.width=pct+'%';
-  document.getElementById('progress-label').textContent=`${pct}% completado — Videos ${doneVideos}/${totalVideos} • Evaluaciones ${doneQuizzes}/${mods.length}`;
-
-  document.getElementById('btn-cert').disabled = !allRequiredDone();
-}
-
-document.getElementById('btn-cert')?.addEventListener('click', ()=>{
-  if(!allRequiredDone()) return;
+document.getElementById('btn-cert').addEventListener('click', ()=>{
   const preferName = state.profile?.name || auth.currentUser?.displayName || '';
   document.getElementById('cert-nombre').textContent = preferName;
   const f=new Date(); const fecha=f.toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'});
@@ -823,7 +735,7 @@ document.getElementById('btn-cert')?.addEventListener('click', ()=>{
   document.getElementById('certificado').classList.add('show'); setTimeout(()=>window.print(),400);
 });
 
-/* ======= Cloud sync ======= */
+/* ================== 11) Cloud sync =================== */
 async function userDoc(){
   const uid=auth.currentUser?.uid; if(!uid) return null;
   return db.collection('users').doc(uid).collection('courses').doc('soulmv');
@@ -834,26 +746,34 @@ async function syncFromCloud(user){
     const snap=await ref.get();
     if(snap.exists){
       const cloud=snap.data()||{};
-      // progreso nuevo por módulos
-      if(cloud.progress){ state.progress = cloud.progress; }
-      // quiz global antiguo (si existiera, lo ignoramos)
+      state.progress = cloud.progress || state.progress || {};
+      state.activeSpec = cloud.activeSpec || state.activeSpec;
       saveState(CURRENT_UID,state);
     }
     const psnap=await db.collection('users').doc(user.uid).collection('profile').doc('main').get();
     if(psnap.exists){ state.profile=psnap.data(); saveState(CURRENT_UID,state); }
-    renderModules(); updateProgress();
-  }catch(e){ console.warn('No se pudo leer progreso/perfil',e); }
+    await loadProfile();
+    if(profileComplete()){
+      buildModulesForSpec(state.profile.spec);
+      $('#modules').style.display='grid';
+      $('#progress').style.display='block';
+      setProfileReadonly(true);
+    }
+    updateTotalsAndProgress();
+  }catch(e){ console.warn('No se pudo leer nube',e); }
 }
 async function syncToCloud(){
   try{
     const ref=await userDoc(); if(!ref) return;
-    const payload={ progress: state.progress || {} };
-    await ref.set(payload,{merge:true});
+    await ref.set({ progress: state.progress||{}, activeSpec: state.profile?.spec||null }, {merge:true});
     const uid=auth.currentUser?.uid; if(uid && state.profile){
       await db.collection('users').doc(uid).collection('profile').doc('main').set(state.profile,{merge:true});
     }
   }catch(e){ console.warn('No se pudo guardar en la nube',e); }
 }
+
+/* ================== 12) Inicio =================== */
+loadProfile().catch(()=>{});
 </script>
 </body>
 </html>
