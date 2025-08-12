@@ -365,7 +365,7 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
   }
 });
 
-/* ======= LOGIN (valida SOLO correo primero) ======= */
+// ======= LOGIN (email-first con fallback robusto) =======
 document.getElementById('btn-login').addEventListener('click', async ()=>{
   const email = (document.getElementById('login-email').value||'').trim().toLowerCase();
   const pass  = (document.getElementById('login-pass').value||'').trim();
@@ -376,31 +376,48 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
   const btn = document.getElementById('btn-login');
   btn.disabled = true;
 
-  try{
-    // 1) Chequeo por CORREO únicamente
+  // 1) Chequeo de existencia SOLO por correo
+  let exists = null;
+  try {
     const methods = await auth.fetchSignInMethodsForEmail(email);
-    if(!methods || methods.length === 0){
+    exists = !!(methods && methods.length);
+  } catch(_) {
+    exists = null; // desconocido → haremos fallback con signIn
+  }
+
+  // 2) Si sabemos con certeza que NO existe → a registro
+  if (exists === false) {
+    msg('Correo no registrado.');
+    setTab('reg');
+    document.getElementById('reg-email').value = email;
+    btn.disabled = false;
+    return;
+  }
+
+  // 3) Si existe o no pudimos comprobar, probamos login para distinguir errores
+  try {
+    await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    await auth.signInWithEmailAndPassword(email, pass);
+    msg('Sesión iniciada.');
+  } catch(e) {
+    // Importante: si la contraseña está mal, el correo SÍ existe.
+    if (e.code === 'auth/wrong-password' ||
+        e.code === 'auth/invalid-credential' ||
+        e.code === 'auth/invalid-login-credentials') {
+      msg('Contraseña incorrecta.');
+      return; // NO mandamos a registro
+    }
+    if (e.code === 'auth/user-not-found') {
       msg('Correo no registrado.');
       setTab('reg');
       document.getElementById('reg-email').value = email;
       return;
     }
-
-    // 2) Si existe → ahora sí probamos contraseña
-    await auth.signInWithEmailAndPassword(email, pass);
-    msg('Sesión iniciada.');
-  }catch(e){
-    if (e.code === 'auth/wrong-password' || e.code==='auth/invalid-credential' || e.code==='auth/invalid-login-credentials'){
-      msg('Contraseña incorrecta.');
-    } else if (e.code==='auth/user-not-found'){
-      // Fallback si 1) falló por red y nos enteramos aquí
-      msg('Correo no registrado.');
-      setTab('reg'); document.getElementById('reg-email').value = email;
-    } else if (e.code==='auth/too-many-requests'){
+    if (e.code === 'auth/too-many-requests') {
       msg('Demasiados intentos. Intenta más tarde.');
-    } else {
-      msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
+      return;
     }
+    msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
   } finally {
     btn.disabled = false;
   }
