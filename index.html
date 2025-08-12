@@ -4,9 +4,17 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Inducción a Soul MV • Hospital Vozandes</title>
+
+<!-- Fuentes -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+<!-- Acelera Firebase Auth -->
+<link rel="preconnect" href="https://www.googleapis.com">
+<link rel="preconnect" href="https://identitytoolkit.googleapis.com">
+<link rel="preconnect" href="https://securetoken.googleapis.com">
+
 <style>
 :root{--brand:#781C38;--ink:#1f2937;--muted:#6b7280;--bg:#f8fafc;--card:#ffffff;--ok:#15803d}
 *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
@@ -56,7 +64,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     <div class="grid cols-2" style="align-items:start">
       <div>
         <h2 style="margin:0 0 6px">Acceso</h2>
-        <p class="muted" style="margin:0 0 14px">Primero validamos si el correo existe; si existe, probamos la contraseña.</p>
+        <p class="muted" style="margin:0 0 14px">Validamos el correo y, si existe, probamos la contraseña.</p>
 
         <div class="grid" id="auth-forms" autocomplete="off">
           <input type="text" style="display:none" aria-hidden="true" autocomplete="off">
@@ -244,7 +252,10 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-// (opcional) caché local para lecturas más rápidas
+// Persistencia una sola vez (no en cada clic)
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
+
+// (opcional) caché local Firestore
 if (db && db.enablePersistence) {
   db.enablePersistence({ synchronizeTabs: true }).catch(()=>{});
 }
@@ -298,33 +309,21 @@ document.querySelectorAll('.eye').forEach(btn=>{
   });
 });
 
-/* ======= Helper: timeout ======= */
-function withTimeout(promise, ms=1500){
+/* ======= Helper: timeout visual ======= */
+function withTimeout(promise, ms=3500){
+  // Solo para feedback de UI; no cancela la request real.
   return Promise.race([
     promise,
     new Promise((_, reject)=>setTimeout(()=>reject(new Error('timeout')), ms))
   ]);
 }
 
-/* ======= Verificación estricta de email (rápida) ======= */
-// 1) fetchSignInMethods con timeout
-// 2) desempate: signIn con contraseña dummy (wrong-password => existe; user-not-found => no existe)
+/* ======= Chequeo de email para reset/registro ======= */
 async function emailExistsStrict(email){
   try{
-    const methods = await withTimeout(auth.fetchSignInMethodsForEmail(email), 1500);
-    if (Array.isArray(methods) && methods.length > 0) return true;
-  }catch(_){ /* timeout/red → desempate */ }
-  try{
-    await auth.signInWithEmailAndPassword(email, '__dummy__' + Math.random());
-    await auth.signOut(); // por si acaso
-    return true;
-  }catch(e){
-    if (e.code === 'auth/wrong-password' ||
-        e.code === 'auth/invalid-credential' ||
-        e.code === 'auth/invalid-login-credentials') return true;
-    if (e.code === 'auth/user-not-found') return false;
-    throw e; // otros errores: no concluyente
-  }
+    const methods = await auth.fetchSignInMethodsForEmail(email);
+    return Array.isArray(methods) && methods.length>0;
+  }catch(_){ return false; }
 }
 
 /* ======= Auth listener (no bloquea) ======= */
@@ -345,8 +344,7 @@ auth.onAuthStateChanged((user)=>{
     showLogin();
     return;
   }
-
-  // Entra de inmediato; sincronización corre en segundo plano
+  // Entra de inmediato; lecturas van en background
   showCourse();
 });
 
@@ -361,15 +359,14 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
   if(pass!==pass2) return msg('Las contraseñas no coinciden.');
 
   try{
-    const methods = await auth.fetchSignInMethodsForEmail(email);
-    if (methods && methods.length){
+    const exists = await emailExistsStrict(email);
+    if (exists){
       setTab('login'); $('#login-email').value = email;
       return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.');
     }
 
     const cred = await auth.createUserWithEmailAndPassword(email, pass);
     const user = cred.user;
-
     if (auth.currentUser?.uid !== user.uid) await auth.updateCurrentUser(user);
     try { await auth.currentUser?.reload(); } catch(_){}
 
@@ -388,7 +385,7 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
   }
 });
 
-/* ======= LOGIN: validar correo -> luego contraseña, y entrar al instante ======= */
+/* ======= LOGIN ultra-rápido (una sola llamada) ======= */
 document.getElementById('btn-login').addEventListener('click', async ()=>{
   const email = ($('#login-email').value||'').trim().toLowerCase();
   const pass  = ($('#login-pass').value||'').trim();
@@ -397,31 +394,26 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
   if(!pass) return msg('Ingresa tu contraseña.');
 
   const btn = $('#btn-login'); btn.disabled = true;
-  msg('Comprobando correo…');
+  msg('Validando contraseña…');
 
   try{
-    let exists;
-    try{ exists = await emailExistsStrict(email); }
-    catch(e){ if(e.message==='timeout'){ exists=null; } else throw e; }
-
-    if (exists === false){
-      msg('Correo no registrado.');
-      setTab('reg'); $('#reg-email').value = email;
-      return;
-    }
-
-    msg('Validando contraseña…');
-    await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-    await auth.signInWithEmailAndPassword(email, pass);
+    // Usamos timeout sólo para feedback visual (no cancela la request real)
+    await withTimeout(auth.signInWithEmailAndPassword(email, pass), 3500);
     msg('Sesión iniciada. Entrando…');
 
-    // Entrar sin esperar lecturas de Firestore
     if (auth.currentUser?.emailVerified){
-      showCourse();
+      showCourse();   // entrar sin esperar Firestore
     } else {
       document.getElementById('verify-box').style.display='block';
     }
   }catch(e){
+    // Si fue timeout, la request puede seguir en vuelo: el onAuthStateChanged te meterá cuando llegue.
+    if (e.message === 'timeout'){
+      msg('La red está lenta. Espera un momento…');
+      // Dejamos el botón activo por si quiere reintentar
+      btn.disabled = false;
+      return;
+    }
     if (e.code === 'auth/wrong-password' ||
         e.code==='auth/invalid-credential' ||
         e.code==='auth/invalid-login-credentials'){
@@ -433,8 +425,6 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
       msg('Demasiados intentos. Intenta más tarde.');
     } else if (e.code === 'auth/unauthorized-domain') {
       msg('Dominio no autorizado en Firebase Auth. Revisa Auth → Settings → Authorized domains.');
-    } else if (e.message === 'timeout') {
-      msg('La red está lenta. Intenta de nuevo.');
     } else {
       msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
     }
@@ -443,7 +433,7 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
   }
 });
 
-/* ======= Reset contraseña ======= */
+/* ======= Reset contraseña (usa chequeo de email, no login) ======= */
 document.getElementById('btn-reset').addEventListener('click', async ()=>{
   const email=($('#login-email').value||'').trim().toLowerCase();
   if(!email) return msg('Escribe tu correo para enviarte el enlace.');
