@@ -273,6 +273,10 @@ function loadState(uid){ try{ return JSON.parse(localStorage.getItem(keyFor(uid)
 function saveState(uid, st){ localStorage.setItem(keyFor(uid), JSON.stringify(st)); }
 let state = {}; // por usuario
 
+/* realtime flags */
+let unsubProfile = null;
+let savingProfile = false;
+
 /* ======= Tabs + ojitos ======= */
 function setTab(which){
   const onLogin = which==='login';
@@ -300,14 +304,15 @@ auth.onAuthStateChanged((user)=>{
     $('#btn-logout').style.display='none';
     document.getElementById('verify-box').style.display='none';
     setTab('login'); showLogin();
+    if (unsubProfile) { try{unsubProfile();}catch(_){} unsubProfile=null; }
     return;
   }
   CURRENT_UID = user.uid;
   state = loadState(CURRENT_UID);
   $('#auth-user').textContent = user.email || '';
   document.getElementById('verify-box').style.display='none';
-  showCourse();                 // Mostrar rápido
-  syncFromCloud(user).catch(()=>{}); // Nube en background
+  showCourse();                 // UI rápida
+  syncFromCloud(user).catch(()=>{});
 });
 
 /* ======= Registro ======= */
@@ -404,12 +409,11 @@ document.getElementById('btn-logout').addEventListener('click', async ()=>{
 function showCourse(){
   if(!auth.currentUser) return;
 
-  // Oculta acceso, muestra perfil y decide según estado local (rápido)
+  // Oculta acceso, muestra perfil y decide con estado local (rápido)
   document.getElementById('step-welcome').style.display='none';
   document.getElementById('btn-logout').style.display='inline-flex';
   document.getElementById('profile').style.display='block';
 
-  // Con lo local decido la UI inicial
   if (profileComplete()) {
     toggleCourse(true);
     setProfileReadonly(true);
@@ -420,10 +424,10 @@ function showCourse(){
     document.getElementById('pf-help').textContent = 'Completa todos los campos para habilitar los módulos.';
   }
 
-  // Render inicial
   renderModules(); updateProgress();
+  startProfileRealtime(); // << escucha en tiempo real
 
-  // A continuación sincronizo perfil en background y revalido
+  // Sincroniza en background y revalida
   loadProfile().then(()=>{
     const complete = profileComplete();
     toggleCourse(complete);
@@ -455,7 +459,7 @@ function toggleCourse(enabled){
   }
 }
 
-/* ======= Perfil: Ver / Modificar / Guardado rápido ======= */
+/* ======= Perfil: realtime, Ver/Modificar, Guardado rápido ======= */
 function setProfileReadonly(ro){
   ['pf-name','pf-id','pf-spec'].forEach(id=>{
     const el=document.getElementById(id);
@@ -468,6 +472,40 @@ document.getElementById('btn-edit-profile').addEventListener('click', ()=>{
   setProfileReadonly(false);
   document.getElementById('pf-help').textContent='Edita tus datos y guarda los cambios.';
 });
+
+function startProfileRealtime(){
+  if (unsubProfile) { try{unsubProfile();}catch(_){} unsubProfile=null; }
+  const uid = auth.currentUser?.uid;
+  if(!uid) return;
+
+  const ref = db.collection('users').doc(uid).collection('profile').doc('main');
+  unsubProfile = ref.onSnapshot((snap)=>{
+    if(!snap.exists) return;
+    state.profile = snap.data() || {};
+    saveState(CURRENT_UID, state);
+
+    const name = state.profile?.name || auth.currentUser?.displayName || '';
+    const iddoc= state.profile?.iddoc || '';
+    const spec = state.profile?.spec  || '';
+
+    // Refleja en inputs si están en modo lectura
+    if (document.getElementById('pf-name').readOnly){
+      document.getElementById('pf-name').value = name;
+      document.getElementById('pf-id').value   = iddoc;
+      document.getElementById('pf-spec').value = spec;
+    }
+
+    // Si veníamos guardando, cierra spinner y confirma
+    if (savingProfile){
+      savingProfile = false;
+      const pfMsg = document.getElementById('pf-msg');
+      pfMsg.classList.remove('saving');
+      pfMsg.textContent = '✅ Perfil guardado.';
+      setProfileReadonly(true);
+      toggleCourse(profileComplete());
+    }
+  });
+}
 
 async function loadProfile(){
   // Relleno inmediato con local (rápido)
@@ -499,28 +537,36 @@ async function saveProfile(){
     pfMsg.textContent='Completa nombre, cédula/pasaporte y especialidad.'; return;
   }
 
-  // UI optimista: guardar local + habilitar curso + feedback
+  // UI optimista inmediata
   state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
   pfMsg.classList.add('saving'); pfMsg.textContent='Guardando…';
   btn.disabled=true;
+  savingProfile = true;
   toggleCourse(true);
   setProfileReadonly(true);
   try{ if(name){ await auth.currentUser.updateProfile({displayName:name}); } }catch(_){}
 
-  // Enviar a Firestore sin bloquear UI
-  (async()=>{
-    try{
-      const uid=auth.currentUser?.uid; if(!uid) throw new Error('Sin UID');
-      await db.collection('users').doc(uid).collection('profile').doc('main').set(state.profile,{merge:true});
-      pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Perfil guardado.';
-    }catch(e){
+  // Escritura a Firestore con timeout; onSnapshot cerrará el spinner
+  try{
+    const uid=auth.currentUser?.uid; if(!uid) throw new Error('Sin UID');
+    const write = db.collection('users').doc(uid).collection('profile').doc('main').set(state.profile,{merge:true});
+    await Promise.race([
+      write,
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),7000))
+    ]);
+  }catch(e){
+    if(e && e.message==='timeout'){
+      pfMsg.textContent='Sincronizando en segundo plano…';
+      // quedamos esperando a onSnapshot para cerrar
+    }else{
+      savingProfile = false;
       pfMsg.classList.remove('saving');
-      pfMsg.textContent='No se pudo guardar en la nube ahora; tus datos quedan guardados localmente.';
-      console.warn('Guardar perfil falló',e);
-    }finally{
-      btn.disabled=false;
+      pfMsg.textContent='No se pudo guardar en la nube ahora; tus datos quedan localmente.';
+      setProfileReadonly(false);
     }
-  })();
+  }finally{
+    btn.disabled=false;
+  }
 }
 document.getElementById('btn-save-profile').addEventListener('click', saveProfile);
 
