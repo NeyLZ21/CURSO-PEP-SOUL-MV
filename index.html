@@ -4,31 +4,44 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Acceso • HV Inducción</title>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <link rel="preconnect" href="https://www.googleapis.com">
 <link rel="preconnect" href="https://identitytoolkit.googleapis.com">
 <link rel="preconnect" href="https://securetoken.googleapis.com">
+
 <style>
-:root{--brand:#781C38;--ink:#111827;--muted:#6b7280;--bg:#f8fafc;--card:#fff}
-*{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+:root{--brand:#781C38;--ink:#111827;--muted:#6b7280;--bg:#f8fafc;--card:#fff;--bd:#e5e7eb;--ok:#15803d}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
 .container{max-width:760px;margin:auto;padding:24px}
-h1{margin:0 0 10px}.card{background:var(--card);border-radius:16px;box-shadow:0 10px 22px rgba(0,0,0,.06);padding:20px}
-.grid{display:grid;gap:16px}.row{display:flex;gap:10px;flex-wrap:wrap}
+h1{margin:0 0 8px}
+p.small{margin:0 0 14px}
+.card{background:var(--card);border-radius:16px;box-shadow:0 10px 22px rgba(0,0,0,.06);padding:20px}
+.grid{display:grid;gap:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
 .btn{border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
-.btn-primary{background:var(--brand);color:#fff}.btn-muted{background:#e5e7eb;color:#111827}
-.input{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:12px}
+.btn-primary{background:var(--brand);color:#fff}
+.btn-muted{background:#e5e7eb;color:#111827}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.input{width:100%;padding:12px;border:1px solid var(--bd);border-radius:12px}
 .small{font-size:12px;color:var(--muted)}
 .tabs .btn{padding:8px 12px}
-.input-wrap{position:relative}.eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:0;cursor:pointer}
+.input-wrap{position:relative}
+.eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:0;cursor:pointer}
 .hidden{display:none !important}
+hr{border:0;border-top:1px dashed var(--bd);margin:6px 0}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:600}
+.ok{color:var(--ok)}
+.err{color:#b91c1c}
 </style>
 </head>
 <body>
 <div class="container">
   <h1>Acceso</h1>
-  <p class="small">Validamos el correo; si existe, probamos la contraseña.</p>
+  <p class="small">Si la cuenta existe y la contraseña es correcta, iniciará sesión. En registro enviamos verificación al correo.</p>
 
   <div class="card">
     <div class="row tabs" style="margin-bottom:8px">
@@ -45,7 +58,7 @@ h1{margin:0 0 10px}.card{background:var(--card);border-radius:16px;box-shadow:0 
       <label>Contraseña
         <div class="input-wrap">
           <input id="login-pass" type="password" class="input" placeholder="••••••••" autocomplete="current-password">
-          <button class="eye" type="button" data-eye="#login-pass">👁️</button>
+          <button class="eye" type="button" data-eye="#login-pass" aria-label="Mostrar u ocultar contraseña">👁️</button>
         </div>
       </label>
       <div class="row">
@@ -64,13 +77,13 @@ h1{margin:0 0 10px}.card{background:var(--card);border-radius:16px;box-shadow:0 
       <label>Contraseña
         <div class="input-wrap">
           <input id="reg-pass" type="password" class="input" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
-          <button class="eye" type="button" data-eye="#reg-pass">👁️</button>
+          <button class="eye" type="button" data-eye="#reg-pass" aria-label="Mostrar u ocultar contraseña">👁️</button>
         </div>
       </label>
       <label>Confirmar contraseña
         <div class="input-wrap">
           <input id="reg-pass2" type="password" class="input" placeholder="Repite la contraseña" autocomplete="new-password">
-          <button class="eye" type="button" data-eye="#reg-pass2">👁️</button>
+          <button class="eye" type="button" data-eye="#reg-pass2" aria-label="Mostrar u ocultar contraseña">👁️</button>
         </div>
       </label>
       <div class="row">
@@ -79,7 +92,7 @@ h1{margin:0 0 10px}.card{background:var(--card);border-radius:16px;box-shadow:0 
       <div id="reg-msg" class="small" style="min-height:18px"></div>
 
       <div id="verify-box" class="hidden" style="margin-top:10px">
-        <p class="small">Te enviamos un email para verificar tu cuenta. Revisa Spam.</p>
+        <p class="small">Te enviamos un correo para <strong>verificar tu cuenta</strong> (revisa Spam).</p>
         <div class="row">
           <button id="btn-check-verify" class="btn btn-primary" type="button">Ya verifiqué</button>
           <button id="btn-resend-verify" class="btn btn-muted" type="button">Reenviar verificación</button>
@@ -100,10 +113,7 @@ h1{margin:0 0 10px}.card{background:var(--card);border-radius:16px;box-shadow:0 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
 <script>
-// ======== Ajuste clave ========
-const ENUM_PROTECTION = false; // ← pon true si mantienes la protección en Firebase
-
-// === Firebase ===
+// =================== Firebase ===================
 const firebaseConfig = {
   apiKey: "AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",
   authDomain: "induccion-pep-hvq.firebaseapp.com",
@@ -118,13 +128,12 @@ const auth = firebase.auth();
 auth.languageCode = 'es';
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
 
-// === Utils ===
+// =================== Utils UI ===================
 const $ = s => document.querySelector(s);
 const emailOk = e => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((e||'').trim().toLowerCase());
-const setMsg = (el, t) => { el.textContent = t || ''; };
-const provName = p => ({'password':'correo y contraseña','google.com':'Google','apple.com':'Apple','facebook.com':'Facebook','microsoft.com':'Microsoft'}[p]||p);
+const setMsg = (el, t, cls) => { el.classList.remove('ok','err'); if(cls) el.classList.add(cls); el.textContent = t||''; };
 
-// === Tabs & ojitos ===
+// Tabs y ojitos
 function show(tab){
   $('#view-login').classList.toggle('hidden', tab!=='login');
   $('#view-register').classList.toggle('hidden', tab!=='register');
@@ -140,10 +149,10 @@ document.querySelectorAll('.eye').forEach(b=>b.addEventListener('click',()=>{
   const i=document.querySelector(b.dataset.eye); if(i) i.type = i.type==='password' ? 'text':'password';
 }));
 
-// === Estado de sesión (solo UI) ===
+// Estado de sesión (UI)
 auth.onAuthStateChanged(user=>{
   if(user){
-    $('#whoami').textContent = `Sesión: ${user.email} ${user.emailVerified ? '(verificado)':'(sin verificar)'}`;
+    $('#whoami').innerHTML = `Sesión: <span class="badge">${user.email}</span> ${user.emailVerified ? '<span class="ok">(verificado)</span>':'<span class="err">(sin verificar)</span>'}`;
     $('#btn-logout').classList.remove('hidden');
   }else{
     $('#whoami').textContent = '';
@@ -151,118 +160,94 @@ auth.onAuthStateChanged(user=>{
   }
 });
 
-// === Helpers ===
-async function fetchMethods(email){
-  try { return await auth.fetchSignInMethodsForEmail(email); }
-  catch(e){ return null; }
-}
-
-// === LOGIN ===
+// =================== LOGIN (sin enumeración) ===================
 $('#btn-login').addEventListener('click', async ()=>{
   const email = ($('#login-email').value||'').trim().toLowerCase();
   const pass  = ($('#login-pass').value||'').trim();
   const msgEl = $('#login-msg');
 
-  if(!emailOk(email)) return setMsg(msgEl,'El formato del correo no es válido.');
-  if(!pass)          return setMsg(msgEl,'Ingresa tu contraseña.');
+  if(!emailOk(email)) return setMsg(msgEl,'El formato del correo no es válido.','err');
+  if(!pass)          return setMsg(msgEl,'Ingresa tu contraseña.','err');
 
-  $('#btn-login').disabled = true; setMsg(msgEl,'Verificando…');
+  $('#btn-login').disabled = true; setMsg(msgEl,'Validando…');
   try{
-    if (!ENUM_PROTECTION) {
-      const methods = await fetchMethods(email);
-      if(methods===null) return setMsg(msgEl,'No se pudo verificar el correo (red).');
-
-      if(!methods || methods.length===0) {
-        return setMsg(msgEl,'Correo no registrado.');
-      }
-      if(!methods.includes('password')) {
-        return setMsg(msgEl, `Este correo está registrado con: ${methods.map(provName).join(', ')}.`);
-      }
-      setMsg(msgEl,'Validando contraseña…');
-    }
-
-    // Modo genérico (protección ON) o continuación si sí tiene password
     await auth.signInWithEmailAndPassword(email, pass);
-    setMsg(msgEl,'Sesión iniciada.');
+    setMsg(msgEl,'Sesión iniciada.','ok');
+    // aquí podrías redirigir a módulos si quieres
+    // location.href = './modulos/index.html';
   }catch(e){
-    if (e.code==='auth/too-many-requests')          setMsg(msgEl,'Demasiados intentos. Intenta más tarde.');
-    else if (e.code==='auth/network-request-failed') setMsg(msgEl,'Error de red. Revisa tu conexión.');
-    else if (!ENUM_PROTECTION && e.code==='auth/wrong-password') setMsg(msgEl,'Contraseña incorrecta.');
-    else if (ENUM_PROTECTION && ['auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials','auth/user-not-found'].includes(e.code))
-      setMsg(msgEl,'Correo o contraseña incorrectos.');
-    else setMsg(msgEl,'Error: ' + (e.message||''));
+    if (e.code==='auth/too-many-requests')          setMsg(msgEl,'Demasiados intentos. Intenta más tarde.','err');
+    else if (e.code==='auth/network-request-failed') setMsg(msgEl,'Error de red. Revisa tu conexión.','err');
+    else if (['auth/wrong-password','auth/user-not-found','auth/invalid-credential','auth/invalid-login-credentials'].includes(e.code))
+      setMsg(msgEl,'Correo o contraseña incorrectos.','err');
+    else setMsg(msgEl,'Error: ' + (e.message||''),'err');
   }finally{
     $('#btn-login').disabled = false;
   }
 });
 
-// === RESET ===
+// =================== RESET (sin revelar existencia) ===================
 $('#btn-reset').addEventListener('click', async ()=>{
   const email = ($('#login-email').value||'').trim().toLowerCase();
   const msgEl = $('#login-msg');
-  if(!emailOk(email)) return setMsg(msgEl,'Escribe un correo válido.');
+  if(!emailOk(email)) return setMsg(msgEl,'Escribe un correo válido.','err');
 
   try{
-    if (!ENUM_PROTECTION) {
-      const methods = await fetchMethods(email);
-      if(!methods || methods.length===0) return setMsg(msgEl,'Correo no registrado.');
-    }
     await auth.sendPasswordResetEmail(email);
-    setMsg(msgEl, ENUM_PROTECTION
-      ? 'Si la cuenta existe, te enviamos un correo para restablecer la contraseña.'
-      : 'Te enviamos un correo para restablecer la contraseña.');
+    setMsg(msgEl,'Si la cuenta existe, te enviaremos un correo para restablecer la contraseña.','ok');
   }catch(e){
-    setMsg(msgEl,'No se pudo enviar: ' + (e.message||''));
+    if (e.code==='auth/network-request-failed') setMsg(msgEl,'Error de red. Revisa tu conexión.','err');
+    else setMsg(msgEl,'No se pudo enviar: ' + (e.message||''),'err');
   }
 });
 
-// === REGISTRO ===
+// =================== REGISTRO ===================
 $('#btn-register').addEventListener('click', async ()=>{
   const email = ($('#reg-email').value||'').trim().toLowerCase();
   const pass  = ($('#reg-pass').value||'').trim();
   const pass2 = ($('#reg-pass2').value||'').trim();
   const msgEl = $('#reg-msg');
 
-  if(!emailOk(email)) return setMsg(msgEl,'El formato del correo no es válido.');
-  if(pass.length<6)   return setMsg(msgEl,'La contraseña es muy corta (mínimo 6).');
-  if(pass!==pass2)    return setMsg(msgEl,'Las contraseñas no coinciden.');
+  if(!emailOk(email)) return setMsg(msgEl,'El formato del correo no es válido.','err');
+  if(pass.length<6)   return setMsg(msgEl,'La contraseña es muy corta (mínimo 6).','err');
+  if(pass!==pass2)    return setMsg(msgEl,'Las contraseñas no coinciden.','err');
 
   $('#btn-register').disabled = true; setMsg(msgEl,'Creando cuenta…');
   try{
-    const methods = await fetchMethods(email);
-    if (methods && methods.length) return setMsg(msgEl,'Ese correo ya tiene cuenta. Usa Iniciar sesión.');
-
     const cred = await auth.createUserWithEmailAndPassword(email, pass);
 
+    // Enviar verificación (primer envío automático)
     try{
       await cred.user.sendEmailVerification({
         url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1',
         handleCodeInApp:false
       });
-      setMsg(msgEl,'Cuenta creada. Te enviamos el correo de verificación.');
+      setMsg(msgEl,'Cuenta creada. Te enviamos el correo de verificación.','ok');
     }catch(_){
-      setMsg(msgEl,'Cuenta creada. No se pudo enviar automáticamente. Usa “Reenviar verificación”.');
+      setMsg(msgEl,'Cuenta creada. No se pudo enviar automáticamente. Usa “Reenviar verificación”.','err');
     }
     $('#verify-box').classList.remove('hidden');
+    show('login'); // opcional: regresar a login
   }catch(e){
-    if (e.code==='auth/email-already-in-use') return setMsg(msgEl,'Ese correo ya tiene cuenta. Usa Iniciar sesión.');
-    if (e.code==='auth/weak-password')        return setMsg(msgEl,'La contraseña es muy corta (mínimo 6).');
-    setMsg(msgEl,'No se pudo registrar: ' + (e.message||''));
+    if (e.code==='auth/email-already-in-use') return setMsg(msgEl,'Ese correo ya tiene cuenta. Usa Iniciar sesión.','err');
+    if (e.code==='auth/weak-password')        return setMsg(msgEl,'La contraseña es muy corta (mínimo 6).','err');
+    if (e.code==='auth/invalid-email')        return setMsg(msgEl,'El correo no es válido.','err');
+    setMsg(msgEl,'No se pudo registrar: ' + (e.message||''),'err');
   } finally {
     $('#btn-register').disabled = false;
   }
 });
 
-// === Verificación & Logout ===
+// =================== Verificación & Logout ===================
 $('#btn-check-verify').onclick = async ()=>{
   const m=$('#verify-msg');
   try{ await auth.currentUser?.reload(); setMsg(m, auth.currentUser?.emailVerified ? '✅ Verificado.' : 'Aún sin verificar.'); }
-  catch(e){ setMsg(m,'Error: '+(e.message||'')); }
+  catch(e){ setMsg(m,'Error: '+(e.message||''),'err'); }
 };
 $('#btn-resend-verify').onclick = async ()=>{
   const m=$('#verify-msg');
-  try{ await auth.currentUser?.sendEmailVerification({url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1',handleCodeInApp:false}); setMsg(m,'Enlace reenviado.'); }
-  catch(e){ setMsg(m,'No se pudo reenviar: '+(e.message||'')); }
+  try{ await auth.currentUser?.sendEmailVerification({url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1',handleCodeInApp:false}); setMsg(m,'Enlace reenviado.','ok'); }
+  catch(e){ setMsg(m,'No se pudo reenviar: '+(e.message||''),'err'); }
 };
 $('#btn-logout').onclick = ()=>auth.signOut().catch(()=>{});
 </script>
