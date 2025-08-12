@@ -309,22 +309,12 @@ document.querySelectorAll('.eye').forEach(btn=>{
   });
 });
 
-/* ======= Chequeos de email (para reset/registro) ======= */
+/* ======= Chequeo de email (para reset/registro) ======= */
 async function emailExistsStrict(email){
   try{
     const methods = await auth.fetchSignInMethodsForEmail(email);
     return Array.isArray(methods) && methods.length>0;
   }catch(_){ return false; }
-}
-// Desambiguador rápido tras fallo de login: true=existe, false=no existe, null=no concluye (timeout/red)
-async function existsQuick(email){
-  try{
-    const methods = await Promise.race([
-      auth.fetchSignInMethodsForEmail(email),
-      new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')), 1200))
-    ]);
-    return Array.isArray(methods) && methods.length > 0;
-  }catch(_){ return null; }
 }
 
 /* ======= Auth listener (no bloquea) ======= */
@@ -386,7 +376,7 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
   }
 });
 
-/* ======= LOGIN: una sola llamada + watchdog + desambiguación ======= */
+/* ======= LOGIN: una sola llamada + watchdog ======= */
 document.getElementById('btn-login').addEventListener('click', async ()=>{
   const email = ($('#login-email').value||'').trim().toLowerCase();
   const pass  = ($('#login-pass').value||'').trim();
@@ -428,21 +418,18 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
     finished = true; clearAll();
 
     if (e.code === 'auth/user-not-found'){
+      // ÚNICO caso que manda a registro
       msg('Correo no registrado.');
       setTab('reg'); document.getElementById('reg-email').value = email;
+
     } else if (
       e.code === 'auth/wrong-password' ||
       e.code === 'auth/invalid-credential' ||
       e.code === 'auth/invalid-login-credentials'
     ){
-      // Desambiguar si el correo existe
-      const ex = await existsQuick(email);
-      if (ex === false){
-        msg('Correo no registrado.');
-        setTab('reg'); document.getElementById('reg-email').value = email;
-      } else {
-        msg('Contraseña incorrecta.');
-      }
+      // No verificamos existencia para no confundir (anti-enumeración)
+      msg('Contraseña incorrecta.');
+
     } else if (e.code === 'auth/too-many-requests'){
       msg('Demasiados intentos. Intenta más tarde.');
     } else if (e.code === 'auth/unauthorized-domain'){
