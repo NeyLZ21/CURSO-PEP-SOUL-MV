@@ -309,12 +309,22 @@ document.querySelectorAll('.eye').forEach(btn=>{
   });
 });
 
-/* ======= Chequeo de email (para reset/registro) ======= */
+/* ======= Helpers de email ======= */
 async function emailExistsStrict(email){
   try{
     const methods = await auth.fetchSignInMethodsForEmail(email);
     return Array.isArray(methods) && methods.length>0;
   }catch(_){ return false; }
+}
+// Probe concurrente de existencia (para desambiguar cuando falla login)
+function probeEmailExists(email){
+  // No bloquea: se dispara en paralelo y lo consultamos en el catch
+  return (async ()=>{
+    try{
+      const methods = await auth.fetchSignInMethodsForEmail(email);
+      return Array.isArray(methods) && methods.length>0; // true = existe
+    }catch(_){ return null; } // null = no concluyente (red/permiso)
+  })();
 }
 
 /* ======= Auth listener (no bloquea) ======= */
@@ -376,7 +386,7 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
   }
 });
 
-/* ======= LOGIN: una sola llamada + watchdog ======= */
+/* ======= LOGIN: una sola llamada + watchdog + desambiguación concurrente ======= */
 document.getElementById('btn-login').addEventListener('click', async ()=>{
   const email = ($('#login-email').value||'').trim().toLowerCase();
   const pass  = ($('#login-pass').value||'').trim();
@@ -388,7 +398,9 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
   btn.disabled = true;
   msg('Validando contraseña…');
 
+  // Lanzamos en paralelo: login real + probe de existencia
   const signPromise = auth.signInWithEmailAndPassword(email, pass);
+  const probePromise = probeEmailExists(email); // true/false/null
 
   // Mensajes de progreso
   let finished = false;
@@ -417,17 +429,23 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
   }catch(e){
     finished = true; clearAll();
 
-    if (e.code === 'auth/user-not-found'){
-      // ÚNICO caso que manda a registro
+    // Espera corta (hasta 1000 ms) por el resultado del probe concurrente
+    let exists = null;
+    try{
+      exists = await Promise.race([probePromise, new Promise(r=>setTimeout(()=>r(null), 1000))]);
+    }catch(_){ exists = null; }
+
+    if (e.code === 'auth/user-not-found' || exists === false){
+      // Solo mandamos a registro si estamos seguros que NO existe
       msg('Correo no registrado.');
       setTab('reg'); document.getElementById('reg-email').value = email;
 
     } else if (
       e.code === 'auth/wrong-password' ||
       e.code === 'auth/invalid-credential' ||
-      e.code === 'auth/invalid-login-credentials'
+      e.code === 'auth/invalid-login-credentials' ||
+      exists === true // existe pero la clave falló
     ){
-      // No verificamos existencia para no confundir (anti-enumeración)
       msg('Contraseña incorrecta.');
 
     } else if (e.code === 'auth/too-many-requests'){
@@ -439,6 +457,7 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
     } else if (e.code === 'auth/invalid-email'){
       msg('El formato del correo no es válido.');
     } else {
+      // Si no pudimos concluir (exists === null), evita mandar a registro por error.
       msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
     }
   } finally {
@@ -579,7 +598,7 @@ function updateProgress(){
   const allDone=(done===total);
   document.getElementById('btn-start-quiz').disabled=!allDone;
   const passed=state.quiz?.passed;
-  document.getElementById('btn-cert').disabled=!(allDone && passed);
+  document.getElementById['btn-cert']?.disabled=!(allDone && passed);
 }
 function renderQuiz(){
   const wrap=document.getElementById('quiz'); wrap.innerHTML='';
