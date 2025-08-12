@@ -358,35 +358,72 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
   }
 });
 
-/* ======= LOGIN ======= */
+/* ======= LOGIN (email-first con fallback) ======= */
 document.getElementById('btn-login').addEventListener('click', async ()=>{
-  const email=($('#login-email').value||'').trim().toLowerCase();
-  const pass =($('#login-pass').value||'').trim();
-  if(!emailOk(email)) return msg('El formato del correo no es válido.');
+  const email = ($('#login-email').value||'').trim().toLowerCase();
+  const pass  = ($('#login-pass').value||'').trim();
 
-  // Revalida por correo (sin bloquear si red cae, pero prioriza mensaje de no registrado)
-  const exists=await checkEmailExists(email,{showErrors:true});
-  if(exists===false){
-    msg('Correo no registrado.');
-    setTab('reg'); $('#reg-email').value=email;
+  if(!emailOk(email)){
+    msg('El formato del correo no es válido.');
     return;
   }
-  if(!pass) return msg('Ingresa tu contraseña.');
 
-  const btn=$('#btn-login'); btn.disabled=true;
+  const btn = $('#btn-login'); btn.disabled = true;
+
+  // 1) Intento “email-only”
+  let exists = null;
+  try{
+    const methods = await auth.fetchSignInMethodsForEmail(email);
+    exists = !!(methods && methods.length);
+  }catch(e){
+    // Ignoramos error aquí; haremos fallback abajo
+    exists = null;
+  }
+
+  // 2) Si sabemos que NO existe → mostrar “no registrado” y mandar a registro
+  if(exists === false){
+    msg('Correo no registrado.');
+    setTab('reg');
+    $('#reg-email').value = email;
+    btn.disabled = false;
+    return;
+  }
+
+  // 3) Si existe (o no pudimos comprobar), intentamos login
+  if(!pass){
+    msg('Ingresa tu contraseña.');
+    btn.disabled = false;
+    return;
+  }
+
   try{
     await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-    await auth.signInWithEmailAndPassword(email,pass);
+    await auth.signInWithEmailAndPassword(email, pass);
     msg('Sesión iniciada.');
+    // onAuthStateChanged se encarga del resto
   }catch(e){
-    if(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential'||e.code==='auth/invalid-login-credentials'){
-      msg('Contraseña incorrecta.');
-    }else if(e.code==='auth/too-many-requests'){
-      msg('Demasiados intentos. Intenta más tarde.');
-    }else{
-      msg(MSGS[e.code]||'Ocurrió un error. Intenta nuevamente.');
+    // Caso clave: si el usuario NO existe (fallback cuando 1) falló)
+    if (e.code === 'auth/user-not-found'){
+      msg('Correo no registrado.');
+      setTab('reg');
+      $('#reg-email').value = email;
     }
-  }finally{ btn.disabled=false; }
+    else if (
+      e.code==='auth/wrong-password' ||
+      e.code==='auth/invalid-credential' ||
+      e.code==='auth/invalid-login-credentials'
+    ){
+      msg('Contraseña incorrecta.');
+    }
+    else if (e.code==='auth/too-many-requests'){
+      msg('Demasiados intentos. Intenta más tarde.');
+    }
+    else {
+      msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
+    }
+  }finally{
+    btn.disabled = false;
+  }
 });
 
 /* ======= Reset contraseña ======= */
