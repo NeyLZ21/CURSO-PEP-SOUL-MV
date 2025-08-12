@@ -40,7 +40,7 @@ p.small{margin:0 0 14px}
 <body>
 <div class="container">
   <h1>Acceso</h1>
-  <p class="small">Login con mensaje genérico (sin revelar si el correo existe). En registro enviamos verificación automáticamente.</p>
+  <p class="small">En registro se envía verificación automática al correo.</p>
 
   <div class="card">
     <div class="row tabs" style="margin-bottom:8px">
@@ -107,17 +107,17 @@ p.small{margin:0 0 14px}
   </div>
 </div>
 
-<div id="version">HVQ v0812c</div>
+<div id="version">HVQ v0812d</div>
 
 <!-- Firebase compat -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
 <script>
-// =================== MARCA DE CONSTRUCCIÓN ===================
-console.log('BUILD: hvq-login v0812c');
+// ====== CONFIGURACIÓN ======
+const MODO_PRECISO = false; // ← pon true si NO tienes protección anti-enumeración y quieres mensajes específicos
 
-// =================== Firebase ===================
+// ====== Firebase ======
 const firebaseConfig = {
   apiKey: "AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",
   authDomain: "induccion-pep-hvq.firebaseapp.com",
@@ -132,12 +132,13 @@ const auth = firebase.auth();
 auth.languageCode = 'es';
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
 
-// =================== Utils UI ===================
+// ====== Utils ======
 const $ = s => document.querySelector(s);
 const emailOk = e => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((e||'').trim().toLowerCase());
 const setMsg = (el, t, cls) => { el.classList.remove('ok','err'); if(cls) el.classList.add(cls); el.textContent = t||''; };
+const provName = p => ({'password':'correo y contraseña','google.com':'Google','apple.com':'Apple','facebook.com':'Facebook','microsoft.com':'Microsoft'}[p]||p);
 
-// Tabs y ojitos
+// ====== Tabs & ojitos ======
 function show(tab){
   $('#view-login').classList.toggle('hidden', tab!=='login');
   $('#view-register').classList.toggle('hidden', tab!=='register');
@@ -153,7 +154,7 @@ document.querySelectorAll('.eye').forEach(b=>b.addEventListener('click',()=>{
   const i=document.querySelector(b.dataset.eye); if(i) i.type = i.type==='password' ? 'text':'password';
 }));
 
-// Estado de sesión (UI)
+// ====== Estado de sesión (UI) ======
 auth.onAuthStateChanged(user=>{
   if(user){
     $('#whoami').innerHTML = `Sesión: <span class="badge">${user.email}</span> ${user.emailVerified ? '<span class="ok">(verificado)</span>':'<span class="err">(sin verificar)</span>'}`;
@@ -164,13 +165,11 @@ auth.onAuthStateChanged(user=>{
   }
 });
 
-// =================== LOGIN (sin enumeración) ===================
+// ====== LOGIN ======
 async function handleLogin(){
   const email = ($('#login-email').value||'').trim().toLowerCase();
   const pass  = ($('#login-pass').value||'').trim();
   const msgEl = $('#login-msg');
-
-  console.log('Click Confirmar →', { email, passLen: pass.length });
 
   if(!emailOk(email)) return setMsg(msgEl,'El formato del correo no es válido.','err');
   if(!pass)          return setMsg(msgEl,'Ingresa tu contraseña.','err');
@@ -179,44 +178,72 @@ async function handleLogin(){
   btn.disabled = true; setMsg(msgEl,'Validando…');
 
   try{
+    // MODO PRECISO: primero comprobamos métodos de acceso
+    if (MODO_PRECISO) {
+      const methods = await auth.fetchSignInMethodsForEmail(email).catch(()=>null);
+      if (methods && methods.length === 0) {
+        setMsg(msgEl,'Correo no registrado.','err');
+        return;
+      }
+      if (methods && !methods.includes('password')) {
+        setMsg(msgEl, `Este correo está registrado con: ${methods.map(provName).join(', ')}.`, 'err');
+        return;
+      }
+    }
+
     await auth.signInWithEmailAndPassword(email, pass);
-    console.log('Login OK');
     setMsg(msgEl,'Sesión iniciada.','ok');
-    // Redirige si quieres:
-    // location.href = './modulos/index.html';
+    // location.href = './modulos/index.html'; // si deseas redirigir
   }catch(e){
-    console.warn('Login error:', e.code, e.message);
-    if (e.code === 'auth/network-request-failed')      setMsg(msgEl,'Error de red. Revisa tu conexión.','err');
-    else if (e.code === 'auth/too-many-requests')      setMsg(msgEl,'Demasiados intentos. Intenta más tarde.','err');
-    else if (['auth/wrong-password','auth/user-not-found','auth/invalid-credential','auth/invalid-login-credentials'].includes(e.code))
-                                                       setMsg(msgEl,'Correo o contraseña incorrectos.','err');
-    else                                               setMsg(msgEl,'Error: '+(e.message||''),'err');
+    // Casos con códigos diferenciados
+    if (e.code === 'auth/wrong-password')         setMsg(msgEl,'Contraseña incorrecta.','err');
+    else if (e.code === 'auth/user-not-found')    setMsg(msgEl,'Correo no registrado.','err');
+    else if (e.code === 'auth/too-many-requests') setMsg(msgEl,'Demasiados intentos. Intenta más tarde.','err');
+    else if (e.code === 'auth/network-request-failed') setMsg(msgEl,'Error de red. Revisa tu conexión.','err');
+    else if (e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-login-credentials') {
+      // Protección anti-enumeración: intentamos refinar si está permitido
+      if (MODO_PRECISO) {
+        try{
+          const methods = await auth.fetchSignInMethodsForEmail(email);
+          if (!methods || methods.length === 0) setMsg(msgEl,'Correo no registrado.','err');
+          else if (methods.includes('password')) setMsg(msgEl,'Contraseña incorrecta.','err');
+          else setMsg(msgEl, `Este correo está registrado con: ${methods.map(provName).join(', ')}.`, 'err');
+        }catch{ setMsg(msgEl,'Correo o contraseña incorrectos.','err'); }
+      } else {
+        setMsg(msgEl,'Correo o contraseña incorrectos.','err');
+      }
+    } else {
+      setMsg(msgEl,'Error: '+(e.message||''),'err');
+    }
   } finally {
     btn.disabled = false;
   }
 }
 $('#btn-login').addEventListener('click', handleLogin);
-// Enter para login
 document.querySelector('#view-login').addEventListener('keydown', e=>{
   if(e.key==='Enter') { e.preventDefault(); handleLogin(); }
 });
 
-// =================== RESET (sin revelar existencia) ===================
+// ====== RESET ======
 $('#btn-reset').addEventListener('click', async ()=>{
   const email = ($('#login-email').value||'').trim().toLowerCase();
   const msgEl = $('#login-msg');
   if(!emailOk(email)) return setMsg(msgEl,'Escribe un correo válido.','err');
 
   try{
+    if (MODO_PRECISO) {
+      const methods = await auth.fetchSignInMethodsForEmail(email).catch(()=>null);
+      if (methods && methods.length === 0) return setMsg(msgEl,'Correo no registrado.','err');
+    }
     await auth.sendPasswordResetEmail(email);
-    setMsg(msgEl,'Si la cuenta existe, te enviaremos un correo para restablecer la contraseña.','ok');
+    setMsg(msgEl, MODO_PRECISO ? 'Te enviamos un correo para restablecer la contraseña.' : 'Si la cuenta existe, te enviaremos un correo para restablecer la contraseña.','ok');
   }catch(e){
     if (e.code==='auth/network-request-failed') setMsg(msgEl,'Error de red. Revisa tu conexión.','err');
     else setMsg(msgEl,'No se pudo enviar: ' + (e.message||''),'err');
   }
 });
 
-// =================== REGISTRO (intenta crear y captura duplicado) ===================
+// ====== REGISTRO ======
 async function handleRegister(){
   const email = ($('#reg-email').value||'').trim().toLowerCase();
   const pass  = ($('#reg-pass').value||'').trim();
@@ -233,7 +260,6 @@ async function handleRegister(){
   try{
     const cred = await auth.createUserWithEmailAndPassword(email, pass);
 
-    // Enviar verificación
     try{
       await cred.user.sendEmailVerification({
         url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1',
@@ -244,7 +270,7 @@ async function handleRegister(){
       setMsg(msgEl,'Cuenta creada. No se pudo enviar automáticamente. Usa “Reenviar verificación”.','err');
     }
     $('#verify-box').classList.remove('hidden');
-    show('login'); // opcional: volver al login
+    show('login');
   }catch(e){
     if (e.code==='auth/email-already-in-use') return setMsg(msgEl,'Ese correo ya tiene cuenta. Usa Iniciar sesión.','err');
     if (e.code==='auth/weak-password')        return setMsg(msgEl,'La contraseña es muy corta (mínimo 6).','err');
@@ -255,12 +281,11 @@ async function handleRegister(){
   }
 }
 $('#btn-register').addEventListener('click', handleRegister);
-// Enter para registro
 document.querySelector('#view-register').addEventListener('keydown', e=>{
   if(e.key==='Enter') { e.preventDefault(); handleRegister(); }
 });
 
-// =================== Verificación & Logout ===================
+// ====== Verificación & Logout ======
 $('#btn-check-verify').onclick = async ()=>{
   const m=$('#verify-msg');
   try{ await auth.currentUser?.reload(); setMsg(m, auth.currentUser?.emailVerified ? '✅ Verificado.' : 'Aún sin verificar.'); }
