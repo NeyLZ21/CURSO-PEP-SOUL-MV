@@ -40,7 +40,7 @@ p.small{margin:0 0 14px}
 <body>
 <div class="container">
   <h1>Acceso</h1>
-  <p class="small">Login con mensaje genérico (sin revelar si el correo existe). En registro enviamos verificación automáticamente.</p>
+  <p class="small">Login con mensaje específico: indica si el correo no existe o si la contraseña es incorrecta.</p>
 
   <div class="card">
     <div class="row tabs" style="margin-bottom:8px">
@@ -107,7 +107,7 @@ p.small{margin:0 0 14px}
   </div>
 </div>
 
-<div id="version">HVQ v0812c</div>
+<div id="version">HVQ v0812d</div>
 
 <!-- Firebase compat -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -115,7 +115,7 @@ p.small{margin:0 0 14px}
 
 <script>
 // =================== MARCA DE CONSTRUCCIÓN ===================
-console.log('BUILD: hvq-login v0812c');
+console.log('BUILD: hvq-login v0812d');
 
 // =================== Firebase ===================
 const firebaseConfig = {
@@ -164,7 +164,7 @@ auth.onAuthStateChanged(user=>{
   }
 });
 
-// =================== LOGIN (sin enumeración) ===================
+// =================== LOGIN (con enumeración explícita) ===================
 async function handleLogin(){
   const email = ($('#login-email').value||'').trim().toLowerCase();
   const pass  = ($('#login-pass').value||'').trim();
@@ -179,18 +179,46 @@ async function handleLogin(){
   btn.disabled = true; setMsg(msgEl,'Validando…');
 
   try{
+    // 1) Verifica si el correo existe y qué métodos tiene
+    const methods = await auth.fetchSignInMethodsForEmail(email);
+
+    if (!methods || methods.length === 0){
+      setMsg(msgEl,'Correo no registrado.','err');
+      return;
+    }
+
+    // (Opcional) Si la cuenta no usa contraseña, avisa el método esperado
+    if (!methods.includes('password')){
+      setMsg(msgEl,'Esta cuenta no usa contraseña. Inicia sesión con: ' + methods.join(', ') + '.','err');
+      return;
+    }
+
+    // 2) Intenta iniciar sesión con contraseña
     await auth.signInWithEmailAndPassword(email, pass);
     console.log('Login OK');
     setMsg(msgEl,'Sesión iniciada.','ok');
-    // Redirige si quieres:
-    // location.href = './modulos/index.html';
+    // location.href = './modulos/index.html'; // ← activa si deseas redirigir
   }catch(e){
     console.warn('Login error:', e.code, e.message);
-    if (e.code === 'auth/network-request-failed')      setMsg(msgEl,'Error de red. Revisa tu conexión.','err');
-    else if (e.code === 'auth/too-many-requests')      setMsg(msgEl,'Demasiados intentos. Intenta más tarde.','err');
-    else if (['auth/wrong-password','auth/user-not-found','auth/invalid-credential','auth/invalid-login-credentials'].includes(e.code))
-                                                       setMsg(msgEl,'Correo o contraseña incorrectos.','err');
-    else                                               setMsg(msgEl,'Error: '+(e.message||''),'err');
+
+    // Mensajes específicos
+    if (e.code === 'auth/wrong-password' ||
+        e.code === 'auth/invalid-credential' ||
+        e.code === 'auth/invalid-login-credentials'){
+      setMsg(msgEl,'Contraseña incorrecta.','err');
+    }
+    else if (e.code === 'auth/user-disabled'){
+      setMsg(msgEl,'La cuenta está deshabilitada. Contacta al administrador.','err');
+    }
+    else if (e.code === 'auth/network-request-failed'){
+      setMsg(msgEl,'Error de red. Revisa tu conexión.','err');
+    }
+    else if (e.code === 'auth/too-many-requests'){
+      setMsg(msgEl,'Demasiados intentos. Intenta más tarde.','err');
+    }
+    else{
+      setMsg(msgEl,'Error: '+(e.message||''),'err');
+    }
   } finally {
     btn.disabled = false;
   }
