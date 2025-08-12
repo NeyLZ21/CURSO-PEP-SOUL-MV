@@ -5,10 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Inducción a Soul MV • Hospital Vozandes</title>
 
+<!-- Fuentes -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
+<!-- Acelera Firebase Auth -->
 <link rel="preconnect" href="https://www.googleapis.com">
 <link rel="preconnect" href="https://identitytoolkit.googleapis.com">
 <link rel="preconnect" href="https://securetoken.googleapis.com">
@@ -242,11 +244,16 @@ const msg = (t)=>{ const el=$('#auth-msg'); if(el) el.textContent=t||''; };
 const emailOk = e => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((e||'').trim().toLowerCase());
 $('#year').textContent = new Date().getFullYear();
 
-/* Mostrar errores JS en pantalla si algo se rompe */
-window.addEventListener('error', (ev)=>{
-  console.error(ev.error || ev.message);
-  msg('Error de script: ' + (ev.error?.message || ev.message));
-});
+function providerLabel(p){
+  switch(p){
+    case 'password': return 'correo y contraseña';
+    case 'google.com': return 'Google';
+    case 'facebook.com': return 'Facebook';
+    case 'apple.com': return 'Apple';
+    case 'microsoft.com': return 'Microsoft';
+    default: return p;
+  }
+}
 
 /* ======= Estado local ======= */
 function keyFor(uid){ return `soulmv_${uid||'anon'}`; }
@@ -255,7 +262,7 @@ function saveState(uid, st){ localStorage.setItem(keyFor(uid), JSON.stringify(st
 let CURRENT_UID = null;
 let state = {};
 
-/* ======= Curso ======= */
+/* ======= Curso (datos) ======= */
 const MODULOS = [
   { id:'mod1', titulo:'Navegación básica en Soul MV', yt:'dQw4w9WgXcQ', duracion:'10:05' },
   { id:'mod2', titulo:'Prescripción y órdenes médicas', yt:'l482T0yNkeo',  duracion:'08:40' },
@@ -281,41 +288,128 @@ function setTab(which){
   $('#tab-register').classList.toggle('btn-primary', !onLogin);
   $('#tab-register').classList.toggle('btn-muted',   onLogin);
 }
+document.getElementById('tab-login').addEventListener('click', ()=>setTab('login'));
+document.getElementById('tab-register').addEventListener('click', ()=>setTab('reg'));
+setTab('login');
 
-/* ======= Email helpers ======= */
-async function fetchMethods(email){
+document.querySelectorAll('.eye').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const inp = document.querySelector(btn.dataset.eye);
+    if(!inp) return; inp.type = inp.type==='password' ? 'text' : 'password';
+  });
+});
+
+/* ======= REGISTRO ======= */
+document.getElementById('btn-register-2').addEventListener('click', async ()=>{
+  const email = ($('#reg-email').value||'').trim().toLowerCase();
+  const pass  = ($('#reg-pass').value||'').trim();
+  const pass2 = ($('#reg-pass2').value||'').trim();
+
+  if(!email || !pass || !pass2) return msg('Completa todos los campos.');
+  if(!emailOk(email)) return msg('El formato del correo no es válido.');
+  if(pass!==pass2) return msg('Las contraseñas no coinciden.');
+
   try{
     const methods = await auth.fetchSignInMethodsForEmail(email);
-    console.log('fetchSignInMethodsForEmail →', methods);
-    return methods || [];
-  }catch(e){
-    console.warn('fetchSignInMethodsForEmail error', e);
-    return null; // null = no concluyente
-  }
-}
-function providerLabel(p){
-  switch(p){
-    case 'password': return 'correo y contraseña';
-    case 'google.com': return 'Google';
-    case 'facebook.com': return 'Facebook';
-    case 'apple.com': return 'Apple';
-    case 'microsoft.com': return 'Microsoft';
-    default: return p;
-  }
-}
+    if (methods && methods.length){
+      return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión o Restablecer contraseña.');
+    }
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    const user = cred.user;
+    try{ await user.reload(); }catch(_){}
+    try{
+      const actionCodeSettings = { url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1', handleCodeInApp:false };
+      await user.sendEmailVerification(actionCodeSettings);
+    }catch(_){}
 
-/* ======= Auth listener ======= */
+    msg('Cuenta creada. Te enviamos el correo de verificación (revisa Spam).');
+  }catch(e){
+    msg((MSGS[e.code]) || ('No se pudo registrar: '+(e.message||'')));
+  }
+});
+
+/* ======= LOGIN (verifica correo, luego contraseña; NO redirige si no existe) ======= */
+document.getElementById('btn-login').addEventListener('click', async ()=>{
+  const email = ($('#login-email').value||'').trim().toLowerCase();
+  const pass  = ($('#login-pass').value||'').trim();
+
+  if(!emailOk(email)) return msg('El formato del correo no es válido.');
+  if(!pass) return msg('Ingresa tu contraseña.');
+
+  const btn = document.getElementById('btn-login');
+  btn.disabled = true;
+
+  try{
+    msg('Verificando correo…');
+    const methods = await auth.fetchSignInMethodsForEmail(email);
+
+    if(!methods || methods.length===0){
+      msg('Correo no registrado.');
+      return; // NO cambia de pestaña
+    }
+
+    if(!methods.includes('password')){
+      const provs = methods.map(providerLabel).join(', ');
+      msg(`Este correo está registrado con: ${provs}. Inicia sesión con ese método.`);
+      return;
+    }
+
+    msg('Validando contraseña…');
+    const cred = await auth.signInWithEmailAndPassword(email, pass);
+    msg('Sesión iniciada. Entrando…');
+    if(cred.user?.emailVerified){
+      showCourse();
+    }else{
+      document.getElementById('verify-box').style.display='block';
+    }
+  }catch(e){
+    if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-login-credentials'){
+      msg('Contraseña incorrecta.');
+    } else if (e.code === 'auth/too-many-requests'){
+      msg('Demasiados intentos. Intenta más tarde.');
+    } else if (e.code === 'auth/network-request-failed'){
+      msg('Error de red. Revisa tu conexión.');
+    } else if (e.code === 'auth/invalid-email'){
+      msg('El formato del correo no es válido.');
+    } else {
+      msg((MSGS[e.code]) || ('Ocurrió un error: '+(e.message||'')));
+      console.warn(e);
+    }
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+/* ======= Reset contraseña ======= */
+document.getElementById('btn-reset').addEventListener('click', async ()=>{
+  const email=($('#login-email').value||'').trim().toLowerCase();
+  if(!email) return msg('Escribe tu correo para enviarte el enlace.');
+  if(!emailOk(email)) return msg('El formato del correo no es válido.');
+  try{
+    const methods = await auth.fetchSignInMethodsForEmail(email);
+    if(!methods || methods.length===0) return msg('Correo no registrado.');
+    await auth.sendPasswordResetEmail(email);
+    msg('Te enviamos un correo para restablecer la contraseña.');
+  }catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.'); }
+});
+
+/* ======= Logout ======= */
+document.getElementById('btn-logout').addEventListener('click', async ()=>{
+  await auth.signOut();
+  msg('Sesión cerrada.');
+});
+
+/* ======= Vistas / Curso ======= */
 auth.onAuthStateChanged((user)=>{
   if(!user){
     CURRENT_UID=null; state={}; $('#auth-user').textContent='';
     $('#btn-logout').style.display='none';
-    showLogin(); 
+    showLogin();
     return;
   }
   CURRENT_UID = user.uid;
   state = loadState(CURRENT_UID);
   $('#auth-user').textContent = user.email || '';
-
   if(!user.emailVerified){
     $('#verify-box').style.display='block';
     $('#btn-logout').style.display='none';
@@ -325,189 +419,16 @@ auth.onAuthStateChanged((user)=>{
   showCourse();
 });
 
-/* ======= DOM Ready ======= */
-document.addEventListener('DOMContentLoaded', ()=>{
-  $('#tab-login').addEventListener('click', ()=>setTab('login'));
-  $('#tab-register').addEventListener('click', ()=>setTab('reg'));
-  setTab('login');
-
-  document.querySelectorAll('.eye').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const inp = document.querySelector(btn.dataset.eye);
-      if(!inp) return; inp.type = inp.type==='password' ? 'text' : 'password';
-    });
-  });
-
-  /* Registro */
-  document.getElementById('btn-register-2').addEventListener('click', async ()=>{
-    const email = ($('#reg-email').value||'').trim().toLowerCase();
-    const pass  = ($('#reg-pass').value||'').trim();
-    const pass2 = ($('#reg-pass2').value||'').trim();
-
-    if(!email || !pass || !pass2) return msg('Completa todos los campos.');
-    if(!emailOk(email)) return msg('El formato del correo no es válido.');
-    if(pass!==pass2) return msg('Las contraseñas no coinciden.');
-
-    const methods = await fetchMethods(email);
-    if (methods && methods.length){
-      setTab('login'); $('#login-email').value = email;
-      return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.');
-    }else if(methods === null){
-      return msg('No se pudo verificar el correo. Intenta nuevamente.');
-    }
-
-    try{
-      const cred = await auth.createUserWithEmailAndPassword(email, pass);
-      const user = cred.user;
-      if (auth.currentUser?.uid !== user.uid) await auth.updateCurrentUser(user);
-      try { await auth.currentUser?.reload(); } catch(_){}
-
-      const actionCodeSettings = { url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1', handleCodeInApp:false };
-      try{ await auth.currentUser.sendEmailVerification(actionCodeSettings); }catch(_){}
-      msg('Cuenta creada. Te enviamos el correo de verificación (revisa Spam).');
-
-      document.getElementById('verify-box').style.display='block';
-      setTab('login'); $('#login-email').value = email;
-    }catch(e){
-      if (e.code === 'auth/email-already-in-use'){
-        setTab('login'); $('#login-email').value = email;
-        return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.');
-      }
-      msg('No se pudo registrar. ' + (e.message||''));
-    }
-  });
-
-  /* Login: 1) verificar correo; 2) si existe, validar contraseña; 3) fallback si 1 falla */
-  document.getElementById('btn-login').addEventListener('click', async (ev)=>{
-    ev.preventDefault();
-
-    const email = ($('#login-email').value||'').trim().toLowerCase();
-    const pass  = ($('#login-pass').value||'').trim();
-
-    if(!emailOk(email)) return msg('El formato del correo no es válido.');
-    if(!pass) return msg('Ingresa tu contraseña.');
-
-    const btn = document.getElementById('btn-login');
-    btn.disabled = true;
-
-    try{
-      msg('Verificando correo…');
-      let methods = await fetchMethods(email);
-
-      if (methods === null){
-        // No concluyente → intentamos login para desambiguar
-        try{
-          await auth.signInWithEmailAndPassword(email, pass);
-          methods = ['password']; // si entró, existe con password
-        }catch(e2){
-          if (e2.code === 'auth/wrong-password' || e2.code === 'auth/invalid-credential' || e2.code === 'auth/invalid-login-credentials'){
-            methods = ['password']; // existe, contraseña mala
-          }else if (e2.code === 'auth/user-not-found'){
-            methods = []; // no existe
-          }else{
-            throw e2; // red u otro error → se muestra abajo
-          }
-        }
-      }
-
-      if (!methods || methods.length === 0){
-        msg('Correo no registrado.');
-        $('#reg-email').value = email; setTab('reg');
-        return;
-      }
-
-      if (!methods.includes('password')){
-        const provs = methods.map(providerLabel).join(', ');
-        msg(`Este correo ya está registrado con: ${provs}. Inicia sesión con ese método.`);
-        return;
-      }
-
-      msg('Validando contraseña…');
-      const cred = await auth.signInWithEmailAndPassword(email, pass);
-      msg('Sesión iniciada. Entrando…');
-
-      if(cred.user?.emailVerified){
-        showCourse();
-      }else{
-        document.getElementById('verify-box').style.display='block';
-      }
-
-    }catch(e){
-      if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-login-credentials'){
-        msg('Contraseña incorrecta.');
-      } else if (e.code === 'auth/user-not-found'){
-        msg('Correo no registrado.');
-        $('#reg-email').value = email; setTab('reg');
-      } else if (e.code === 'auth/too-many-requests'){
-        msg('Demasiados intentos. Intenta más tarde.');
-      } else if (e.code === 'auth/network-request-failed'){
-        msg('Error de red. Revisa tu conexión e inténtalo nuevamente.');
-      } else if (e.code === 'auth/unauthorized-domain'){
-        msg('Dominio no autorizado en Firebase Auth.');
-      } else if (e.code === 'auth/invalid-email'){
-        msg('El formato del correo no es válido.');
-      } else {
-        msg('Ocurrió un error: ' + (e.message||'Intenta nuevamente.'));
-        console.warn(e);
-      }
-    } finally {
-      btn.disabled = false;
-    }
-  });
-
-  /* Reset contraseña */
-  document.getElementById('btn-reset').addEventListener('click', async ()=>{
-    const email=($('#login-email').value||'').trim().toLowerCase();
-    if(!email) return msg('Escribe tu correo para enviarte el enlace.');
-    if(!emailOk(email)) return msg('El formato del correo no es válido.');
-    const methods = await fetchMethods(email);
-    if(methods === null) return msg('No se pudo verificar el correo. Intenta nuevamente.');
-    if(!methods.length) return msg('Correo no registrado.');
-    try{
-      await auth.sendPasswordResetEmail(email);
-      msg('Te enviamos un correo para restablecer la contraseña.');
-    }catch(e){ msg('No se pudo enviar: ' + (e.message||'')); }
-  });
-
-  /* Verificación */
-  document.getElementById('btn-check-verify').addEventListener('click', async ()=>{
-    if(!auth.currentUser) return msg('Primero inicia sesión.');
-    try{
-      await auth.currentUser.reload();
-      if(auth.currentUser.emailVerified){ showCourse(); msg('¡Correo verificado!'); }
-      else msg('Tu correo aún no aparece verificado.');
-    }catch(e){ msg('No se pudo comprobar: ' + (e.message||'')); }
-  });
-  document.getElementById('btn-resend-verify').addEventListener('click', async ()=>{
-    if(!auth.currentUser) return msg('Primero inicia sesión.');
-    try{
-      const actionCodeSettings = { url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1', handleCodeInApp:false };
-      await auth.currentUser.sendEmailVerification(actionCodeSettings);
-      msg('Te enviamos el correo de verificación (revisa Spam).');
-    }catch(e){ msg('No se pudo enviar: ' + (e.message||'')); }
-  });
-
-  /* Logout */
-  document.getElementById('btn-logout').addEventListener('click', async ()=>{
-    await auth.signOut();
-    msg('Sesión cerrada.');
-  });
-});
-
-/* ======= Vistas / Curso ======= */
 function showCourse(){
   if(!auth.currentUser || !auth.currentUser.emailVerified) return;
-
   document.getElementById('step-welcome').style.display='none';
   document.getElementById('profile').style.display='block';
   document.getElementById('btn-logout').style.display='inline-flex';
-
   CURRENT_UID = auth.currentUser.uid;
   state = loadState(CURRENT_UID);
   document.getElementById('pf-name').value = state.profile?.name || auth.currentUser.displayName || '';
   document.getElementById('pf-id').value   = state.profile?.iddoc || '';
   document.getElementById('pf-spec').value = state.profile?.spec  || '';
-
   toggleCourse(true);
   loadProfile().then(()=> toggleCourse(profileComplete()));
   syncFromCloud(auth.currentUser).then(()=>{ renderModules(); updateProgress(); }).catch(()=>{});
