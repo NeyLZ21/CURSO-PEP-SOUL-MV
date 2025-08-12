@@ -21,7 +21,7 @@ h1{margin:0 0 8px}
 p.small{margin:0 0 14px}
 .card{background:var(--card);border-radius:16px;box-shadow:0 10px 22px rgba(0,0,0,.06);padding:20px}
 .grid{display:grid;gap:16px}
-.row{display:flex;gap:10px;flex-wrap:wrap}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .btn{border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
 .btn-primary{background:var(--brand);color:#fff}
 .btn-muted{background:#e5e7eb;color:#111827}
@@ -35,6 +35,13 @@ p.small{margin:0 0 14px}
 .badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:600}
 .ok{color:var(--ok)} .err{color:#b91c1c}
 #version{position:fixed;right:10px;bottom:10px;font-size:12px;color:#6b7280;background:#fff;border:1px dashed #e5e7eb;border-radius:10px;padding:4px 8px}
+
+/* Encabezado de perfil */
+#header{margin-top:12px}
+#whoami .line1{font-weight:800}
+#whoami .line2{margin-top:2px}
+#whoami .pill{display:inline-block;border:1px solid var(--bd);border-radius:999px;padding:4px 10px;margin-right:6px;background:#fff}
+#btn-edit-profile{margin-left:auto}
 </style>
 </head>
 <body>
@@ -101,21 +108,62 @@ p.small{margin:0 0 14px}
     </section>
   </div>
 
-  <div class="row" style="margin-top:12px">
-    <span id="whoami" class="small"></span>
+  <!-- ENCABEZADO DE SESIÓN + PERFIL -->
+  <div id="header" class="row">
+    <div id="whoami" class="small" style="flex:1"></div>
+    <button id="btn-edit-profile" class="btn btn-muted hidden" type="button">Modificar</button>
     <button id="btn-logout" class="btn btn-muted hidden" type="button">Cerrar sesión</button>
+  </div>
+
+  <!-- FORMULARIO PERFIL (aparece al primer ingreso o al pulsar Modificar) -->
+  <div id="profile-card" class="card hidden" style="margin-top:12px">
+    <h3 style="margin:0 0 8px">Perfil</h3>
+    <div id="profile-view" class="grid hidden">
+      <div><strong id="pf-nombre"></strong></div>
+      <div class="small"><span id="pf-cedula"></span> • <span id="pf-esp"></span></div>
+    </div>
+
+    <div id="profile-edit" class="grid">
+      <label>Nombre completo
+        <input id="in-nombre" type="text" class="input" placeholder="Apellidos Nombres" autocomplete="name" />
+      </label>
+      <label>Cédula
+        <input id="in-cedula" type="text" class="input" placeholder="10 dígitos" inputmode="numeric" maxlength="10" />
+      </label>
+      <label>Especialidad
+        <input id="in-esp" type="text" class="input" placeholder="Ej. Medicina Interna" list="esp-list" />
+        <datalist id="esp-list">
+          <option>Medicina Interna</option>
+          <option>Pediatría</option>
+          <option>Ginecología y Obstetricia</option>
+          <option>Cirugía General</option>
+          <option>Emergenciología</option>
+          <option>Traumatología</option>
+          <option>Anestesiología</option>
+          <option>Oftalmología</option>
+          <option>Otorrinolaringología</option>
+          <option>Urología</option>
+        </datalist>
+      </label>
+      <div class="row">
+        <button id="btn-save-profile" class="btn btn-primary" type="button">Guardar</button>
+        <button id="btn-cancel-profile" class="btn btn-muted" type="button">Cancelar</button>
+      </div>
+      <div id="profile-msg" class="small" style="min-height:18px"></div>
+    </div>
   </div>
 </div>
 
-<div id="version">HVQ v0812d</div>
+<div id="version">HVQ v0812e</div>
 
 <!-- Firebase compat -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
 // =================== MARCA DE CONSTRUCCIÓN ===================
-console.log('BUILD: hvq-login v0812d');
+console.log('BUILD: hvq-login v0812e');
 
 // =================== Firebase ===================
 const firebaseConfig = {
@@ -129,6 +177,7 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
+const db   = firebase.firestore();
 auth.languageCode = 'es';
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
 
@@ -136,8 +185,27 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
 const $ = s => document.querySelector(s);
 const emailOk = e => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((e||'').trim().toLowerCase());
 const setMsg = (el, t, cls) => { el.classList.remove('ok','err'); if(cls) el.classList.add(cls); el.textContent = t||''; };
+const trim1 = s => (s||'').replace(/\s+/g,' ').trim();
 
-// Tabs y ojitos
+// Validador de cédula ecuatoriana (10 dígitos)
+function cedulaEcOk(c){
+  c = (c||'').replace(/\D/g,'');
+  if(!/^\d{10}$/.test(c)) return false;
+  const prov = parseInt(c.slice(0,2),10);
+  if(!(prov>=1 && prov<=24) && prov!==30) return false; // 30: extranjero
+  const tercer = parseInt(c[2],10);
+  if(tercer>=6) return false;
+  let suma=0;
+  for(let i=0;i<9;i++){
+    let n=parseInt(c[i],10);
+    if(i%2===0){ n*=2; if(n>9) n-=9; }
+    suma+=n;
+  }
+  const verif=(10-(suma%10))%10;
+  return verif===parseInt(c[9],10);
+}
+
+// =================== Tabs y ojitos ===================
 function show(tab){
   $('#view-login').classList.toggle('hidden', tab!=='login');
   $('#view-register').classList.toggle('hidden', tab!=='register');
@@ -153,14 +221,145 @@ document.querySelectorAll('.eye').forEach(b=>b.addEventListener('click',()=>{
   const i=document.querySelector(b.dataset.eye); if(i) i.type = i.type==='password' ? 'text':'password';
 }));
 
-// Estado de sesión (UI)
+// =================== Estado de sesión + Perfil (UI) ===================
+async function loadProfile(user){
+  try{
+    const ref = db.collection('users').doc(user.uid);
+    const snap = await ref.get();
+    const profile = snap.exists ? snap.data() : null;
+    renderHeader(user, profile);
+    // Mostrar formulario si perfil no está completo
+    const incomplete = !profile || !profile.nombre || !profile.cedula || !profile.especialidad;
+    toggleProfileEditor(incomplete, profile);
+  }catch(e){
+    console.warn('Error cargando perfil:', e);
+    renderHeader(user, null);
+    toggleProfileEditor(true, null);
+  }
+}
+
+function renderHeader(user, profile){
+  const w = $('#whoami');
+  const editBtn = $('#btn-edit-profile');
+  if(user){
+    const verif = user.emailVerified ? '<span class="ok">(verificado)</span>' : '<span class="err">(sin verificar)</span>';
+    const nombre = profile?.nombre ? `<span class="pill">${profile.nombre}</span>` : '';
+    const cedula = profile?.cedula ? `<span class="pill">Cédula: ${profile.cedula}</span>` : '';
+    const esp    = profile?.especialidad ? `<span class="pill">${profile.especialidad}</span>` : '';
+    w.innerHTML =
+      `<div class="line1">Sesión: <span class="badge">${user.email}</span> ${verif}</div>
+       <div class="line2">${nombre}${cedula}${esp}</div>`;
+    $('#btn-logout').classList.remove('hidden');
+    editBtn.classList.remove('hidden');
+  }else{
+    w.textContent='';
+    $('#btn-logout').classList.add('hidden');
+    $('#btn-edit-profile').classList.add('hidden');
+  }
+}
+
+function toggleProfileEditor(editing, profile){
+  const card = $('#profile-card');
+  const v    = $('#profile-view');
+  const e    = $('#profile-edit');
+
+  if(editing){
+    card.classList.remove('hidden');
+    v.classList.add('hidden');
+    e.classList.remove('hidden');
+    // Prefill
+    $('#in-nombre').value = profile?.nombre || '';
+    $('#in-cedula').value = profile?.cedula || '';
+    $('#in-esp').value    = profile?.especialidad || '';
+    setMsg($('#profile-msg'),'Completa tu perfil para continuar.','');
+  }else{
+    // Mostrar resumen
+    card.classList.remove('hidden');
+    v.classList.remove('hidden');
+    e.classList.add('hidden');
+    $('#pf-nombre').textContent = profile?.nombre || '';
+    $('#pf-cedula').textContent = profile?.cedula ? `Cédula: ${profile.cedula}` : '';
+    $('#pf-esp').textContent    = profile?.especialidad || '';
+    setMsg($('#profile-msg'),'','');
+  }
+}
+
+// Botón Modificar del encabezado
+$('#btn-edit-profile').onclick = async ()=>{
+  const user = auth.currentUser;
+  if(!user) return;
+  try{
+    const snap = await db.collection('users').doc(user.uid).get();
+    const profile = snap.exists ? snap.data() : null;
+    toggleProfileEditor(true, profile);
+  }catch(_){
+    toggleProfileEditor(true, null);
+  }
+};
+
+// Guardar perfil
+$('#btn-save-profile').onclick = async ()=>{
+  const user = auth.currentUser;
+  if(!user) return;
+  const msg = $('#profile-msg');
+
+  const nombre = trim1($('#in-nombre').value);
+  const cedula = ($('#in-cedula').value||'').replace(/\D/g,'');
+  const esp    = trim1($('#in-esp').value);
+
+  if(nombre.length < 5) return setMsg(msg,'Escribe tu nombre completo.','err');
+  if(!cedulaEcOk(cedula)) return setMsg(msg,'Cédula inválida. Verifica los 10 dígitos.','err');
+  if(esp.length < 3) return setMsg(msg,'Indica tu especialidad.','err');
+
+  const btn = $('#btn-save-profile');
+  btn.disabled = true; setMsg(msg,'Guardando…');
+  try{
+    await db.collection('users').doc(user.uid).set({
+      email: user.email,
+      nombre, cedula, especialidad: esp,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge:true });
+
+    const profile = { nombre, cedula, especialidad: esp };
+    renderHeader(user, profile);
+    toggleProfileEditor(false, profile);
+    setMsg(msg,'Perfil guardado.','ok');
+  }catch(e){
+    console.warn('Guardar perfil error:', e);
+    setMsg(msg,'No se pudo guardar: '+(e.message||''),'err');
+  }finally{
+    btn.disabled = false;
+  }
+};
+
+// Cancelar edición
+$('#btn-cancel-profile').onclick = async ()=>{
+  const user = auth.currentUser;
+  if(!user){ $('#profile-card').classList.add('hidden'); return; }
+  try{
+    const snap = await db.collection('users').doc(user.uid).get();
+    const profile = snap.exists ? snap.data() : null;
+    if(!profile || !profile.nombre || !profile.cedula || !profile.especialidad){
+      // Si está incompleto, mantenemos el editor visible
+      setMsg($('#profile-msg'),'Para continuar, completa tu perfil.','err');
+      return;
+    }
+    toggleProfileEditor(false, profile);
+  }catch(_){
+    setMsg($('#profile-msg'),'Para continuar, completa tu perfil.','err');
+  }
+};
+
+// =================== onAuthStateChanged ===================
 auth.onAuthStateChanged(user=>{
   if(user){
-    $('#whoami').innerHTML = `Sesión: <span class="badge">${user.email}</span> ${user.emailVerified ? '<span class="ok">(verificado)</span>':'<span class="err">(sin verificar)</span>'}`;
+    renderHeader(user, null);
     $('#btn-logout').classList.remove('hidden');
+    loadProfile(user);
   }else{
-    $('#whoami').textContent = '';
-    $('#btn-logout').classList.add('hidden');
+    renderHeader(null, null);
+    $('#profile-card').classList.add('hidden');
   }
 });
 
@@ -170,8 +369,6 @@ async function handleLogin(){
   const pass  = ($('#login-pass').value||'').trim();
   const msgEl = $('#login-msg');
 
-  console.log('Click Confirmar →', { email, passLen: pass.length });
-
   if(!emailOk(email)) return setMsg(msgEl,'El formato del correo no es válido.','err');
   if(!pass)          return setMsg(msgEl,'Ingresa tu contraseña.','err');
 
@@ -179,29 +376,21 @@ async function handleLogin(){
   btn.disabled = true; setMsg(msgEl,'Validando…');
 
   try{
-    // 1) Verifica si el correo existe y qué métodos tiene
     const methods = await auth.fetchSignInMethodsForEmail(email);
-
     if (!methods || methods.length === 0){
       setMsg(msgEl,'Correo no registrado.','err');
       return;
     }
-
-    // (Opcional) Si la cuenta no usa contraseña, avisa el método esperado
     if (!methods.includes('password')){
       setMsg(msgEl,'Esta cuenta no usa contraseña. Inicia sesión con: ' + methods.join(', ') + '.','err');
       return;
     }
 
-    // 2) Intenta iniciar sesión con contraseña
     await auth.signInWithEmailAndPassword(email, pass);
-    console.log('Login OK');
     setMsg(msgEl,'Sesión iniciada.','ok');
-    // location.href = './modulos/index.html'; // ← activa si deseas redirigir
+    // Al iniciar sesión, onAuthStateChanged llamará a loadProfile() y, si falta, pedirá el perfil.
+    // location.href = './modulos/index.html';
   }catch(e){
-    console.warn('Login error:', e.code, e.message);
-
-    // Mensajes específicos
     if (e.code === 'auth/wrong-password' ||
         e.code === 'auth/invalid-credential' ||
         e.code === 'auth/invalid-login-credentials'){
@@ -224,7 +413,6 @@ async function handleLogin(){
   }
 }
 $('#btn-login').addEventListener('click', handleLogin);
-// Enter para login
 document.querySelector('#view-login').addEventListener('keydown', e=>{
   if(e.key==='Enter') { e.preventDefault(); handleLogin(); }
 });
@@ -234,7 +422,6 @@ $('#btn-reset').addEventListener('click', async ()=>{
   const email = ($('#login-email').value||'').trim().toLowerCase();
   const msgEl = $('#login-msg');
   if(!emailOk(email)) return setMsg(msgEl,'Escribe un correo válido.','err');
-
   try{
     await auth.sendPasswordResetEmail(email);
     setMsg(msgEl,'Si la cuenta existe, te enviaremos un correo para restablecer la contraseña.','ok');
@@ -272,6 +459,9 @@ async function handleRegister(){
       setMsg(msgEl,'Cuenta creada. No se pudo enviar automáticamente. Usa “Reenviar verificación”.','err');
     }
     $('#verify-box').classList.remove('hidden');
+
+    // Al estar ya autenticado, mostramos el editor de perfil de inmediato (primer ingreso)
+    loadProfile(cred.user);
     show('login'); // opcional: volver al login
   }catch(e){
     if (e.code==='auth/email-already-in-use') return setMsg(msgEl,'Ese correo ya tiene cuenta. Usa Iniciar sesión.','err');
@@ -283,7 +473,6 @@ async function handleRegister(){
   }
 }
 $('#btn-register').addEventListener('click', handleRegister);
-// Enter para registro
 document.querySelector('#view-register').addEventListener('keydown', e=>{
   if(e.key==='Enter') { e.preventDefault(); handleRegister(); }
 });
