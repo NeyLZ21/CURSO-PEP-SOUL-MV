@@ -56,7 +56,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     <div class="grid cols-2" style="align-items:start">
       <div>
         <h2 style="margin:0 0 6px">Acceso</h2>
-        <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo. Primero validamos si el correo existe; si existe, probamos la contraseña.</p>
+        <p class="muted" style="margin:0 0 14px">Primero validamos si el correo existe; si existe, probamos la contraseña.</p>
 
         <div class="grid" id="auth-forms" autocomplete="off">
           <input type="text" style="display:none" aria-hidden="true" autocomplete="off">
@@ -244,6 +244,11 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
+// (opcional) caché local para lecturas más rápidas
+if (db && db.enablePersistence) {
+  db.enablePersistence({ synchronizeTabs: true }).catch(()=>{});
+}
+
 /* ======= Utilidades ======= */
 const $ = s => document.querySelector(s);
 $('#year').textContent = new Date().getFullYear();
@@ -302,44 +307,46 @@ function withTimeout(promise, ms=1500){
 }
 
 /* ======= Verificación estricta de email (rápida) ======= */
+// 1) fetchSignInMethods con timeout
+// 2) desempate: signIn con contraseña dummy (wrong-password => existe; user-not-found => no existe)
 async function emailExistsStrict(email){
-  // 1) Intento por métodos con timeout
   try{
     const methods = await withTimeout(auth.fetchSignInMethodsForEmail(email), 1500);
     if (Array.isArray(methods) && methods.length > 0) return true;
-    // Si vino [], no concluimos → desempate
   }catch(_){ /* timeout/red → desempate */ }
-
-  // 2) Desempate: login con contraseña falsa
   try{
     await auth.signInWithEmailAndPassword(email, '__dummy__' + Math.random());
-    await auth.signOut();
+    await auth.signOut(); // por si acaso
     return true;
   }catch(e){
     if (e.code === 'auth/wrong-password' ||
         e.code === 'auth/invalid-credential' ||
         e.code === 'auth/invalid-login-credentials') return true;
     if (e.code === 'auth/user-not-found') return false;
-    throw e; // errores no concluyentes
+    throw e; // otros errores: no concluyente
   }
 }
 
-/* ======= Auth listener ======= */
-auth.onAuthStateChanged(async (user)=>{
+/* ======= Auth listener (no bloquea) ======= */
+auth.onAuthStateChanged((user)=>{
   if(!user){
     CURRENT_UID=null; state={}; $('#auth-user').textContent='';
     $('#btn-logout').style.display='none';
-    showLogin(); return;
+    showLogin(); 
+    return;
   }
   CURRENT_UID = user.uid;
   state = loadState(CURRENT_UID);
   $('#auth-user').textContent = user.email || '';
+
   if(!user.emailVerified){
     $('#verify-box').style.display='block';
     $('#btn-logout').style.display='none';
-    showLogin(); return;
+    showLogin();
+    return;
   }
-  await syncFromCloud(user);
+
+  // Entra de inmediato; sincronización corre en segundo plano
   showCourse();
 });
 
@@ -381,7 +388,7 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
   }
 });
 
-/* ======= LOGIN: validar correo -> luego contraseña ======= */
+/* ======= LOGIN: validar correo -> luego contraseña, y entrar al instante ======= */
 document.getElementById('btn-login').addEventListener('click', async ()=>{
   const email = ($('#login-email').value||'').trim().toLowerCase();
   const pass  = ($('#login-pass').value||'').trim();
@@ -406,7 +413,14 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
     msg('Validando contraseña…');
     await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     await auth.signInWithEmailAndPassword(email, pass);
-    msg('Sesión iniciada.');
+    msg('Sesión iniciada. Entrando…');
+
+    // Entrar sin esperar lecturas de Firestore
+    if (auth.currentUser?.emailVerified){
+      showCourse();
+    } else {
+      document.getElementById('verify-box').style.display='block';
+    }
   }catch(e){
     if (e.code === 'auth/wrong-password' ||
         e.code==='auth/invalid-credential' ||
@@ -448,13 +462,28 @@ document.getElementById('btn-logout').addEventListener('click', async ()=>{
   msg('Sesión cerrada.');
 });
 
-/* ======= Vistas (resto del curso) ======= */
+/* ======= Vistas: entrada inmediata y sincronización en background ======= */
 function showCourse(){
-  if(!auth.currentUser || !auth.currentUser.emailVerified){ return; }
+  if(!auth.currentUser || !auth.currentUser.emailVerified) return;
+
+  // UI inmediata
   document.getElementById('step-welcome').style.display='none';
   document.getElementById('profile').style.display='block';
   document.getElementById('btn-logout').style.display='inline-flex';
-  loadProfile().then(()=>{ toggleCourse(profileComplete()); });
+
+  // Estado local inmediato
+  CURRENT_UID = auth.currentUser.uid;
+  state = loadState(CURRENT_UID);
+  document.getElementById('pf-name').value = state.profile?.name || auth.currentUser.displayName || '';
+  document.getElementById('pf-id').value   = state.profile?.iddoc || '';
+  document.getElementById('pf-spec').value = state.profile?.spec  || '';
+
+  // Habilita módulos YA
+  toggleCourse(true);
+
+  // Carga de perfil/progreso en segundo plano y refresca si hace falta
+  loadProfile().then(()=> toggleCourse(profileComplete()));
+  syncFromCloud(auth.currentUser).then(()=>{ renderModules(); updateProgress(); }).catch(()=>{});
 }
 function showLogin(){
   document.getElementById('step-welcome').style.display='block';
@@ -586,7 +615,7 @@ document.getElementById('btn-cert')?.addEventListener('click', ()=>{
   document.getElementById('certificado').classList.add('show'); setTimeout(()=>window.print(),400);
 });
 
-/* ======= Perfil + Cloud sync (mínimo necesario) ======= */
+/* ======= Perfil + Cloud sync (en background) ======= */
 async function userDoc(){
   const uid=auth.currentUser?.uid; if(!uid) return null;
   return db.collection('users').doc(uid).collection('courses').doc('soulmv');
