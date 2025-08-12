@@ -37,6 +37,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 /* Avisos */
 .alert{border-radius:12px;padding:12px 14px;font-size:14px}
 .alert-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
+.small{font-size:12px}
 </style>
 </head>
 <body>
@@ -48,7 +49,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
       <div class="subtitle">Curso para nuevos médicos • Hospital Vozandes</div>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
-      <span id="auth-user" class="muted" style="font-size:13px"></span>
+      <span id="auth-user" class="muted small"></span>
       <button id="btn-logout" class="btn btn-muted" style="display:none">Cerrar sesión</button>
     </div>
   </header>
@@ -58,11 +59,11 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     <div class="grid cols-2" style="align-items:start">
       <div>
         <h2 style="margin:0 0 6px">Acceso</h2>
-        <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña. Te pediremos verificar el correo antes de iniciar el curso. Tu progreso quedará guardado en la nube.</p>
+        <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo. Primero validamos si el correo existe; si existe, pedimos la contraseña.</p>
 
         <div class="grid" id="auth-forms" autocomplete="off">
-          <input type="text" style="display:none" aria-hidden="true">
-          <input type="password" style="display:none" aria-hidden="true">
+          <input type="text" style="display:none" aria-hidden="true" autocomplete="off">
+          <input type="password" style="display:none" aria-hidden="true" autocomplete="new-password">
 
           <div style="display:flex; gap:8px; margin-bottom:8px">
             <button id="tab-login" class="btn btn-primary">Iniciar sesión</button>
@@ -86,6 +87,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
               <button class="btn btn-primary" id="btn-login">Confirmar</button>
               <button class="btn" id="btn-reset" style="background:#e5e7eb">Restablecer contraseña</button>
             </div>
+            <div id="auth-msg" class="muted" style="min-height:18px;margin-top:6px"></div>
           </div>
 
           <!-- REGISTRO -->
@@ -111,12 +113,10 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
               <button class="btn btn-muted" id="btn-register-2">Crear cuenta</button>
             </div>
           </div>
-
-          <div id="auth-msg" class="muted" style="min-height:18px"></div>
         </div>
 
         <div id="verify-box" class="alert alert-warn" style="display:none;margin-top:10px">
-          <strong>Verifica tu correo:</strong> te enviamos un email de verificación. Confírmalo y vuelve a esta pantalla para continuar.
+          <strong>Verifica tu correo:</strong> te enviamos un email de verificación.
           <div style="display:flex;gap:8px;margin-top:8px">
             <button id="btn-check-verify" class="btn btn-primary">Ya verifiqué mi correo</button>
             <button id="btn-resend-verify" class="btn btn-muted">Reenviar verificación</button>
@@ -150,7 +150,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
         <input id="pf-spec" type="text" required style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
       </label>
     </div>
-    <div class="actions" style="display:flex;gap:8px;margin-top:10px">
+    <div style="display:flex;gap:8px;margin-top:10px">
       <button id="btn-save-profile" class="btn btn-primary">Guardar perfil</button>
     </div>
     <div id="pf-msg" class="muted" style="margin-top:6px"></div>
@@ -180,11 +180,11 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     <div id="quiz-intro" class="grid cols-2">
       <div>
         <button id="btn-start-quiz" class="btn btn-primary" disabled>Comenzar evaluación</button>
-        <p class="muted" style="font-size:12px">Debes aprobar con 80% para habilitar el certificado.</p>
+        <p class="muted small">Debes aprobar con 80% para habilitar el certificado.</p>
       </div>
       <div>
         <button id="btn-cert" class="btn btn-success" disabled>Mostrar certificado</button>
-        <p class="muted" style="font-size:12px">Disponible cuando completes los módulos y apruebes la evaluación.</p>
+        <p class="muted small">Disponible cuando completes los módulos y apruebes la evaluación.</p>
       </div>
     </div>
 
@@ -262,13 +262,14 @@ const MSGS = {
   'auth/invalid-credential':'Contraseña incorrecta.',
   'auth/invalid-login-credentials':'Contraseña incorrecta.',
   'auth/too-many-requests':'Demasiados intentos. Intenta más tarde.',
-  'auth/network-request-failed':'Error de red. Revisa tu conexión.'
+  'auth/network-request-failed':'Error de red. Revisa tu conexión.',
+  'auth/unauthorized-domain':'Dominio no autorizado en Firebase Auth.'
 };
-const msg = (t)=>{ const el=$('#auth-msg'); if(el) el.textContent=t; };
+const msg = (t)=>{ const el=$('#auth-msg'); if(el) el.textContent=t||''; };
 const emailOk = e => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((e||'').trim().toLowerCase());
 
 /* ======= Estado local por usuario ======= */
-function keyFor(uid){ return `soulmv_${uid||'anon'}`; }   // <-- estaba roto
+function keyFor(uid){ return `soulmv_${uid||'anon'}`; }
 function loadState(uid){ try{ return JSON.parse(localStorage.getItem(keyFor(uid))||'{}'); }catch{ return {}; } }
 function saveState(uid, st){ localStorage.setItem(keyFor(uid), JSON.stringify(st)); }
 let CURRENT_UID = null;
@@ -295,12 +296,35 @@ document.querySelectorAll('.eye').forEach(btn=>{
   });
 });
 
+/* ======= Verificación estricta de email ======= */
+// Si fetchSignInMethods falla o devuelve vacío, hacemos desempate con un login de contraseña falsa.
+// - wrong-password => el correo SÍ existe
+// - user-not-found => no existe
+async function emailExistsStrict(email){
+  try {
+    const methods = await auth.fetchSignInMethodsForEmail(email);
+    if (Array.isArray(methods) && methods.length > 0) return true;
+  } catch(_) { /* seguimos al desempate */ }
+  try{
+    await auth.signInWithEmailAndPassword(email, '__dummy__' + Math.random());
+    await auth.signOut(); // por si acaso
+    return true;
+  }catch(e){
+    if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-login-credentials'){
+      return true;
+    }
+    if (e.code === 'auth/user-not-found') return false;
+    // Cualquier otro error de red/config no concluyente: lo propagamos
+    throw e;
+  }
+}
+
 /* ======= Auth listener ======= */
 auth.onAuthStateChanged(async (user)=>{
   if(!user){
     CURRENT_UID=null; state={}; $('#auth-user').textContent='';
     $('#btn-logout').style.display='none';
-    setTab('login'); showLogin(); return;
+    showLogin(); return;
   }
   CURRENT_UID = user.uid;
   state = loadState(CURRENT_UID);
@@ -316,9 +340,9 @@ auth.onAuthStateChanged(async (user)=>{
 
 /* ======= REGISTRO ======= */
 document.getElementById('btn-register-2').addEventListener('click', async ()=>{
-  const email = (document.getElementById('reg-email').value||'').trim().toLowerCase();
-  const pass  = (document.getElementById('reg-pass').value||'').trim();
-  const pass2 = (document.getElementById('reg-pass2').value||'').trim();
+  const email = ($('#reg-email').value||'').trim().toLowerCase();
+  const pass  = ($('#reg-pass').value||'').trim();
+  const pass2 = ($('#reg-pass2').value||'').trim();
 
   if(!email || !pass || !pass2) return msg('Completa todos los campos.');
   if(!emailOk(email)) return msg('El formato del correo no es válido.');
@@ -327,8 +351,7 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
   try{
     const methods = await auth.fetchSignInMethodsForEmail(email);
     if (methods && methods.length){
-      setTab('login');
-      document.getElementById('login-email').value = email;
+      setTab('login'); $('#login-email').value = email;
       return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.');
     }
 
@@ -342,82 +365,58 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
     let sent=false;
     for (let i=0;i<3 && !sent;i++){
       try{ await auth.currentUser.sendEmailVerification(actionCodeSettings); sent=true; }
-      catch(e){ try{ await auth.currentUser.reload(); }catch(_){ } await new Promise(r=>setTimeout(r, 600*(i+1))); }
+      catch(_){ try{ await auth.currentUser.reload(); }catch(__){} await new Promise(r=>setTimeout(r, 600*(i+1))); }
     }
-    msg(sent
-      ? 'Cuenta creada. Te enviamos el correo de verificación (revisa Spam).'
-      : 'Cuenta creada. No se pudo enviar automáticamente, usa “Reenviar verificación”.');
+    msg(sent ? 'Cuenta creada. Te enviamos el correo de verificación (revisa Spam).' : 'Cuenta creada. No se pudo enviar automáticamente, usa “Reenviar verificación”.');
 
     document.getElementById('verify-box').style.display='block';
-    setTab('login');
-    document.getElementById('login-email').value = email;
-    startVerifyPolling();
+    setTab('login'); $('#login-email').value = email;
 
     db.collection('users').doc(user.uid).collection('courses').doc('soulmv')
       .set({}, { merge:true }).catch(()=>{});
   }catch(e){
     if (e.code === 'auth/email-already-in-use'){
-      setTab('login');
-      document.getElementById('login-email').value = email;
+      setTab('login'); $('#login-email').value = email;
       return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.');
     }
     msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
   }
 });
 
-// ======= LOGIN (email-first con fallback robusto) =======
+/* ======= LOGIN: validar correo -> luego contraseña ======= */
 document.getElementById('btn-login').addEventListener('click', async ()=>{
-  const email = (document.getElementById('login-email').value||'').trim().toLowerCase();
-  const pass  = (document.getElementById('login-pass').value||'').trim();
+  const email = ($('#login-email').value||'').trim().toLowerCase();
+  const pass  = ($('#login-pass').value||'').trim();
 
   if(!emailOk(email)) return msg('El formato del correo no es válido.');
   if(!pass) return msg('Ingresa tu contraseña.');
 
-  const btn = document.getElementById('btn-login');
-  btn.disabled = true;
+  const btn = $('#btn-login'); btn.disabled = true;
 
-  // 1) Chequeo de existencia SOLO por correo
-  let exists = null;
-  try {
-    const methods = await auth.fetchSignInMethodsForEmail(email);
-    exists = !!(methods && methods.length);
-  } catch(_) {
-    exists = null; // desconocido → haremos fallback con signIn
-  }
-
-  // 2) Si sabemos con certeza que NO existe → a registro
-  if (exists === false) {
-    msg('Correo no registrado.');
-    setTab('reg');
-    document.getElementById('reg-email').value = email;
-    btn.disabled = false;
-    return;
-  }
-
-  // 3) Si existe o no pudimos comprobar, probamos login para distinguir errores
-  try {
+  try{
+    const exists = await emailExistsStrict(email);
+    if (exists === false){
+      msg('Correo no registrado.');
+      setTab('reg'); $('#reg-email').value = email;
+      return;
+    }
+    // correo confirmado → validar contraseña real
     await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     await auth.signInWithEmailAndPassword(email, pass);
     msg('Sesión iniciada.');
-  } catch(e) {
-    // Importante: si la contraseña está mal, el correo SÍ existe.
-    if (e.code === 'auth/wrong-password' ||
-        e.code === 'auth/invalid-credential' ||
-        e.code === 'auth/invalid-login-credentials') {
+  }catch(e){
+    if (e.code === 'auth/wrong-password' || e.code==='auth/invalid-credential' || e.code==='auth/invalid-login-credentials'){
       msg('Contraseña incorrecta.');
-      return; // NO mandamos a registro
-    }
-    if (e.code === 'auth/user-not-found') {
+    } else if (e.code === 'auth/user-not-found') {
       msg('Correo no registrado.');
-      setTab('reg');
-      document.getElementById('reg-email').value = email;
-      return;
-    }
-    if (e.code === 'auth/too-many-requests') {
+      setTab('reg'); $('#reg-email').value = email;
+    } else if (e.code === 'auth/too-many-requests') {
       msg('Demasiados intentos. Intenta más tarde.');
-      return;
+    } else if (e.code === 'auth/unauthorized-domain') {
+      msg('Dominio no autorizado en Firebase Auth. Revisa la configuración de dominios.');
+    } else {
+      msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
     }
-    msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
   } finally {
     btn.disabled = false;
   }
@@ -425,12 +424,12 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
 
 /* ======= Reset contraseña ======= */
 document.getElementById('btn-reset').addEventListener('click', async ()=>{
-  const email=(document.getElementById('login-email').value||'').trim().toLowerCase();
+  const email=($('#login-email').value||'').trim().toLowerCase();
   if(!email) return msg('Escribe tu correo para enviarte el enlace.');
   if(!emailOk(email)) return msg('El formato del correo no es válido.');
   try{
-    const methods = await auth.fetchSignInMethodsForEmail(email);
-    if(!methods || methods.length===0) return msg('Correo no registrado.');
+    const exists = await emailExistsStrict(email);
+    if(!exists) return msg('Correo no registrado.');
     await auth.sendPasswordResetEmail(email);
     msg('Te enviamos un correo para restablecer la contraseña.');
   }catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.'); }
