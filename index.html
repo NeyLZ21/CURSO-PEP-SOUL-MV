@@ -506,25 +506,6 @@ function startProfileRealtime(){
   });
 }
 
-async function loadProfile(){
-  // Relleno inmediato con local (rápido)
-  document.getElementById('pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
-  document.getElementById('pf-id').value   = state.profile?.iddoc || '';
-  document.getElementById('pf-spec').value = state.profile?.spec  || '';
-
-  // Intento nube en background
-  try{
-    const uid=auth.currentUser?.uid; if(!uid) return;
-    const s=await db.collection('users').doc(uid).collection('profile').doc('main').get();
-    if(s.exists){
-      state.profile=s.data(); saveState(CURRENT_UID,state);
-      document.getElementById('pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
-      document.getElementById('pf-id').value   = state.profile?.iddoc || '';
-      document.getElementById('pf-spec').value = state.profile?.spec  || '';
-    }
-  }catch(e){ console.warn('Perfil no disponible',e); }
-}
-
 async function saveProfile(){
   const name=(document.getElementById('pf-name').value||'').trim();
   const iddoc=(document.getElementById('pf-id').value||'').trim();
@@ -533,10 +514,11 @@ async function saveProfile(){
   const btn=document.getElementById('btn-save-profile');
 
   if(!name || !iddoc || !spec){
-    pfMsg.textContent='Completa nombre, cédula/pasaporte y especialidad.'; return;
+    pfMsg.textContent='Completa nombre, cédula/pasaporte y especialidad.'; 
+    return;
   }
 
-  // UI optimista inmediata
+  // UI optimista
   state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
   pfMsg.classList.add('saving'); pfMsg.textContent='Guardando…';
   btn.disabled=true;
@@ -549,21 +531,19 @@ async function saveProfile(){
     const uid=auth.currentUser?.uid; if(!uid) throw new Error('Sin UID');
 
     const ref = db.collection('users').doc(uid).collection('profile').doc('main');
-    const payload = {
-      ...state.profile,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-
+    const payload = { ...state.profile, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
     const write = ref.set(payload,{merge:true});
 
-    // Al completar el write, si el snapshot aún no cerró, cerramos aquí
+    // Cuando Firestore confirme, cerramos (sin mensajes de “sincronizando”)
     write.then(()=>{
-      if (!savingProfile) return;
+      if (!savingProfile) return;        // ya cerró por onSnapshot
       savingProfile = false;
       pfMsg.classList.remove('saving');
       pfMsg.textContent='✅ Perfil guardado.';
       setProfileReadonly(true);
       toggleCourse(profileComplete());
+      // opcional: limpiar mensaje al rato
+      setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; }, 1500);
     }).catch(()=>{
       savingProfile = false;
       pfMsg.classList.remove('saving');
@@ -571,11 +551,11 @@ async function saveProfile(){
       setProfileReadonly(false);
     });
 
-    // Timeout solo para no bloquear la UI (el cierre real lo hará then()/snapshot)
+    // No cambiamos el mensaje en caso de demora; dejamos “Guardando…” hasta que llegue .then()
     await Promise.race([
       write,
       new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),7000))
-    ]);
+    ]).catch(()=>{}); // ignoramos el timeout aquí
 
   }catch(e){
     if(e && e.message!=='timeout'){
@@ -588,6 +568,7 @@ async function saveProfile(){
     btn.disabled=false;
   }
 }
+
 document.getElementById('btn-save-profile').addEventListener('click', saveProfile);
 
 /* ======= Módulos (YouTube) ======= */
