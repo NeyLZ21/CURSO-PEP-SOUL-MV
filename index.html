@@ -208,32 +208,47 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
   <div class="footer no-print">© <span id="year"></span> Hospital Vozandes — Inducción Soul MV</div>
 </div>
 
-<!-- YouTube API -->
+<!-- APIs -->
 <script src="https://www.youtube.com/iframe_api"></script>
-<!-- Firebase (compat) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
-/* ============= Carga del catálogo desde JSON (sin cache) ============= */
+/* ================== 1) Cargar catálogo desde JSON O desde JS ================== */
 let ESPECIALIDADES = [];
 let MAPA_MODULOS = {};
-let catalogoReady = (async function cargarCatalogo(){
+async function loadCatalog(){
+  // 1A. JSON
   try{
-    const res = await fetch('especialidades_modulos_from_excel.json', { cache:'no-store' });
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const data = await res.json();
-    ESPECIALIDADES = Array.isArray(data.ESPECIALIDADES) ? data.ESPECIALIDADES : [];
-    MAPA_MODULOS  = data.MAPA_MODULOS || {};
-  }catch(err){
-    console.error('No se pudo cargar el catálogo:', err);
-    alert('No se pudo cargar la lista de especialidades. Verifica el archivo "especialidades_modulos_from_excel.json".');
-    ESPECIALIDADES = []; MAPA_MODULOS = {};
+    const r = await fetch('especialidades_modulos_from_excel.json?v=' + Date.now(), {cache:'no-store'});
+    if(r.ok){
+      const data = await r.json();
+      ESPECIALIDADES = Array.isArray(data.ESPECIALIDADES) ? data.ESPECIALIDADES : [];
+      MAPA_MODULOS  = data.MAPA_MODULOS || {};
+      if(ESPECIALIDADES.length) return;
+    }
+  }catch(_){/* luego intento .js */}
+  // 1B. JS (definiendo window.ESPECIALIDADES / window.MAPA_MODULOS)
+  await new Promise((resolve)=>{
+    const s=document.createElement('script');
+    s.src='especialidades_modulos_from_excel.js?v='+Date.now();
+    s.onload=()=>{ 
+      ESPECIALIDADES = (window.ESPECIALIDADES||[]);
+      MAPA_MODULOS   = (window.MAPA_MODULOS||{});
+      resolve();
+    };
+    s.onerror=()=>resolve();
+    document.head.appendChild(s);
+  });
+  if(!Array.isArray(ESPECIALIDADES) || !ESPECIALIDADES.length){
+    alert('No se cargó la lista de especialidades desde el Excel. Verifica que "especialidades_modulos_from_excel.json" o ".js" esté disponible.');
   }
-})();
+  // Limpieza: trim + únicos
+  ESPECIALIDADES = [...new Set(ESPECIALIDADES.map(x=>(x||'').trim()))].filter(Boolean).sort();
+}
 
-/* ============= Videos por módulo (fallback GENERALIDADES) ============= */
+/* ================== 2) Catálogo de videos por módulo ================== */
 const MOD_VIDEOS = {
   "ANESTESIOLOGÍA":["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0","3JZ_D3ELwOQ","kXYiU_JCYtU"],
   "CENTRO QUIRÚRGICO":["l482T0yNkeo","9bZkp7q19f0","3JZ_D3ELwOQ","kXYiU_JCYtU","CevxZvSJLk8"],
@@ -242,8 +257,25 @@ const MOD_VIDEOS = {
   "GENERALIDADES":["kXYiU_JCYtU","CevxZvSJLk8","RgKAFK5djSk","OPf0YbXqDm0","YVkUvmDQ3HY"],
   "HOSPITALIZACIÓN-HDD":["CevxZvSJLk8","RgKAFK5djSk","OPf0YbXqDm0","YVkUvmDQ3HY","hTWKbfoikeg"]
 };
+// Mapeo Excel → títulos reales
+const MOD_ALIAS = {
+  "MODULO 1":"GENERALIDADES",
+  "MODULO 2":"CONSULTA EXTERNA",
+  "MODULO 3":"CENTRO QUIRÚRGICO",
+  "MODULO 4":"HOSPITALIZACIÓN-HDD",
+  "MODULO 5":"EMERGENCIAS"
+};
+function normalizeModuleTitle(raw, spec){
+  const t = (raw||'').toUpperCase().trim();
+  let name = MOD_ALIAS[t] || t; // si ya viene con nombre real, respétalo
+  // Caso especial: Anestesiología
+  if(name==="CENTRO QUIRÚRGICO" && (spec||'').toUpperCase().includes('ANESTESIOLOGIA')){
+    name = "ANESTESIOLOGÍA";
+  }
+  return name;
+}
 
-/* ============= Firebase ============= */
+/* ================== 3) Firebase ================== */
 const firebaseConfig = {
   apiKey: "AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",
   authDomain: "induccion-pep-hvq.firebaseapp.com",
@@ -257,7 +289,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-/* ============= Helpers/estado ============= */
+/* ================== 4) Estado/Helpers ================== */
 const $ = s => document.querySelector(s);
 $('#year').textContent = new Date().getFullYear();
 const MSGS = {
@@ -285,33 +317,12 @@ let justRegistered = false;
 let unsubProfile = null;
 let savingProfile = false;
 
-/* ============= Tabs + ojitos ============= */
-function setTab(which){
-  const onLogin = which==='login';
-  $('#form-login').style.display = onLogin ? 'block' : 'none';
-  $('#form-register').style.display = onLogin ? 'none'  : 'block';
-  $('#tab-login').classList.toggle('btn-primary', onLogin);
-  $('#tab-login').classList.toggle('btn-muted',   !onLogin);
-  $('#tab-register').classList.toggle('btn-primary', !onLogin);
-  $('#tab-register').classList.toggle('btn-muted',   onLogin);
-}
-$('#tab-login').addEventListener('click', ()=>setTab('login'));
-$('#tab-register').addEventListener('click', ()=>setTab('reg'));
-setTab('login');
-document.querySelectorAll('.eye').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    const inp = document.querySelector(btn.dataset.eye);
-    if(!inp) return; inp.type = inp.type==='password' ? 'text' : 'password';
-  });
-});
-
-/* ============= Combo de especialidad (estricto + anti-autofill) ============= */
+/* ================== 5) Anti-autofill + combo ================== */
 const specCombo = $('#spec-combo'), specInput = $('#spec-input'), specList = $('#spec-list');
 function isSpecValid(v){ return Array.isArray(ESPECIALIDADES) && ESPECIALIDADES.includes(v); }
 function renderSpecList(filter=''){
   const f = (filter||'').trim().toLowerCase();
-  const base = Array.isArray(ESPECIALIDADES) ? ESPECIALIDADES : [];
-  const opts = base.filter(x=>x.toLowerCase().includes(f));
+  const opts = (ESPECIALIDADES||[]).filter(x=>x.toLowerCase().includes(f));
   specList.innerHTML = opts.length
     ? opts.map(x=>`<div class="item" data-v="${x}">${x}</div>`).join('')
     : `<div class="item" data-v="">(sin resultados)</div>`;
@@ -321,9 +332,8 @@ function valueOnlyIfValid(){
   if(!isSpecValid(v)) specInput.value='';
 }
 function setupCombo(){
-  // anti-autofill fuerte
-  specInput.setAttribute('name','spec-'+Date.now());
-  specInput.setAttribute('autocomplete','new-password');
+  specInput.setAttribute('name','spec-'+Date.now());   // evita sugerencias guardadas
+  specInput.setAttribute('autocomplete','new-password'); // “truco” anti Chrome
 
   specInput.addEventListener('focus', ()=>{
     valueOnlyIfValid();
@@ -333,16 +343,17 @@ function setupCombo(){
   specInput.addEventListener('input', ()=>renderSpecList(specInput.value));
   specInput.addEventListener('blur', valueOnlyIfValid);
   document.addEventListener('click', (e)=>{ if(!specCombo.contains(e.target)) specCombo.classList.remove('show'); });
-  specList.addEventListener('mousedown', (e)=>{ // mousedown evita que el blur borre antes de seleccionar
+  specList.addEventListener('mousedown', (e)=>{ // mousedown evita perder el foco antes de seleccionar
     const it=e.target.closest('.item'); if(!it) return;
     const v=it.dataset.v; if(v){ specInput.value=v; }
     specCombo.classList.remove('show');
   });
 }
 
-/* ============= Auth listener (espera catálogo) ============= */
+/* ================== 6) Auth (esperando catálogo) ================== */
 auth.onAuthStateChanged(async (user)=>{
-  await catalogoReady; // ¡importante!
+  await loadCatalog();        // <— espera a tener la lista
+  setupCombo();               // <— y recién arma el combo
   if(!user){
     CURRENT_UID=null; state={}; $('#auth-user').textContent='';
     $('#btn-logout').style.display='none';
@@ -363,12 +374,30 @@ auth.onAuthStateChanged(async (user)=>{
     $('#verify-box').style.display='none';
   }
 
-  setupCombo(); // ahora que ya cargó el catálogo
   showCourse();
   syncFromCloud(user).catch(()=>{});
 });
 
-/* ============= Registro / Login / Reset / Logout ============= */
+/* ================== 7) Tabs/ojitos/Login/Registro ================== */
+function setTab(which){
+  const onLogin = which==='login';
+  $('#form-login').style.display = onLogin ? 'block' : 'none';
+  $('#form-register').style.display = onLogin ? 'none'  : 'block';
+  $('#tab-login').classList.toggle('btn-primary', onLogin);
+  $('#tab-login').classList.toggle('btn-muted',   !onLogin);
+  $('#tab-register').classList.toggle('btn-primary', !onLogin);
+  $('#tab-register').classList.toggle('btn-muted',   onLogin);
+}
+$('#tab-login').addEventListener('click', ()=>setTab('login'));
+$('#tab-register').addEventListener('click', ()=>setTab('reg'));
+setTab('login');
+document.querySelectorAll('.eye').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const inp = document.querySelector(btn.dataset.eye);
+    if(!inp) return; inp.type = inp.type==='password' ? 'text' : 'password';
+  });
+});
+
 $('#btn-register-2').addEventListener('click', async ()=>{
   const email= ($('#reg-email').value||'').trim().toLowerCase();
   const pass  = ($('#reg-pass').value||'').trim();
@@ -385,15 +414,12 @@ $('#btn-register-2').addEventListener('click', async ()=>{
     }
     const { user } = await auth.createUserWithEmailAndPassword(email, pass);
     if (auth.currentUser?.uid !== user.uid) await auth.updateCurrentUser(user);
-
     db.collection('users').doc(user.uid).collection('courses').doc('soulmv').set({}, { merge:true }).catch(()=>{});
-
     const actionCodeSettings = { url: location.href.replace(location.search,'')+'?verified=1', handleCodeInApp:false };
     justRegistered = true;
     try{ await auth.currentUser.sendEmailVerification(actionCodeSettings); msg('Cuenta creada. Te enviamos el correo de verificación (revisa Spam).','#auth-msg2'); }catch(_){ msg('Cuenta creada. Si no te llegó, usa “Reenviar verificación”.','#auth-msg2'); }
     $('#verify-box').style.display='block';
     setTab('login'); $('#login-email').value=email;
-
   }catch(e){ msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.','#auth-msg2'); }
 });
 
@@ -407,22 +433,17 @@ $('#btn-resend-verify').addEventListener('click', async ()=>{
     else { msg('Primero inicia sesión.','#auth-msg'); }
   }catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.','#auth-msg'); }
 });
-
 $('#btn-login').addEventListener('click', async ()=>{
   const email=($('#login-email').value||'').trim().toLowerCase();
   const pass =( $('#login-pass').value||'').trim();
   if(!email || !pass) return msg('Ingresa correo y contraseña.');
   if(!emailOk(email)) return msg('El formato del correo no es válido.');
-
   const btn=$('#btn-login'); btn.disabled=true;
   try{
     const cred = await auth.signInWithEmailAndPassword(email, pass);
     const u = cred.user || auth.currentUser;
-    msg('Sesión iniciada.');
-    $('#verify-box').style.display='none';
-    justRegistered=false;
-    await catalogoReady; setupCombo(); showCourse();
-    syncFromCloud(u).catch(()=>{});
+    msg('Sesión iniciada.'); $('#verify-box').style.display='none'; justRegistered=false;
+    showCourse(); syncFromCloud(u).catch(()=>{});
   }catch(e){
     let methods=[]; try{ methods = await auth.fetchSignInMethodsForEmail(email); }catch(_){}
     if(!methods || methods.length===0){ msg('Correo no registrado.'); setTab('reg'); $('#reg-email').value = email; }
@@ -432,7 +453,6 @@ $('#btn-login').addEventListener('click', async ()=>{
     else{ msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.'); }
   }finally{ btn.disabled=false; }
 });
-
 $('#btn-reset').addEventListener('click', async ()=>{
   const email=($('#login-email').value||'').trim().toLowerCase();
   if(!email) return msg('Escribe tu correo para enviarte el enlace.');
@@ -446,7 +466,7 @@ $('#btn-reset').addEventListener('click', async ()=>{
 });
 $('#btn-logout').addEventListener('click', async ()=>{ await auth.signOut(); msg('Sesión cerrada.'); });
 
-/* ============= Vistas / flujo ============= */
+/* ================== 8) Vistas / flujo ================== */
 function showCourse(){
   if(!auth.currentUser) return;
   $('#step-welcome').style.display='none';
@@ -456,15 +476,8 @@ function showCourse(){
   const currentSpec = state.profile?.spec || '';
   $('#spec-input').value = isSpecValid(currentSpec) ? currentSpec : '';
 
-  if (profileComplete()) {
-    toggleCourse(true);
-    setProfileReadonly(true);
-    $('#pf-help').textContent = 'Puedes actualizar tus datos cuando quieras.';
-  } else {
-    toggleCourse(false);
-    setProfileReadonly(false);
-    $('#pf-help').textContent = 'Completa todos los campos para habilitar los módulos.';
-  }
+  if (profileComplete()) { toggleCourse(true); setProfileReadonly(true); $('#pf-help').textContent = 'Puedes actualizar tus datos cuando quieras.'; }
+  else { toggleCourse(false); setProfileReadonly(false); $('#pf-help').textContent = 'Completa todos los campos para habilitar los módulos.'; }
 
   renderModules(); updateProgress();
   startProfileRealtime();
@@ -474,7 +487,7 @@ function showLogin(){ $('#step-welcome').style.display='block'; $('#profile').st
 function profileComplete(){ const p = state.profile || {}; return !!(p.name && p.iddoc && isSpecValid(p.spec||'')); }
 function toggleCourse(enabled){ $('#progress').style.display= enabled?'block':'none'; $('#modules').style.display= enabled?'grid':'none'; }
 
-/* ============= Perfil realtime/guardar ============= */
+/* ================== 9) Perfil realtime/guardar ================== */
 function setProfileReadonly(ro){
   ['pf-name','pf-id','spec-input'].forEach(id=>{
     const el=document.getElementById(id);
@@ -512,7 +525,6 @@ function startProfileRealtime(){
 async function loadProfile(){
   $('#pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
   $('#pf-id').value   = state.profile?.iddoc || '';
-
   try{
     const uid=auth.currentUser?.uid; if(!uid) return;
     const s=await db.collection('users').doc(uid).collection('profile').doc('main').get();
@@ -552,9 +564,13 @@ async function saveProfile(){
 }
 $('#btn-save-profile').addEventListener('click', saveProfile);
 
-/* ============= Módulos por especialidad ============= */
+/* ================== 10) Módulos por especialidad ================== */
 const players = {};
-function currentModules(){ const spec = state.profile?.spec || ''; return (MAPA_MODULOS[spec]||[]); }
+function currentModules(){
+  const spec = state.profile?.spec || '';
+  const raws = (MAPA_MODULOS[spec]||[]);
+  return raws.map(r=>normalizeModuleTitle(r, spec));
+}
 function renderModules(){
   const wrap=$('#modules'); wrap.innerHTML='';
   const mods = currentModules();
@@ -632,7 +648,7 @@ function renderModules(){
   $('#modules').querySelectorAll('[data-quiz]').forEach(b=>b.addEventListener('click', (e)=>openQuiz(e.currentTarget.getAttribute('data-quiz')) ));
 }
 
-/* ============= Evaluaciones (demo) ============= */
+/* ================== 11) Evaluaciones (demo) ================== */
 function questionsFor(moduleTitle){
   return [
     { id:'q1', text:`${moduleTitle}: ¿Pregunta 1?`, options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}], correct:'A'},
@@ -682,7 +698,7 @@ function openQuiz(moduleTitle){
   };
 }
 
-/* ============= Progreso y Certificado ============= */
+/* ================== 12) Progreso y Certificado ================== */
 function updateProgress(){
   const mods = currentModules();
   const totalMods = mods.length;
@@ -710,7 +726,7 @@ function updateProgress(){
   }
 }
 
-/* ============= Cloud sync ============= */
+/* ================== 13) Cloud sync ================== */
 async function userDoc(){ const uid=auth.currentUser?.uid; if(!uid) return null; return db.collection('users').doc(uid).collection('courses').doc('soulmv'); }
 async function syncFromCloud(user){
   try{
