@@ -5,12 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Inducción a Soul MV • Hospital Vozandes</title>
 
-<!-- Fuentes -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
-<!-- Acelera Firebase Auth -->
 <link rel="preconnect" href="https://www.googleapis.com">
 <link rel="preconnect" href="https://identitytoolkit.googleapis.com">
 <link rel="preconnect" href="https://securetoken.googleapis.com">
@@ -36,7 +34,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 #certificado{display:none} #certificado.show{display:block}
 @media print{.no-print{display:none !important} #certificado{display:block}}
 .cert-card{background:#fff;border:4px solid var(--brand);border-radius:20px;padding:40px;text-align:center}
-.cert-title{font-size:28px;font-weight:800;margin:0 0 10px;color:var(--brand)} .cert-name{font-size:26px;font-weight:800;margin:8px 0}
+.cert-title{font-size:28px;font-weight:800;margin:0 0 10px;color:#781C38} .cert-name{font-size:26px;font-weight:800;margin:8px 0}
 .cert-meta{color:#374151;margin-top:10px}
 .input-wrap{position:relative} .input-wrap input{width:100%;padding:12px 40px 12px 12px;border-radius:12px;border:1px solid #e5e7eb}
 .eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;border:0;background:transparent;font-size:16px}
@@ -55,7 +53,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     </div>
     <div style="display:flex;gap:8px;align-items:center">
       <span id="auth-user" class="muted small"></span>
-      <button id="btn-logout" class="btn btn-muted" style="display:none">Cerrar sesión</button>
+      <button id="btn-logout" class="btn btn-muted" style="display:none" type="button">Cerrar sesión</button>
     </div>
   </header>
 
@@ -71,8 +69,8 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
           <input type="password" style="display:none" aria-hidden="true" autocomplete="new-password">
 
           <div style="display:flex; gap:8px; margin-bottom:8px">
-            <button id="tab-login" class="btn btn-primary">Iniciar sesión</button>
-            <button id="tab-register" class="btn btn-muted">Registrarme</button>
+            <button id="tab-login" class="btn btn-primary" type="button">Iniciar sesión</button>
+            <button id="tab-register" class="btn btn-muted" type="button">Registrarme</button>
           </div>
 
           <!-- LOGIN -->
@@ -89,8 +87,8 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
               </div>
             </label>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <button class="btn btn-primary" id="btn-login">Confirmar</button>
-              <button class="btn" id="btn-reset" style="background:#e5e7eb">Restablecer contraseña</button>
+              <button class="btn btn-primary" id="btn-login" type="button">Confirmar</button>
+              <button class="btn" id="btn-reset" style="background:#e5e7eb" type="button">Restablecer contraseña</button>
             </div>
             <div id="auth-msg" class="muted" style="min-height:18px;margin-top:6px"></div>
           </div>
@@ -115,7 +113,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
               </div>
             </label>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <button class="btn btn-muted" id="btn-register-2">Crear cuenta</button>
+              <button class="btn btn-muted" id="btn-register-2" type="button">Crear cuenta</button>
             </div>
           </div>
         </div>
@@ -123,8 +121,8 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
         <div id="verify-box" class="alert alert-warn" style="display:none;margin-top:10px">
           <strong>Verifica tu correo:</strong> te enviamos un email de verificación.
           <div style="display:flex;gap:8px;margin-top:8px">
-            <button id="btn-check-verify" class="btn btn-primary">Ya verifiqué mi correo</button>
-            <button id="btn-resend-verify" class="btn btn-muted">Reenviar verificación</button>
+            <button id="btn-check-verify" class="btn btn-primary" type="button">Ya verifiqué mi correo</button>
+            <button id="btn-resend-verify" class="btn btn-muted" type="button">Reenviar verificación</button>
           </div>
         </div>
       </div>
@@ -156,7 +154,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
       </label>
     </div>
     <div style="display:flex;gap:8px;margin-top:10px">
-      <button id="btn-save-profile" class="btn btn-primary">Guardar perfil</button>
+      <button id="btn-save-profile" class="btn btn-primary" type="button">Guardar perfil</button>
     </div>
     <div id="pf-msg" class="muted" style="margin-top:6px"></div>
   </section>
@@ -184,11 +182,11 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 
     <div id="quiz-intro" class="grid cols-2">
       <div>
-        <button id="btn-start-quiz" class="btn btn-primary" disabled>Comenzar evaluación</button>
+        <button id="btn-start-quiz" class="btn btn-primary" disabled type="button">Comenzar evaluación</button>
         <p class="muted small">Debes aprobar con 80% para habilitar el certificado.</p>
       </div>
       <div>
-        <button id="btn-cert" class="btn btn-success" disabled>Mostrar certificado</button>
+        <button id="btn-cert" class="btn btn-success" disabled type="button">Mostrar certificado</button>
         <p class="muted small">Disponible cuando completes los módulos y apruebes la evaluación.</p>
       </div>
     </div>
@@ -222,7 +220,42 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
-/* ======= Config del curso ======= */
+/* ======= Firebase ======= */
+const firebaseConfig = {
+  apiKey: "AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",
+  authDomain: "induccion-pep-hvq.firebaseapp.com",
+  projectId: "induccion-pep-hvq",
+  storageBucket: "induccion-pep-hvq.firebasestorage.app",
+  messagingSenderId: "651724182766",
+  appId: "1:651724182766:web:4eec9be43e9e8e60dc0fff",
+  measurementId: "G-Z62L1CCYP1"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
+if (db && db.enablePersistence) { db.enablePersistence({ synchronizeTabs: true }).catch(()=>{}); }
+
+/* ======= Util ======= */
+const $ = s => document.querySelector(s);
+const msg = (t)=>{ const el=$('#auth-msg'); if(el) el.textContent=t||''; };
+const emailOk = e => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((e||'').trim().toLowerCase());
+$('#year').textContent = new Date().getFullYear();
+
+/* Mostrar errores JS en pantalla si algo se rompe */
+window.addEventListener('error', (ev)=>{
+  console.error(ev.error || ev.message);
+  msg('Error de script: ' + (ev.error?.message || ev.message));
+});
+
+/* ======= Estado local ======= */
+function keyFor(uid){ return `soulmv_${uid||'anon'}`; }
+function loadState(uid){ try{ return JSON.parse(localStorage.getItem(keyFor(uid))||'{}'); }catch{ return {}; } }
+function saveState(uid, st){ localStorage.setItem(keyFor(uid), JSON.stringify(st)); }
+let CURRENT_UID = null;
+let state = {};
+
+/* ======= Curso ======= */
 const MODULOS = [
   { id:'mod1', titulo:'Navegación básica en Soul MV', yt:'dQw4w9WgXcQ', duracion:'10:05' },
   { id:'mod2', titulo:'Prescripción y órdenes médicas', yt:'l482T0yNkeo',  duracion:'08:40' },
@@ -238,57 +271,7 @@ const QUESTIONS = [
     {key:'A',label:'Guardar borrador'},{key:'B',label:'Cerrar/Finalizar el documento (FECHADO)'},{key:'C',label:'Imprimir sin cerrar'}], correct:'B'}
 ];
 
-/* ======= Firebase ======= */
-const firebaseConfig = {
-  apiKey: "AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",
-  authDomain: "induccion-pep-hvq.firebaseapp.com",
-  projectId: "induccion-pep-hvq",
-  storageBucket: "induccion-pep-hvq.firebasestorage.app",
-  messagingSenderId: "651724182766",
-  appId: "1:651724182766:web:4eec9be43e9e8e60dc0fff",
-  measurementId: "G-Z62L1CCYP1"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db   = firebase.firestore();
-
-// Persistencia una sola vez (no en cada clic)
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
-
-// (opcional) caché local Firestore
-if (db && db.enablePersistence) {
-  db.enablePersistence({ synchronizeTabs: true }).catch(()=>{});
-}
-
-/* ======= Utilidades ======= */
-const $ = s => document.querySelector(s);
-$('#year').textContent = new Date().getFullYear();
-
-const MSGS = {
-  'auth/email-already-in-use':'Ese correo ya tiene una cuenta. Usa Iniciar sesión.',
-  'auth/invalid-email':'El formato del correo no es válido.',
-  'auth/missing-email':'Ingresa tu correo.',
-  'auth/missing-password':'Ingresa tu contraseña.',
-  'auth/weak-password':'La contraseña es muy corta (mínimo 6).',
-  'auth/user-not-found':'Correo no registrado.',
-  'auth/wrong-password':'Contraseña incorrecta.',
-  'auth/invalid-credential':'Contraseña incorrecta.',
-  'auth/invalid-login-credentials':'Contraseña incorrecta.',
-  'auth/too-many-requests':'Demasiados intentos. Intenta más tarde.',
-  'auth/network-request-failed':'Error de red. Revisa tu conexión.',
-  'auth/unauthorized-domain':'Dominio no autorizado en Firebase Auth.'
-};
-const msg = (t)=>{ const el=$('#auth-msg'); if(el) el.textContent=t||''; };
-const emailOk = e => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((e||'').trim().toLowerCase());
-
-/* ======= Estado local por usuario ======= */
-function keyFor(uid){ return `soulmv_${uid||'anon'}`; }
-function loadState(uid){ try{ return JSON.parse(localStorage.getItem(keyFor(uid))||'{}'); }catch{ return {}; } }
-function saveState(uid, st){ localStorage.setItem(keyFor(uid), JSON.stringify(st)); }
-let CURRENT_UID = null;
-let state = {};
-
-/* ======= Tabs + ojitos ======= */
+/* ======= Tabs ======= */
 function setTab(which){
   const onLogin = which==='login';
   $('#form-login').style.display = onLogin ? 'block' : 'none';
@@ -298,35 +281,30 @@ function setTab(which){
   $('#tab-register').classList.toggle('btn-primary', !onLogin);
   $('#tab-register').classList.toggle('btn-muted',   onLogin);
 }
-$('#tab-login').addEventListener('click', ()=>setTab('login'));
-$('#tab-register').addEventListener('click', ()=>setTab('reg'));
-setTab('login');
 
-document.querySelectorAll('.eye').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    const inp = document.querySelector(btn.dataset.eye);
-    if(!inp) return; inp.type = inp.type==='password' ? 'text' : 'password';
-  });
-});
-
-/* ======= Helper: timeout visual ======= */
-function withTimeout(promise, ms=3500){
-  // Solo para feedback de UI; no cancela la request real.
-  return Promise.race([
-    promise,
-    new Promise((_, reject)=>setTimeout(()=>reject(new Error('timeout')), ms))
-  ]);
-}
-
-/* ======= Chequeo de email para reset/registro ======= */
-async function emailExistsStrict(email){
+/* ======= Email helpers ======= */
+async function fetchMethods(email){
   try{
     const methods = await auth.fetchSignInMethodsForEmail(email);
-    return Array.isArray(methods) && methods.length>0;
-  }catch(_){ return false; }
+    console.log('fetchSignInMethodsForEmail →', methods);
+    return methods || [];
+  }catch(e){
+    console.warn('fetchSignInMethodsForEmail error', e);
+    return null; // null = no concluyente
+  }
+}
+function providerLabel(p){
+  switch(p){
+    case 'password': return 'correo y contraseña';
+    case 'google.com': return 'Google';
+    case 'facebook.com': return 'Facebook';
+    case 'apple.com': return 'Apple';
+    case 'microsoft.com': return 'Microsoft';
+    default: return p;
+  }
 }
 
-/* ======= Auth listener (no bloquea) ======= */
+/* ======= Auth listener ======= */
 auth.onAuthStateChanged((user)=>{
   if(!user){
     CURRENT_UID=null; state={}; $('#auth-user').textContent='';
@@ -344,154 +322,193 @@ auth.onAuthStateChanged((user)=>{
     showLogin();
     return;
   }
-  // Entra de inmediato; lecturas van en background
   showCourse();
 });
 
-/* ======= REGISTRO ======= */
-document.getElementById('btn-register-2').addEventListener('click', async ()=>{
-  const email = ($('#reg-email').value||'').trim().toLowerCase();
-  const pass  = ($('#reg-pass').value||'').trim();
-  const pass2 = ($('#reg-pass2').value||'').trim();
+/* ======= DOM Ready ======= */
+document.addEventListener('DOMContentLoaded', ()=>{
+  $('#tab-login').addEventListener('click', ()=>setTab('login'));
+  $('#tab-register').addEventListener('click', ()=>setTab('reg'));
+  setTab('login');
 
-  if(!email || !pass || !pass2) return msg('Completa todos los campos.');
-  if(!emailOk(email)) return msg('El formato del correo no es válido.');
-  if(pass!==pass2) return msg('Las contraseñas no coinciden.');
+  document.querySelectorAll('.eye').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const inp = document.querySelector(btn.dataset.eye);
+      if(!inp) return; inp.type = inp.type==='password' ? 'text' : 'password';
+    });
+  });
 
-  try{
-    const exists = await emailExistsStrict(email);
-    if (exists){
+  /* Registro */
+  document.getElementById('btn-register-2').addEventListener('click', async ()=>{
+    const email = ($('#reg-email').value||'').trim().toLowerCase();
+    const pass  = ($('#reg-pass').value||'').trim();
+    const pass2 = ($('#reg-pass2').value||'').trim();
+
+    if(!email || !pass || !pass2) return msg('Completa todos los campos.');
+    if(!emailOk(email)) return msg('El formato del correo no es válido.');
+    if(pass!==pass2) return msg('Las contraseñas no coinciden.');
+
+    const methods = await fetchMethods(email);
+    if (methods && methods.length){
       setTab('login'); $('#login-email').value = email;
       return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.');
+    }else if(methods === null){
+      return msg('No se pudo verificar el correo. Intenta nuevamente.');
     }
 
-    const cred = await auth.createUserWithEmailAndPassword(email, pass);
-    const user = cred.user;
-    if (auth.currentUser?.uid !== user.uid) await auth.updateCurrentUser(user);
-    try { await auth.currentUser?.reload(); } catch(_){}
+    try{
+      const cred = await auth.createUserWithEmailAndPassword(email, pass);
+      const user = cred.user;
+      if (auth.currentUser?.uid !== user.uid) await auth.updateCurrentUser(user);
+      try { await auth.currentUser?.reload(); } catch(_){}
 
-    const actionCodeSettings = { url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1', handleCodeInApp:false };
-    try{ await auth.currentUser.sendEmailVerification(actionCodeSettings); }catch(_){}
-    msg('Cuenta creada. Te enviamos el correo de verificación (revisa Spam).');
+      const actionCodeSettings = { url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1', handleCodeInApp:false };
+      try{ await auth.currentUser.sendEmailVerification(actionCodeSettings); }catch(_){}
+      msg('Cuenta creada. Te enviamos el correo de verificación (revisa Spam).');
 
-    document.getElementById('verify-box').style.display='block';
-    setTab('login'); $('#login-email').value = email;
-  }catch(e){
-    if (e.code === 'auth/email-already-in-use'){
-      setTab('login'); $('#login-email').value = email;
-      return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.');
-    }
-    msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
-  }
-});
-
-// === LOGIN ultra-rápido con watchdog (NO usa fetchSignInMethods) ===
-document.getElementById('btn-login').addEventListener('click', async ()=>{
-  const email = (document.getElementById('login-email').value||'').trim().toLowerCase();
-  const pass  = (document.getElementById('login-pass').value||'').trim();
-
-  if(!emailOk(email)) return msg('El formato del correo no es válido.');
-  if(!pass)           return msg('Ingresa tu contraseña.');
-
-  const btn = document.getElementById('btn-login');
-  btn.disabled = true;
-  msg('Validando contraseña…');
-
-  // Una sola llamada a Firebase
-  const signPromise = auth.signInWithEmailAndPassword(email, pass);
-
-  // Watchdogs para evitar “pantalla congelada”
-  let finished = false;
-  const t1 = setTimeout(()=>{ if(!finished) msg('Conectando…'); }, 1200);
-  const t2 = setTimeout(()=>{ if(!finished) msg('Aún conectando, casi listo…'); }, 3000);
-  const t3 = setTimeout(()=>{ if(!finished) msg('La red está lenta. No cierres esta ventana…'); }, 5000);
-
-  // Corte duro a los 12 s (reintento limpio)
-  const hard = setTimeout(async ()=>{
-    if(!finished){
-      try{ await auth.signOut(); }catch(_){}
-      finished = true;
-      btn.disabled = false;
-      msg('No pudimos conectar con el servidor. Intenta nuevamente.');
-    }
-  }, 12000);
-
-  function clearAll(){ clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(hard); }
-
-  try{
-    const cred = await signPromise;   // esperamos el resultado real
-    finished = true; clearAll();
-    msg('Sesión iniciada. Entrando…');
-
-    // Entra inmediatamente sin esperar Firestore
-    if (cred.user?.emailVerified){
-      showCourse();
-    } else {
       document.getElementById('verify-box').style.display='block';
+      setTab('login'); $('#login-email').value = email;
+    }catch(e){
+      if (e.code === 'auth/email-already-in-use'){
+        setTab('login'); $('#login-email').value = email;
+        return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.');
+      }
+      msg('No se pudo registrar. ' + (e.message||''));
     }
-  }catch(e){
-    finished = true; clearAll();
+  });
 
-    if (e.code === 'auth/wrong-password' ||
-        e.code === 'auth/invalid-credential' ||
-        e.code === 'auth/invalid-login-credentials'){
-      msg('Contraseña incorrecta.');
-    } else if (e.code === 'auth/user-not-found'){
-      msg('Correo no registrado.');
-      setTab('reg'); document.getElementById('reg-email').value = email;
-    } else if (e.code === 'auth/too-many-requests'){
-      msg('Demasiados intentos. Intenta más tarde.');
-    } else if (e.code === 'auth/unauthorized-domain'){
-      msg('Dominio no autorizado en Firebase Auth.');
-    } else if (e.code === 'auth/network-request-failed'){
-      msg('Error de red. Revisa tu conexión e inténtalo de nuevo.');
-    } else {
-      msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
+  /* Login: 1) verificar correo; 2) si existe, validar contraseña; 3) fallback si 1 falla */
+  document.getElementById('btn-login').addEventListener('click', async (ev)=>{
+    ev.preventDefault();
+
+    const email = ($('#login-email').value||'').trim().toLowerCase();
+    const pass  = ($('#login-pass').value||'').trim();
+
+    if(!emailOk(email)) return msg('El formato del correo no es válido.');
+    if(!pass) return msg('Ingresa tu contraseña.');
+
+    const btn = document.getElementById('btn-login');
+    btn.disabled = true;
+
+    try{
+      msg('Verificando correo…');
+      let methods = await fetchMethods(email);
+
+      if (methods === null){
+        // No concluyente → intentamos login para desambiguar
+        try{
+          await auth.signInWithEmailAndPassword(email, pass);
+          methods = ['password']; // si entró, existe con password
+        }catch(e2){
+          if (e2.code === 'auth/wrong-password' || e2.code === 'auth/invalid-credential' || e2.code === 'auth/invalid-login-credentials'){
+            methods = ['password']; // existe, contraseña mala
+          }else if (e2.code === 'auth/user-not-found'){
+            methods = []; // no existe
+          }else{
+            throw e2; // red u otro error → se muestra abajo
+          }
+        }
+      }
+
+      if (!methods || methods.length === 0){
+        msg('Correo no registrado.');
+        $('#reg-email').value = email; setTab('reg');
+        return;
+      }
+
+      if (!methods.includes('password')){
+        const provs = methods.map(providerLabel).join(', ');
+        msg(`Este correo ya está registrado con: ${provs}. Inicia sesión con ese método.`);
+        return;
+      }
+
+      msg('Validando contraseña…');
+      const cred = await auth.signInWithEmailAndPassword(email, pass);
+      msg('Sesión iniciada. Entrando…');
+
+      if(cred.user?.emailVerified){
+        showCourse();
+      }else{
+        document.getElementById('verify-box').style.display='block';
+      }
+
+    }catch(e){
+      if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-login-credentials'){
+        msg('Contraseña incorrecta.');
+      } else if (e.code === 'auth/user-not-found'){
+        msg('Correo no registrado.');
+        $('#reg-email').value = email; setTab('reg');
+      } else if (e.code === 'auth/too-many-requests'){
+        msg('Demasiados intentos. Intenta más tarde.');
+      } else if (e.code === 'auth/network-request-failed'){
+        msg('Error de red. Revisa tu conexión e inténtalo nuevamente.');
+      } else if (e.code === 'auth/unauthorized-domain'){
+        msg('Dominio no autorizado en Firebase Auth.');
+      } else if (e.code === 'auth/invalid-email'){
+        msg('El formato del correo no es válido.');
+      } else {
+        msg('Ocurrió un error: ' + (e.message||'Intenta nuevamente.'));
+        console.warn(e);
+      }
+    } finally {
+      btn.disabled = false;
     }
-  } finally {
-    btn.disabled = false;
-  }
+  });
+
+  /* Reset contraseña */
+  document.getElementById('btn-reset').addEventListener('click', async ()=>{
+    const email=($('#login-email').value||'').trim().toLowerCase();
+    if(!email) return msg('Escribe tu correo para enviarte el enlace.');
+    if(!emailOk(email)) return msg('El formato del correo no es válido.');
+    const methods = await fetchMethods(email);
+    if(methods === null) return msg('No se pudo verificar el correo. Intenta nuevamente.');
+    if(!methods.length) return msg('Correo no registrado.');
+    try{
+      await auth.sendPasswordResetEmail(email);
+      msg('Te enviamos un correo para restablecer la contraseña.');
+    }catch(e){ msg('No se pudo enviar: ' + (e.message||'')); }
+  });
+
+  /* Verificación */
+  document.getElementById('btn-check-verify').addEventListener('click', async ()=>{
+    if(!auth.currentUser) return msg('Primero inicia sesión.');
+    try{
+      await auth.currentUser.reload();
+      if(auth.currentUser.emailVerified){ showCourse(); msg('¡Correo verificado!'); }
+      else msg('Tu correo aún no aparece verificado.');
+    }catch(e){ msg('No se pudo comprobar: ' + (e.message||'')); }
+  });
+  document.getElementById('btn-resend-verify').addEventListener('click', async ()=>{
+    if(!auth.currentUser) return msg('Primero inicia sesión.');
+    try{
+      const actionCodeSettings = { url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1', handleCodeInApp:false };
+      await auth.currentUser.sendEmailVerification(actionCodeSettings);
+      msg('Te enviamos el correo de verificación (revisa Spam).');
+    }catch(e){ msg('No se pudo enviar: ' + (e.message||'')); }
+  });
+
+  /* Logout */
+  document.getElementById('btn-logout').addEventListener('click', async ()=>{
+    await auth.signOut();
+    msg('Sesión cerrada.');
+  });
 });
 
-/* ======= Reset contraseña (usa chequeo de email, no login) ======= */
-document.getElementById('btn-reset').addEventListener('click', async ()=>{
-  const email=($('#login-email').value||'').trim().toLowerCase();
-  if(!email) return msg('Escribe tu correo para enviarte el enlace.');
-  if(!emailOk(email)) return msg('El formato del correo no es válido.');
-  try{
-    const exists = await emailExistsStrict(email);
-    if(!exists) return msg('Correo no registrado.');
-    await auth.sendPasswordResetEmail(email);
-    msg('Te enviamos un correo para restablecer la contraseña.');
-  }catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.'); }
-});
-
-/* ======= Logout ======= */
-document.getElementById('btn-logout').addEventListener('click', async ()=>{
-  await auth.signOut();
-  msg('Sesión cerrada.');
-});
-
-/* ======= Vistas: entrada inmediata y sincronización en background ======= */
+/* ======= Vistas / Curso ======= */
 function showCourse(){
   if(!auth.currentUser || !auth.currentUser.emailVerified) return;
 
-  // UI inmediata
   document.getElementById('step-welcome').style.display='none';
   document.getElementById('profile').style.display='block';
   document.getElementById('btn-logout').style.display='inline-flex';
 
-  // Estado local inmediato
   CURRENT_UID = auth.currentUser.uid;
   state = loadState(CURRENT_UID);
   document.getElementById('pf-name').value = state.profile?.name || auth.currentUser.displayName || '';
   document.getElementById('pf-id').value   = state.profile?.iddoc || '';
   document.getElementById('pf-spec').value = state.profile?.spec  || '';
 
-  // Habilita módulos YA
   toggleCourse(true);
-
-  // Carga de perfil/progreso en segundo plano y refresca si hace falta
   loadProfile().then(()=> toggleCourse(profileComplete()));
   syncFromCloud(auth.currentUser).then(()=>{ renderModules(); updateProgress(); }).catch(()=>{});
 }
@@ -542,8 +559,8 @@ function renderModules(){
           <div id="player-${m.id}"></div>
         </div>
         <div style="display:flex;gap:8px;margin-top:10px">
-          <button class="btn btn-muted" data-restart="${m.id}">Reiniciar</button>
-          <button class="btn ${done?'btn-success':'btn-primary'}" data-complete="${m.id}" ${done?'':'disabled'}>${done?'Completado ✓':'Marcar como completado'}</button>
+          <button class="btn btn-muted" data-restart="${m.id}" type="button">Reiniciar</button>
+          <button class="btn ${done?'btn-success':'btn-primary'}" data-complete="${m.id}" ${done?'':'disabled'} type="button">${done?'Completado ✓':'Marcar como completado'}</button>
         </div>
       </div>`;
     wrap.appendChild(card);
@@ -586,7 +603,8 @@ function updateProgress(){
   const allDone=(done===total);
   document.getElementById('btn-start-quiz').disabled=!allDone;
   const passed=state.quiz?.passed;
-  document.getElementById('btn-cert').disabled=!(allDone && passed);
+  const certBtn = document.getElementById('btn-cert');
+  if (certBtn) certBtn.disabled = !(allDone && passed);
 }
 function renderQuiz(){
   const wrap=document.getElementById('quiz'); wrap.innerHTML='';
@@ -600,7 +618,7 @@ function renderQuiz(){
     card.innerHTML=`<strong>${idx+1}. ${q.text}</strong><div style="margin-top:6px">${opts}</div>`;
     wrap.appendChild(card);
   });
-  const submit=document.createElement('button'); submit.className='btn btn-primary'; submit.textContent='Enviar evaluación';
+  const submit=document.createElement('button'); submit.className='btn btn-primary'; submit.textContent='Enviar evaluación'; submit.type='button';
   submit.addEventListener('click', gradeQuiz); wrap.appendChild(submit);
 }
 function gradeQuiz(){
@@ -625,7 +643,7 @@ document.getElementById('btn-cert')?.addEventListener('click', ()=>{
   document.getElementById('certificado').classList.add('show'); setTimeout(()=>window.print(),400);
 });
 
-/* ======= Perfil + Cloud sync (en background) ======= */
+/* ======= Cloud sync (background) ======= */
 async function userDoc(){
   const uid=auth.currentUser?.uid; if(!uid) return null;
   return db.collection('users').doc(uid).collection('courses').doc('soulmv');
