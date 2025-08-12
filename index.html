@@ -61,7 +61,6 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
         <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña. Te pediremos verificar el correo antes de iniciar el curso. Tu progreso quedará guardado en la nube.</p>
 
         <div class="grid" id="auth-forms" autocomplete="off">
-          <!-- señuelos para frenar autofill agresivo -->
           <input type="text" style="display:none" aria-hidden="true">
           <input type="password" style="display:none" aria-hidden="true">
 
@@ -326,7 +325,6 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
   if(pass!==pass2) return msg('Las contraseñas no coinciden.');
 
   try{
-    // Pre-chequeo
     const methods = await auth.fetchSignInMethodsForEmail(email);
     if (methods && methods.length){
       setTab('login');
@@ -337,11 +335,9 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
     const cred = await auth.createUserWithEmailAndPassword(email, pass);
     const user = cred.user;
 
-    // Asegurar currentUser + reload
     if (auth.currentUser?.uid !== user.uid) await auth.updateCurrentUser(user);
     try { await auth.currentUser?.reload(); } catch(_){}
 
-    // Envío automático del mail de verificación con reintentos
     const actionCodeSettings = { url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1', handleCodeInApp:false };
     let sent=false, lastErr=null;
     for (let i=0;i<3 && !sent;i++){
@@ -358,13 +354,11 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
       ? 'Cuenta creada. Te enviamos el correo de verificación (revisa Spam).'
       : 'Cuenta creada. No se pudo enviar automáticamente, usa “Reenviar verificación”.');
 
-    // Mostrar caja, pasar a login y precargar correo
     document.getElementById('verify-box').style.display='block';
     setTab('login');
     document.getElementById('login-email').value = email;
     startVerifyPolling();
 
-    // Base Firestore (no bloquea)
     db.collection('users').doc(user.uid).collection('courses').doc('soulmv')
       .set({}, { merge:true }).catch(()=>{});
   }catch(e){
@@ -389,11 +383,9 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
   btn.disabled = true;
 
   try{
-    // 1) Intento rápido de sign-in
     await auth.signInWithEmailAndPassword(email, pass);
     msg('Sesión iniciada.');
   }catch(e){
-    // 2) Diferenciar con fetchSignInMethods
     let methods = [];
     try { methods = await auth.fetchSignInMethodsForEmail(email); } catch(_){}
     const hasAccount = methods && methods.length > 0;
@@ -592,7 +584,8 @@ function updateProgress(){
 function renderQuiz(){
   const wrap=document.getElementById('quiz'); wrap.innerHTML='';
   QUESTIONS.forEach((q,idx)=>{
-    const card=document.createElement('div'); card.className='card'; card.style	marginBottom='12px';
+    const card=document.createElement('div'); card.className='card';
+    card.style.marginBottom='12px';
     const opts=q.options.map(o=>`
       <label style="display:flex;gap:8px;align-items:center;margin:6px 0">
         <input type="radio" name="${q.id}" value="${o.key}">
