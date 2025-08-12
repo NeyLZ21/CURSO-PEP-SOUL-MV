@@ -41,11 +41,8 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .alert{border-radius:12px;padding:12px 14px;font-size:14px}
 .alert-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
 
-/* Spinner “Guardando…” */
-.saving::after{
-  content:''; display:inline-block; width:14px; height:14px; margin-left:8px;
-  border:2px solid #9ca3af; border-top-color:transparent; border-radius:999px; animation:spin .8s linear infinite;
-}
+/* Spinner */
+.saving::after{content:'';display:inline-block;width:14px;height:14px;margin-left:8px;border:2px solid #9ca3af;border-top-color:transparent;border-radius:999px;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* Combo especialidad */
@@ -161,7 +158,11 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
       <div>
         <label>Especialidad</label>
         <div class="combo" id="spec-combo">
-          <input id="spec-input" type="text" placeholder="Escribe para buscar..." autocomplete="off" autocorrect="off" autocapitalize="off" inputmode="search" name="spec-avoid-autofill-123">
+          <!-- Anti-autofill fuerte -->
+          <input id="spec-input" type="search"
+            placeholder="Escribe para buscar..."
+            autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+            inputmode="search" name="spec-avoid-autofill">
           <div class="list" id="spec-list"></div>
         </div>
         <div class="muted" style="margin-top:6px">Selecciona de la lista. Esto define los módulos que verás.</div>
@@ -215,118 +216,18 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-<script>
-/* ======= LISTA DESDE TU EXCEL (inyectada) ======= */
-/* Generé esto a partir de tu archivo. Si prefieres, puedes cargarlo desde un .js externo */
-const ESPECIALIDADES = ["ACUPUNTURA","ALERGOLOGIA","ANESTESIOLOGIA","CARDIOLOGIA","CARDIOLOGIA ADULTOS","CARDIOLOGIA HEMODINAMIA","CARDIOLOGIA INTERVENCIONISTA","CARDIOLOGIA PEDIATRICA","CIR. GENERAL-COLOPROCTOLOGIA","CIR. MANO/MUÑE-NERVIO PERI/BRA","CIRUGIA BARIATRICA","CIRUGIA CARDIACA","CIRUGIA DE CABEZA Y CUELLO","CIRUGIA GENERAL","CIRUGIA MAXILOFACIAL","CIRUGIA ONCOLOGICA","CIRUGIA PEDIATRICA","CIRUGIA PLASTICA","CIRUGIA TORAX","CIRUGIA VASCULAR","CLINICA MEDICA","DERMATOLOGIA","DIABETOLOGIA","DIAGNOSTICO POR IMAGEN","ECOGRAFIA","EMERGENCIOLOGIA","EMERGENCIOLOGIA PEDIATRICA","ENDOCRINOLOGIA","ENDOCRINOLOGIA PEDIATRICA","ENFERMERIA","FISIOTERAPIA","GASTROENTEROLOGIA","GASTROENTEROLOGIA PEDIATRICA","GERIATRIA","GERONTOLOGIA","GINECOLOGIA ONCOLOGICA","GINECOLOGIA Y OBSTETRICIA","HEMATO-ONCOLOGIA PEDIATRICA","HEMATOLOGIA","HEMATOLOGIA Y HEMOTERAPIA","HEMOTERAPIA","IMAGENOLOGIA","INFECTOLOGIA","INFECTOLOGIA PEDIATRICA","INTENSIVISTA","INTERVENCIONISMO","LABORATORIO CLINICO","MEDICAMENTOS","MEDICINA DE EMERGENCIAS","MEDICINA FAMILIAR","MEDICINA FISICA Y REHABILITACION","MEDICINA GENERAL","MEDICINA INTERNA","MEDICINA INTERNA 44","MEDICINA INTERNA HOSPITALARIA","MEDICINA INTERNA e 4","MEDICINA INTERNA e 4 t","MEDICINA NUCLEAR","NEFROLOGIA","NEFROLOGIA PEDIATRICA","NEONATOLOGIA","NEUROCIRUGIA","NEUROLOGIA","NEUROLOGIA PEDIATRICA","NEUMOLOGIA","NEUMOLOGIA PEDIATRICA","NUTRICION","NUTRICION CLINICA","NUTRICION PEDIATRICA","OFTALMOLOGIA","ONCOLOGIA","ONCOLOGIA PEDIATRICA","ORTOPEDIA Y TRAUMATOLOGIA","OTORRINOLARINGOLOGIA","OTORRINOPEDIATRIA","PALIATIVOS","PEDIATRIA","PERFUSIONISTA","PSICOLOGIA","PSIQUIATRIA","RADIOLOGIA","RADIOTERAPIA","REHABILITACION PEDIATRICA","REUMATOLOGIA","REUMATOLOGIA PEDIATRICA","SALUD OCUPACIONAL","TERAPIA RESPIRATORIA","TOXICOLOGIA","TRANSPLANTE","TRAUMATOLOGIA PEDIATRICA","UCI ADULTOS","UCI NEONATAL","UCI PEDIATRICA","UROLOGIA","UROLOGIA PEDIATRICA","ALERGOLOGIA PEDIATRICA"];
-const MAPA_MODULOS = {
-"ACUPUNTURA":["MODULO 1","MODULO 2","MODULO 4"],
-"ALERGOLOGIA":["MODULO 1","MODULO 2","MODULO 4"],
-"ANESTESIOLOGIA":["MODULO 3"],
-"CARDIOLOGIA":["MODULO 1","MODULO 2","MODULO 4"],
-"CARDIOLOGIA ADULTOS":["MODULO 1","MODULO 2","MODULO 4"],
-"CARDIOLOGIA HEMODINAMIA":["MODULO 1","MODULO 2","MODULO 4"],
-"CARDIOLOGIA INTERVENCIONISTA":["MODULO 1","MODULO 2","MODULO 4"],
-"CARDIOLOGIA PEDIATRICA":["MODULO 1","MODULO 2","MODULO 4"],
-"CIR. GENERAL-COLOPROCTOLOGIA":["MODULO 1","MODULO 3","MODULO 4"],
-"CIR. MANO/MUÑE-NERVIO PERI/BRA":["MODULO 1","MODULO 3","MODULO 4"],
-"CIRUGIA BARIATRICA":["MODULO 1","MODULO 4"],
-"CIRUGIA CARDIACA":["MODULO 1","MODULO 3","MODULO 4"],
-"CIRUGIA DE CABEZA Y CUELLO":["MODULO 1","MODULO 3","MODULO 4"],
-"CIRUGIA GENERAL":["MODULO 1","MODULO 3","MODULO 4"],
-"CIRUGIA MAXILOFACIAL":["MODULO 1","MODULO 3","MODULO 4"],
-"CIRUGIA ONCOLOGICA":["MODULO 1","MODULO 3","MODULO 4"],
-"CIRUGIA PEDIATRICA":["MODULO 1","MODULO 3","MODULO 4"],
-"CIRUGIA PLASTICA":["MODULO 1","MODULO 3","MODULO 4"],
-"CIRUGIA TORAX":["MODULO 1","MODULO 3","MODULO 4"],
-"CIRUGIA VASCULAR":["MODULO 1","MODULO 3","MODULO 4"],
-"CLINICA MEDICA":["MODULO 1","MODULO 2","MODULO 4"],
-"DERMATOLOGIA":["MODULO 1","MODULO 2"],
-"DIABETOLOGIA":["MODULO 1","MODULO 2"],
-"DIAGNOSTICO POR IMAGEN":["MODULO 1"],
-"ECOGRAFIA":["MODULO 1","MODULO 2"],
-"EMERGENCIOLOGIA":["MODULO 1","MODULO 5"],
-"EMERGENCIOLOGIA PEDIATRICA":["MODULO 1","MODULO 5"],
-"ENDOCRINOLOGIA":["MODULO 1","MODULO 2"],
-"ENDOCRINOLOGIA PEDIATRICA":["MODULO 1","MODULO 2"],
-"ENFERMERIA":["MODULO 1","MODULO 4","MODULO 5"],
-"FISIOTERAPIA":["MODULO 1","MODULO 2"],
-"GASTROENTEROLOGIA":["MODULO 1","MODULO 2","MODULO 4"],
-"GASTROENTEROLOGIA PEDIATRICA":["MODULO 1","MODULO 2"],
-"GERIATRIA":["MODULO 1","MODULO 2","MODULO 4"],
-"GERONTOLOGIA":["MODULO 1","MODULO 2"],
-"GINECOLOGIA ONCOLOGICA":["MODULO 1","MODULO 3","MODULO 4"],
-"GINECOLOGIA Y OBSTETRICIA":["MODULO 1","MODULO 3","MODULO 4"],
-"HEMATO-ONCOLOGIA PEDIATRICA":["MODULO 1","MODULO 2","MODULO 4"],
-"HEMATOLOGIA":["MODULO 1","MODULO 2","MODULO 4"],
-"HEMATOLOGIA Y HEMOTERAPIA":["MODULO 1","MODULO 4"],
-"HEMOTERAPIA":["MODULO 1","MODULO 4"],
-"IMAGENOLOGIA":["MODULO 1"],
-"INFECTOLOGIA":["MODULO 1","MODULO 2","MODULO 4"],
-"INFECTOLOGIA PEDIATRICA":["MODULO 1","MODULO 4"],
-"INTENSIVISTA":["MODULO 1","MODULO 4","MODULO 5"],
-"INTERVENCIONISMO":["MODULO 1","MODULO 4"],
-"LABORATORIO CLINICO":["MODULO 1"],
-"MEDICAMENTOS":["MODULO 1"],
-"MEDICINA DE EMERGENCIAS":["MODULO 1","MODULO 5"],
-"MEDICINA FAMILIAR":["MODULO 1","MODULO 2"],
-"MEDICINA FISICA Y REHABILITACION":["MODULO 1","MODULO 2"],
-"MEDICINA GENERAL":["MODULO 1","MODULO 2"],
-"MEDICINA INTERNA":["MODULO 1","MODULO 2","MODULO 4"],
-"MEDICINA INTERNA 44":["MODULO 1","MODULO 2","MODULO 4"],
-"MEDICINA INTERNA HOSPITALARIA":["MODULO 1","MODULO 2","MODULO 4"],
-"MEDICINA INTERNA e 4":["MODULO 1","MODULO 2","MODULO 4"],
-"MEDICINA INTERNA e 4 t":["MODULO 1","MODULO 2","MODULO 4"],
-"MEDICINA NUCLEAR":["MODULO 1"],
-"NEFROLOGIA":["MODULO 1","MODULO 2","MODULO 4"],
-"NEFROLOGIA PEDIATRICA":["MODULO 1","MODULO 4"],
-"NEONATOLOGIA":["MODULO 1","MODULO 4"],
-"NEUROCIRUGIA":["MODULO 1","MODULO 3","MODULO 4"],
-"NEUROLOGIA":["MODULO 1","MODULO 2","MODULO 4"],
-"NEUROLOGIA PEDIATRICA":["MODULO 1","MODULO 4"],
-"NEUMOLOGIA":["MODULO 1","MODULO 2","MODULO 4"],
-"NEUMOLOGIA PEDIATRICA":["MODULO 1","MODULO 4"],
-"NUTRICION":["MODULO 1","MODULO 2"],
-"NUTRICION CLINICA":["MODULO 1","MODULO 2"],
-"NUTRICION PEDIATRICA":["MODULO 1","MODULO 2"],
-"OFTALMOLOGIA":["MODULO 1","MODULO 2","MODULO 3"],
-"ONCOLOGIA":["MODULO 1","MODULO 2","MODULO 4"],
-"ONCOLOGIA PEDIATRICA":["MODULO 1","MODULO 4"],
-"ORTOPEDIA Y TRAUMATOLOGIA":["MODULO 1","MODULO 4","MODULO 3"],
-"OTORRINOLARINGOLOGIA":["MODULO 1","MODULO 2","MODULO 3"],
-"OTORRINOPEDIATRIA":["MODULO 1","MODULO 3"],
-"PALIATIVOS":["MODULO 1","MODULO 2"],
-"PEDIATRIA":["MODULO 1","MODULO 4","MODULO 2"],
-"PERFUSIONISTA":["MODULO 1","MODULO 3"],
-"PSICOLOGIA":["MODULO 1","MODULO 2"],
-"PSIQUIATRIA":["MODULO 1","MODULO 2"],
-"RADIOLOGIA":["MODULO 1"],
-"RADIOTERAPIA":["MODULO 1","MODULO 4"],
-"REHABILITACION PEDIATRICA":["MODULO 1","MODULO 2"],
-"REUMATOLOGIA":["MODULO 1","MODULO 2"],
-"REUMATOLOGIA PEDIATRICA":["MODULO 1","MODULO 2"],
-"SALUD OCUPACIONAL":["MODULO 1","MODULO 2"],
-"TERAPIA RESPIRATORIA":["MODULO 1","MODULO 4"],
-"TOXICOLOGIA":["MODULO 1","MODULO 5"],
-"TRANSPLANTE":["MODULO 1","MODULO 4"],
-"TRAUMATOLOGIA PEDIATRICA":["MODULO 1","MODULO 3"],
-"UCI ADULTOS":["MODULO 1","MODULO 4","MODULO 5"],
-"UCI NEONATAL":["MODULO 1","MODULO 4","MODULO 5"],
-"UCI PEDIATRICA":["MODULO 1","MODULO 4","MODULO 5"],
-"UROLOGIA":["MODULO 1","MODULO 4","MODULO 3"],
-"UROLOGIA PEDIATRICA":["MODULO 1","MODULO 3"],
-"ALERGOLOGIA PEDIATRICA":["MODULO 1","MODULO 2"]
-};
+<!-- Carga la lista generada desde tu Excel -->
+<script src="especialidades_modulos_from_excel.js"></script>
 
-/* ======= Videos por módulo (fallback GENERALIDADES si falta) ======= */
+<script>
+/* ======= Videos por módulo (usa GENERALIDADES si el título no está) ======= */
 const MOD_VIDEOS = {
-  "ANESTESIOLOGÍA": ["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0","3JZ_D3ELwOQ","kXYiU_JCYtU"],
-  "CENTRO QUIRÚRGICO": ["l482T0yNkeo","9bZkp7q19f0","3JZ_D3ELwOQ","kXYiU_JCYtU","CevxZvSJLk8"],
-  "CONSULTA EXTERNA": ["9bZkp7q19f0","3JZ_D3ELwOQ","kXYiU_JCYtU","CevxZvSJLk8","RgKAFK5djSk"],
-  "EMERGENCIAS": ["3JZ_D3ELwOQ","kXYiU_JCYtU","CevxZvSJLk8","RgKAFK5djSk","OPf0YbXqDm0"],
-  "GENERALIDADES": ["kXYiU_JCYtU","CevxZvSJLk8","RgKAFK5djSk","OPf0YbXqDm0","YVkUvmDQ3HY"],
-  "HOSPITALIZACIÓN-HDD": ["CevxZvSJLk8","RgKAFK5djSk","OPf0YbXqDm0","YVkUvmDQ3HY","hTWKbfoikeg"],
-  /* Para los títulos "MODULO 1", "MODULO 2", "MODULO 3", "MODULO 4", "MODULO 5" usa GENERALIDADES como respaldo */
+  "ANESTESIOLOGÍA":["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0","3JZ_D3ELwOQ","kXYiU_JCYtU"],
+  "CENTRO QUIRÚRGICO":["l482T0yNkeo","9bZkp7q19f0","3JZ_D3ELwOQ","kXYiU_JCYtU","CevxZvSJLk8"],
+  "CONSULTA EXTERNA":["9bZkp7q19f0","3JZ_D3ELwOQ","kXYiU_JCYtU","CevxZvSJLk8","RgKAFK5djSk"],
+  "EMERGENCIAS":["3JZ_D3ELwOQ","kXYiU_JCYtU","CevxZvSJLk8","RgKAFK5djSk","OPf0YbXqDm0"],
+  "GENERALIDADES":["kXYiU_JCYtU","CevxZvSJLk8","RgKAFK5djSk","OPf0YbXqDm0","YVkUvmDQ3HY"],
+  "HOSPITALIZACIÓN-HDD":["CevxZvSJLk8","RgKAFK5djSk","OPf0YbXqDm0","YVkUvmDQ3HY","hTWKbfoikeg"]
 };
 
 /* ======= Firebase ======= */
@@ -343,9 +244,10 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-/* ======= Helpers/estado por usuario ======= */
+/* ======= Utils/estado ======= */
 const $ = s => document.querySelector(s);
 $('#year').textContent = new Date().getFullYear();
+
 const MSGS = {
   'auth/email-already-in-use':'Ese correo ya tiene una cuenta. Usa Iniciar sesión.',
   'auth/invalid-email':'El formato del correo no es válido.',
@@ -366,9 +268,9 @@ let CURRENT_UID = null;
 function keyFor(uid){ return `soulmv_${uid||'anon'}`; }
 function loadState(uid){ try{ return JSON.parse(localStorage.getItem(keyFor(uid))||'{}'); }catch{ return {}; } }
 function saveState(uid, st){ localStorage.setItem(keyFor(uid), JSON.stringify(st)); }
-let state = {}; // por usuario
+let state = {};
 
-let justRegistered = false; // gate de verificación POST-registro
+let justRegistered = false;
 let unsubProfile = null;
 let savingProfile = false;
 
@@ -392,25 +294,48 @@ document.querySelectorAll('.eye').forEach(btn=>{
   });
 });
 
-/* ======= Combo de especialidad (estricto) ======= */
+/* ======= Anti-autofill + combo de especialidad ======= */
 const specCombo = $('#spec-combo'), specInput = $('#spec-input'), specList = $('#spec-list');
+
+// aleatoriza el name para que Chrome no autocomplemente
+specInput.setAttribute('name', 'spec-' + Date.now());
+// algunos navegadores respetan más este valor “raro”
+specInput.setAttribute('autocomplete','new-password');
+
 function renderSpecList(filter=''){
-  const f = filter.trim().toLowerCase();
-  const opts = ESPECIALIDADES.filter(x=>x.toLowerCase().includes(f));
-  specList.innerHTML = opts.map(x=>`<div class="item" data-v="${x}">${x}</div>`).join('') || `<div class="item" data-v="">(sin resultados)</div>`;
+  const f = (filter||'').trim().toLowerCase();
+  const base = (typeof ESPECIALIDADES!=='undefined' && Array.isArray(ESPECIALIDADES)) ? ESPECIALIDADES : [];
+  const opts = base.filter(x=>x.toLowerCase().includes(f));
+  specList.innerHTML = opts.map(x=>`<div class="item" data-v="${x}">${x}</div>`).join('')
+    || `<div class="item" data-v="">(sin resultados)</div>`;
 }
-specInput.addEventListener('focus', ()=>{
+
+function valueOnlyIfValid(){
+  const base = (typeof ESPECIALIDADES!=='undefined' && Array.isArray(ESPECIALIDADES)) ? ESPECIALIDADES : [];
   const v=(specInput.value||'').trim();
-  if(!ESPECIALIDADES.includes(v)) specInput.value='';
-  specCombo.classList.add('show'); renderSpecList(specInput.value);
+  if(!base.includes(v)) specInput.value='';
+}
+
+specInput.addEventListener('focus', ()=>{
+  valueOnlyIfValid();
+  specCombo.classList.add('show');
+  renderSpecList(specInput.value);
 });
 specInput.addEventListener('input', ()=>renderSpecList(specInput.value));
-specInput.addEventListener('blur', ()=>{
-  const v=(specInput.value||'').trim();
-  if(!ESPECIALIDADES.includes(v)) specInput.value='';
-});
+specInput.addEventListener('blur', valueOnlyIfValid);
 document.addEventListener('click', (e)=>{ if(!specCombo.contains(e.target)) specCombo.classList.remove('show'); });
-specList.addEventListener('click', (e)=>{ const it=e.target.closest('.item'); if(!it) return; const v=it.dataset.v; if(v){ specInput.value=v; } specCombo.classList.remove('show'); });
+specList.addEventListener('mousedown', (e)=>{ // mousedown evita interferencia del blur
+  const it=e.target.closest('.item'); if(!it) return;
+  const v=it.dataset.v; if(v){ specInput.value=v; }
+  specCombo.classList.remove('show');
+});
+
+/* ======= Guard: verifica que se cargó el JS del Excel ======= */
+window.addEventListener('load', ()=>{
+  if(typeof ESPECIALIDADES==='undefined' || !Array.isArray(ESPECIALIDADES) || ESPECIALIDADES.length===0){
+    alert('No se cargó la lista de especialidades desde el Excel. Verifica que "especialidades_modulos_from_excel.js" esté disponible.');
+  }
+});
 
 /* ======= Auth listener ======= */
 auth.onAuthStateChanged(async (user)=>{
@@ -477,7 +402,6 @@ $('#btn-resend-verify').addEventListener('click', async ()=>{
     else { msg('Primero inicia sesión.','#auth-msg'); }
   }catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.','#auth-msg'); }
 });
-if(new URLSearchParams(location.search).get('verified')){ /* nada */ }
 
 /* ======= Login robusto ======= */
 $('#btn-login').addEventListener('click', async ()=>{
@@ -528,7 +452,12 @@ function showCourse(){
   $('#btn-logout').style.display='inline-flex';
   $('#profile').style.display='block';
 
-  specInput.value = state.profile?.spec || '';
+  // Solo rellenar si es válido
+  if (state.profile?.spec && Array.isArray(ESPECIALIDADES) && ESPECIALIDADES.includes(state.profile.spec)){
+    $('#spec-input').value = state.profile.spec;
+  } else {
+    $('#spec-input').value = '';
+  }
 
   if (profileComplete()) {
     toggleCourse(true);
@@ -554,7 +483,7 @@ function showLogin(){
 
 function profileComplete(){
   const p = state.profile || {};
-  return !!(p.name && p.iddoc && p.spec && ESPECIALIDADES.includes(p.spec));
+  return !!(p.name && p.iddoc && p.spec && Array.isArray(ESPECIALIDADES) && ESPECIALIDADES.includes(p.spec));
 }
 
 function toggleCourse(enabled){
@@ -567,7 +496,7 @@ function toggleCourse(enabled){
   }
 }
 
-/* ======= Perfil: realtime, Ver/Modificar, Guardado rápido ======= */
+/* ======= Perfil realtime/guardado ======= */
 function setProfileReadonly(ro){
   ['pf-name','pf-id','spec-input'].forEach(id=>{
     const el=document.getElementById(id);
@@ -586,7 +515,14 @@ function startProfileRealtime(){
     if(!snap.exists) return;
     state.profile = snap.data() || {}; saveState(CURRENT_UID,state);
 
-    if($('#pf-name').readOnly){ $('#pf-name').value = state.profile?.name || auth.currentUser?.displayName || ''; $('#pf-id').value   = state.profile?.iddoc || ''; specInput.value = state.profile?.spec  || ''; }
+    if($('#pf-name').readOnly){
+      $('#pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
+      $('#pf-id').value   = state.profile?.iddoc || '';
+      // nunca escribir una especialidad que no esté en la lista
+      if (Array.isArray(ESPECIALIDADES) && ESPECIALIDADES.includes(state.profile?.spec||'')) {
+        $('#spec-input').value = state.profile.spec;
+      }
+    }
 
     if (savingProfile){
       savingProfile = false;
@@ -601,7 +537,6 @@ function startProfileRealtime(){
 async function loadProfile(){
   $('#pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
   $('#pf-id').value   = state.profile?.iddoc || '';
-  specInput.value     = state.profile?.spec  || '';
 
   try{
     const uid=auth.currentUser?.uid; if(!uid) return;
@@ -610,7 +545,11 @@ async function loadProfile(){
       state.profile=s.data(); saveState(CURRENT_UID,state);
       $('#pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
       $('#pf-id').value   = state.profile?.iddoc || '';
-      specInput.value     = state.profile?.spec  || '';
+      if (Array.isArray(ESPECIALIDADES) && ESPECIALIDADES.includes(state.profile?.spec||'')) {
+        $('#spec-input').value = state.profile.spec;
+      } else {
+        $('#spec-input').value = '';
+      }
     }
   }catch(e){ console.warn('Perfil no disponible',e); }
 }
@@ -618,11 +557,11 @@ async function loadProfile(){
 async function saveProfile(){
   const name=($('#pf-name').value||'').trim();
   const iddoc=($('#pf-id').value||'').trim();
-  const spec =(specInput.value||'').trim();
+  const spec =(($('#spec-input').value)||'').trim();
   const pfMsg=$('#pf-msg'); const btn=$('#btn-save-profile');
 
   if(!name || !iddoc || !spec){ pfMsg.textContent='Completa nombre, cédula/pasaporte y especialidad.'; return; }
-  if(!ESPECIALIDADES.includes(spec)){ pfMsg.textContent='Selecciona la especialidad desde la lista (no es texto libre).'; return; }
+  if(!(Array.isArray(ESPECIALIDADES) && ESPECIALIDADES.includes(spec))){ pfMsg.textContent='Selecciona la especialidad desde la lista (no es texto libre).'; return; }
 
   state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
   pfMsg.classList.add('saving'); pfMsg.textContent='Guardando…';
@@ -643,10 +582,10 @@ async function saveProfile(){
 $('#btn-save-profile').addEventListener('click', saveProfile);
 
 /* ======= Módulos por especialidad ======= */
-const players = {};  // YT players por videoId
+const players = {};
 function currentModules(){
   const spec = state.profile?.spec || '';
-  return (MAPA_MODULOS[spec]||[]);
+  return (typeof MAPA_MODULOS!=='undefined' && MAPA_MODULOS[spec]) ? MAPA_MODULOS[spec] : [];
 }
 function renderModules(){
   const wrap=$('#modules'); wrap.innerHTML='';
@@ -657,11 +596,10 @@ function renderModules(){
   mods.forEach((m,idx)=>{
     const modKey = `mod_${idx}_${m}`;
     const modState = state.modules?.[m] || { done:false, videosDone:{} , quizPassed:false };
-    // Fallback de videos si no existe un set específico para este título
     const videos = (MOD_VIDEOS[m] || MOD_VIDEOS['GENERALIDADES'] || []);
 
     const card=document.createElement('article'); card.className='card module';
-    const vidsHtml = videos.map((vid,i)=>`
+    const vidsHtml = videos.map((vid)=>`
       <div class="yt-wrap" id="wrap-${modKey}-${vid}">
         <div id="player-${modKey}-${vid}"></div>
       </div>`).join('');
@@ -684,7 +622,6 @@ function renderModules(){
       </div>`;
     wrap.appendChild(card);
 
-    // Inicializa players
     videos.forEach((vid)=>{
       const pid = `player-${modKey}-${vid}`;
       players[pid] = new YT.Player(pid,{
@@ -712,7 +649,6 @@ function renderModules(){
       });
     });
 
-    // Estado inicial de botones
     const btnComp = card.querySelector(`[data-complete="${m}"]`);
     const btnQuiz = card.querySelector(`[data-quiz="${m}"]`);
     const all = (videos||[]).every(v=>modState.videosDone?.[v]);
@@ -728,7 +664,7 @@ function renderModules(){
   wrap.querySelectorAll('[data-quiz]').forEach(b=>b.addEventListener('click', (e)=>openQuiz(e.currentTarget.getAttribute('data-quiz')) ));
 }
 
-/* ======= Evaluaciones (3 preguntas dummy por módulo) ======= */
+/* ======= Evaluaciones (dummy) ======= */
 function questionsFor(moduleTitle){
   return [
     { id:'q1', text:`${moduleTitle}: ¿Pregunta 1?`, options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}], correct:'A'},
@@ -792,27 +728,22 @@ function updateProgress(){
   $('#progress-sub').textContent = `Videos: ${videosDone}/${videosTotal}`;
 
   const allOk = totalMods>0 && evalsDone===totalMods;
-  if(allOk){
-    if(!document.getElementById('btn-cert-global')){
-      const cont = document.createElement('div'); cont.className='card'; cont.style.marginTop='12px';
-      cont.innerHTML = `<button id="btn-cert-global" class="btn btn-success">Mostrar certificado</button>`;
-      $('#progress').appendChild(cont);
-      cont.querySelector('#btn-cert-global').addEventListener('click', ()=>{
-        const preferName = state.profile?.name || auth.currentUser?.displayName || '';
-        document.getElementById('cert-nombre').textContent = preferName;
-        const f=new Date(); const fecha=f.toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'});
-        document.getElementById('cert-fecha').textContent=`Fecha: ${fecha}`;
-        document.getElementById('certificado').classList.add('show'); setTimeout(()=>window.print(),400);
-      });
-    }
+  if(allOk && !document.getElementById('btn-cert-global')){
+    const cont = document.createElement('div'); cont.className='card'; cont.style.marginTop='12px';
+    cont.innerHTML = `<button id="btn-cert-global" class="btn btn-success">Mostrar certificado</button>`;
+    $('#progress').appendChild(cont);
+    cont.querySelector('#btn-cert-global').addEventListener('click', ()=>{
+      const preferName = state.profile?.name || auth.currentUser?.displayName || '';
+      document.getElementById('cert-nombre').textContent = preferName;
+      const f=new Date(); const fecha=f.toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'});
+      document.getElementById('cert-fecha').textContent=`Fecha: ${fecha}`;
+      document.getElementById('certificado').classList.add('show'); setTimeout(()=>window.print(),400);
+    });
   }
 }
 
 /* ======= Cloud sync ======= */
-async function userDoc(){
-  const uid=auth.currentUser?.uid; if(!uid) return null;
-  return db.collection('users').doc(uid).collection('courses').doc('soulmv');
-}
+async function userDoc(){ const uid=auth.currentUser?.uid; if(!uid) return null; return db.collection('users').doc(uid).collection('courses').doc('soulmv'); }
 async function syncFromCloud(user){
   try{
     const ref=await userDoc(); if(!ref) return;
