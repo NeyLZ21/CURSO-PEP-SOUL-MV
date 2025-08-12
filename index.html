@@ -25,16 +25,13 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .yt-wrap{position:relative;padding-top:56.25%;border-radius:16px;overflow:hidden;background:#000;margin-top:12px}
 .yt-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .muted{color:var(--muted)} .footer{margin-top:24px;color:var(--muted);font-size:13px}
-/* Certificado */
 #certificado{display:none} #certificado.show{display:block}
 @media print{.no-print{display:none !important} #certificado{display:block}}
 .cert-card{background:#fff;border:4px solid var(--brand);border-radius:20px;padding:40px;text-align:center}
 .cert-title{font-size:28px;font-weight:800;margin:0 0 10px;color:var(--brand)} .cert-name{font-size:26px;font-weight:800;margin:8px 0}
 .cert-meta{color:#374151;margin-top:10px}
-/* Inputs con ojito */
 .input-wrap{position:relative} .input-wrap input{width:100%;padding:12px 40px 12px 12px;border-radius:12px;border:1px solid #e5e7eb}
 .eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;border:0;background:transparent;font-size:16px}
-/* Avisos */
 .alert{border-radius:12px;padding:12px 14px;font-size:14px}
 .alert-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
 .small{font-size:12px}
@@ -59,7 +56,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     <div class="grid cols-2" style="align-items:start">
       <div>
         <h2 style="margin:0 0 6px">Acceso</h2>
-        <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo. Primero validamos si el correo existe; si existe, pedimos la contraseña.</p>
+        <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo. Primero validamos si el correo existe; si existe, probamos la contraseña.</p>
 
         <div class="grid" id="auth-forms" autocomplete="off">
           <input type="text" style="display:none" aria-hidden="true" autocomplete="off">
@@ -296,26 +293,34 @@ document.querySelectorAll('.eye').forEach(btn=>{
   });
 });
 
-/* ======= Verificación estricta de email ======= */
-// Si fetchSignInMethods falla o devuelve vacío, hacemos desempate con un login de contraseña falsa.
-// - wrong-password => el correo SÍ existe
-// - user-not-found => no existe
+/* ======= Helper: timeout ======= */
+function withTimeout(promise, ms=1500){
+  return Promise.race([
+    promise,
+    new Promise((_, reject)=>setTimeout(()=>reject(new Error('timeout')), ms))
+  ]);
+}
+
+/* ======= Verificación estricta de email (rápida) ======= */
 async function emailExistsStrict(email){
-  try {
-    const methods = await auth.fetchSignInMethodsForEmail(email);
+  // 1) Intento por métodos con timeout
+  try{
+    const methods = await withTimeout(auth.fetchSignInMethodsForEmail(email), 1500);
     if (Array.isArray(methods) && methods.length > 0) return true;
-  } catch(_) { /* seguimos al desempate */ }
+    // Si vino [], no concluimos → desempate
+  }catch(_){ /* timeout/red → desempate */ }
+
+  // 2) Desempate: login con contraseña falsa
   try{
     await auth.signInWithEmailAndPassword(email, '__dummy__' + Math.random());
-    await auth.signOut(); // por si acaso
+    await auth.signOut();
     return true;
   }catch(e){
-    if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-login-credentials'){
-      return true;
-    }
+    if (e.code === 'auth/wrong-password' ||
+        e.code === 'auth/invalid-credential' ||
+        e.code === 'auth/invalid-login-credentials') return true;
     if (e.code === 'auth/user-not-found') return false;
-    // Cualquier otro error de red/config no concluyente: lo propagamos
-    throw e;
+    throw e; // errores no concluyentes
   }
 }
 
@@ -362,18 +367,11 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
     try { await auth.currentUser?.reload(); } catch(_){}
 
     const actionCodeSettings = { url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1', handleCodeInApp:false };
-    let sent=false;
-    for (let i=0;i<3 && !sent;i++){
-      try{ await auth.currentUser.sendEmailVerification(actionCodeSettings); sent=true; }
-      catch(_){ try{ await auth.currentUser.reload(); }catch(__){} await new Promise(r=>setTimeout(r, 600*(i+1))); }
-    }
-    msg(sent ? 'Cuenta creada. Te enviamos el correo de verificación (revisa Spam).' : 'Cuenta creada. No se pudo enviar automáticamente, usa “Reenviar verificación”.');
+    try{ await auth.currentUser.sendEmailVerification(actionCodeSettings); }catch(_){}
+    msg('Cuenta creada. Te enviamos el correo de verificación (revisa Spam).');
 
     document.getElementById('verify-box').style.display='block';
     setTab('login'); $('#login-email').value = email;
-
-    db.collection('users').doc(user.uid).collection('courses').doc('soulmv')
-      .set({}, { merge:true }).catch(()=>{});
   }catch(e){
     if (e.code === 'auth/email-already-in-use'){
       setTab('login'); $('#login-email').value = email;
@@ -392,20 +390,27 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
   if(!pass) return msg('Ingresa tu contraseña.');
 
   const btn = $('#btn-login'); btn.disabled = true;
+  msg('Comprobando correo…');
 
   try{
-    const exists = await emailExistsStrict(email);
+    let exists;
+    try{ exists = await emailExistsStrict(email); }
+    catch(e){ if(e.message==='timeout'){ exists=null; } else throw e; }
+
     if (exists === false){
       msg('Correo no registrado.');
       setTab('reg'); $('#reg-email').value = email;
       return;
     }
-    // correo confirmado → validar contraseña real
+
+    msg('Validando contraseña…');
     await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     await auth.signInWithEmailAndPassword(email, pass);
     msg('Sesión iniciada.');
   }catch(e){
-    if (e.code === 'auth/wrong-password' || e.code==='auth/invalid-credential' || e.code==='auth/invalid-login-credentials'){
+    if (e.code === 'auth/wrong-password' ||
+        e.code==='auth/invalid-credential' ||
+        e.code==='auth/invalid-login-credentials'){
       msg('Contraseña incorrecta.');
     } else if (e.code === 'auth/user-not-found') {
       msg('Correo no registrado.');
@@ -413,7 +418,9 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
     } else if (e.code === 'auth/too-many-requests') {
       msg('Demasiados intentos. Intenta más tarde.');
     } else if (e.code === 'auth/unauthorized-domain') {
-      msg('Dominio no autorizado en Firebase Auth. Revisa la configuración de dominios.');
+      msg('Dominio no autorizado en Firebase Auth. Revisa Auth → Settings → Authorized domains.');
+    } else if (e.message === 'timeout') {
+      msg('La red está lenta. Intenta de nuevo.');
     } else {
       msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
     }
@@ -437,53 +444,11 @@ document.getElementById('btn-reset').addEventListener('click', async ()=>{
 
 /* ======= Logout ======= */
 document.getElementById('btn-logout').addEventListener('click', async ()=>{
-  clearInterval(_verifyPoll);
   await auth.signOut();
   msg('Sesión cerrada.');
 });
 
-/* ======= Verificación ======= */
-let _verifyPoll;
-function startVerifyPolling(){
-  clearInterval(_verifyPoll);
-  const deadline = Date.now()+10*60*1000;
-  _verifyPoll = setInterval(async ()=>{
-    if(Date.now()>deadline){ clearInterval(_verifyPoll); return; }
-    if(auth.currentUser){
-      try{ await auth.currentUser.reload(); }catch(_){}
-      if(auth.currentUser.emailVerified){
-        clearInterval(_verifyPoll);
-        document.getElementById('verify-box').style.display='none';
-        msg('¡Correo verificado! Entrando…');
-        showCourse();
-      }
-    }
-  }, 8000);
-}
-document.getElementById('btn-check-verify').addEventListener('click', async ()=>{
-  if(auth.currentUser){
-    try{ await auth.currentUser.reload(); }catch(_){}
-    if(auth.currentUser.emailVerified){
-      document.getElementById('verify-box').style.display='none';
-      showCourse();
-    }else{
-      msg('Tu correo aún no aparece verificado. Revisa tu bandeja o reenvía el enlace.');
-    }
-  } else { msg('Primero inicia sesión.'); }
-});
-document.getElementById('btn-resend-verify').addEventListener('click', async ()=>{
-  try{
-    const actionCodeSettings = { url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1', handleCodeInApp:false };
-    if(auth.currentUser){
-      await auth.currentUser.sendEmailVerification(actionCodeSettings);
-      msg('Te enviamos el correo de verificación (revisa Spam).');
-      startVerifyPolling();
-    }else{ msg('Primero inicia sesión.'); }
-  }catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.'); }
-});
-if(new URLSearchParams(location.search).get('verified')) startVerifyPolling();
-
-/* ======= Vistas ======= */
+/* ======= Vistas (resto del curso) ======= */
 function showCourse(){
   if(!auth.currentUser || !auth.currentUser.emailVerified){ return; }
   document.getElementById('step-welcome').style.display='none';
@@ -550,7 +515,7 @@ function renderModules(){
   wrap.querySelectorAll('[data-complete]').forEach(b=>b.addEventListener('click',e=>{
     const id=e.currentTarget.getAttribute('data-complete');
     state[id]=state[id]||{}; state[id].done=true; saveState(CURRENT_UID,state);
-    updateProgress(); renderModules(); setTimeout(syncToCloud,300);
+    updateProgress(); renderModules();
   }));
 }
 window.onYouTubeIframeAPIReady = function(){
@@ -565,13 +530,6 @@ window.onYouTubeIframeAPIReady = function(){
           if(ev.data===YT.PlayerState.ENDED){
             const btn=document.querySelector(`[data-complete="${m.id}"]`);
             if(btn){ btn.disabled=false; btn.classList.remove('btn-primary'); btn.classList.add('btn-success'); btn.textContent='Marcar como completado'; }
-          }
-          if(ev.data===YT.PlayerState.PLAYING){
-            try{
-              const t=ev.target.getCurrentTime(); const last=state[m.id]?.t||0;
-              if(t>last+30){ ev.target.seekTo(last,true); }
-              state[m.id]=state[m.id]||{}; state[m.id].t=t; saveState(CURRENT_UID,state);
-            }catch(_){}
           }
         }
       }
@@ -595,7 +553,6 @@ function renderQuiz(){
   const wrap=document.getElementById('quiz'); wrap.innerHTML='';
   QUESTIONS.forEach((q,idx)=>{
     const card=document.createElement('div'); card.className='card';
-    card.style.marginBottom='12px';
     const opts=q.options.map(o=>`
       <label style="display:flex;gap:8px;align-items:center;margin:6px 0">
         <input type="radio" name="${q.id}" value="${o.key}">
@@ -614,7 +571,6 @@ function gradeQuiz(){
   const result=document.getElementById('quiz-result'); result.style.display='block';
   result.textContent=`Resultado: ${correct}/${QUESTIONS.length} (${scorePct}%). ${state.quiz.passed?'✅ Aprobado':'❌ No aprobado'}.`;
   if(state.quiz.passed){ document.getElementById('btn-cert').disabled=false; }
-  setTimeout(syncToCloud,300);
   window.scrollTo({ top: result.offsetTop-80, behavior:'smooth' });
 }
 document.getElementById('btn-start-quiz')?.addEventListener('click', ()=>{
@@ -630,7 +586,7 @@ document.getElementById('btn-cert')?.addEventListener('click', ()=>{
   document.getElementById('certificado').classList.add('show'); setTimeout(()=>window.print(),400);
 });
 
-/* ======= Perfil + Cloud sync ======= */
+/* ======= Perfil + Cloud sync (mínimo necesario) ======= */
 async function userDoc(){
   const uid=auth.currentUser?.uid; if(!uid) return null;
   return db.collection('users').doc(uid).collection('courses').doc('soulmv');
@@ -649,20 +605,7 @@ async function syncFromCloud(user){
       state.quiz = cloud.quiz || state.quiz;
       saveState(CURRENT_UID,state);
     }
-    const psnap=await db.collection('users').doc(user.uid).collection('profile').doc('main').get();
-    if(psnap.exists){ state.profile=psnap.data(); saveState(CURRENT_UID,state); }
-  }catch(e){ console.warn('No se pudo leer progreso/perfil',e); }
-}
-async function syncToCloud(){
-  try{
-    const ref=await userDoc(); if(!ref) return;
-    const payload={ quiz: state.quiz };
-    MODULOS.forEach(m=>{ payload[m.id]={done:!!(state[m.id]?.done)}; });
-    await ref.set(payload,{merge:true});
-    const uid=auth.currentUser?.uid; if(uid && state.profile){
-      await db.collection('users').doc(uid).collection('profile').doc('main').set(state.profile,{merge:true});
-    }
-  }catch(e){ console.warn('No se pudo guardar en la nube',e); }
+  }catch(e){ console.warn('No se pudo leer progreso',e); }
 }
 async function loadProfile(){
   try{
@@ -675,21 +618,19 @@ async function loadProfile(){
   }catch(e){ console.warn('Perfil no disponible',e); }
 }
 async function saveProfile(){
-  const name=(document.getElementById('pf-name').value||'').trim();
-  const iddoc=(document.getElementById('pf-id').value||'').trim();
-  const spec =(document.getElementById('pf-spec').value||'').trim();
+  const name=($('#pf-name').value||'').trim();
+  const iddoc=($('#pf-id').value||'').trim();
+  const spec =($('#pf-spec').value||'').trim();
   if(!name || !iddoc || !spec){
-    document.getElementById('pf-msg').textContent='Completa nombre, cédula/pasaporte y especialidad.';
-    return;
+    document.getElementById('pf-msg').textContent='Completa nombre, cédula/pasaporte y especialidad.'; return;
   }
   try{
     const uid=auth.currentUser?.uid; if(!uid) return;
     await db.collection('users').doc(uid).collection('profile').doc('main').set({name,iddoc,spec},{merge:true});
     state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
     if(name){ await auth.currentUser.updateProfile({displayName:name}); }
-    document.getElementById('pf-msg').textContent='✅ Perfil guardado.';
-    toggleCourse(true);
-  }catch(e){ document.getElementById('pf-msg').textContent='No se pudo guardar: '+(MSGS[e.code]||e.message); }
+    document.getElementById('pf-msg').textContent='✅ Perfil guardado.'; toggleCourse(true);
+  }catch(e){ document.getElementById('pf-msg').textContent='No se pudo guardar.'; }
 }
 document.getElementById('btn-save-profile').addEventListener('click', saveProfile);
 </script>
