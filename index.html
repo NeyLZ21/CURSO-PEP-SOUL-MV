@@ -252,7 +252,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-// Persistencia una sola vez (no en cada clic)
+// Persistencia una vez (no en cada clic)
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
 
 // (opcional) caché local Firestore
@@ -309,21 +309,22 @@ document.querySelectorAll('.eye').forEach(btn=>{
   });
 });
 
-/* ======= Helper: timeout visual ======= */
-function withTimeout(promise, ms=3500){
-  // Solo para feedback de UI; no cancela la request real.
-  return Promise.race([
-    promise,
-    new Promise((_, reject)=>setTimeout(()=>reject(new Error('timeout')), ms))
-  ]);
-}
-
-/* ======= Chequeo de email para reset/registro ======= */
+/* ======= Chequeos de email (para reset/registro) ======= */
 async function emailExistsStrict(email){
   try{
     const methods = await auth.fetchSignInMethodsForEmail(email);
     return Array.isArray(methods) && methods.length>0;
   }catch(_){ return false; }
+}
+// Desambiguador rápido tras fallo de login: true=existe, false=no existe, null=no concluye (timeout/red)
+async function existsQuick(email){
+  try{
+    const methods = await Promise.race([
+      auth.fetchSignInMethodsForEmail(email),
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')), 1200))
+    ]);
+    return Array.isArray(methods) && methods.length > 0;
+  }catch(_){ return null; }
 }
 
 /* ======= Auth listener (no bloquea) ======= */
@@ -385,66 +386,71 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
   }
 });
 
-// === LOGIN ultra-rápido con watchdog (NO usa fetchSignInMethods) ===
+/* ======= LOGIN: una sola llamada + watchdog + desambiguación ======= */
 document.getElementById('btn-login').addEventListener('click', async ()=>{
-  const email = (document.getElementById('login-email').value||'').trim().toLowerCase();
-  const pass  = (document.getElementById('login-pass').value||'').trim();
+  const email = ($('#login-email').value||'').trim().toLowerCase();
+  const pass  = ($('#login-pass').value||'').trim();
 
   if(!emailOk(email)) return msg('El formato del correo no es válido.');
-  if(!pass)           return msg('Ingresa tu contraseña.');
+  if(!pass) return msg('Ingresa tu contraseña.');
 
   const btn = document.getElementById('btn-login');
   btn.disabled = true;
   msg('Validando contraseña…');
 
-  // Una sola llamada a Firebase
   const signPromise = auth.signInWithEmailAndPassword(email, pass);
 
-  // Watchdogs para evitar “pantalla congelada”
+  // Mensajes de progreso
   let finished = false;
   const t1 = setTimeout(()=>{ if(!finished) msg('Conectando…'); }, 1200);
   const t2 = setTimeout(()=>{ if(!finished) msg('Aún conectando, casi listo…'); }, 3000);
   const t3 = setTimeout(()=>{ if(!finished) msg('La red está lenta. No cierres esta ventana…'); }, 5000);
-
-  // Corte duro a los 12 s (reintento limpio)
   const hard = setTimeout(async ()=>{
     if(!finished){
       try{ await auth.signOut(); }catch(_){}
-      finished = true;
-      btn.disabled = false;
+      finished = true; btn.disabled = false;
       msg('No pudimos conectar con el servidor. Intenta nuevamente.');
     }
   }, 12000);
-
-  function clearAll(){ clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(hard); }
+  const clearAll=()=>{ clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(hard); };
 
   try{
-    const cred = await signPromise;   // esperamos el resultado real
+    const cred = await signPromise;
     finished = true; clearAll();
     msg('Sesión iniciada. Entrando…');
 
-    // Entra inmediatamente sin esperar Firestore
     if (cred.user?.emailVerified){
-      showCourse();
+      showCourse();   // entrar sin esperar Firestore
     } else {
       document.getElementById('verify-box').style.display='block';
     }
   }catch(e){
     finished = true; clearAll();
 
-    if (e.code === 'auth/wrong-password' ||
-        e.code === 'auth/invalid-credential' ||
-        e.code === 'auth/invalid-login-credentials'){
-      msg('Contraseña incorrecta.');
-    } else if (e.code === 'auth/user-not-found'){
+    if (e.code === 'auth/user-not-found'){
       msg('Correo no registrado.');
       setTab('reg'); document.getElementById('reg-email').value = email;
+    } else if (
+      e.code === 'auth/wrong-password' ||
+      e.code === 'auth/invalid-credential' ||
+      e.code === 'auth/invalid-login-credentials'
+    ){
+      // Desambiguar si el correo existe
+      const ex = await existsQuick(email);
+      if (ex === false){
+        msg('Correo no registrado.');
+        setTab('reg'); document.getElementById('reg-email').value = email;
+      } else {
+        msg('Contraseña incorrecta.');
+      }
     } else if (e.code === 'auth/too-many-requests'){
       msg('Demasiados intentos. Intenta más tarde.');
     } else if (e.code === 'auth/unauthorized-domain'){
       msg('Dominio no autorizado en Firebase Auth.');
     } else if (e.code === 'auth/network-request-failed'){
       msg('Error de red. Revisa tu conexión e inténtalo de nuevo.');
+    } else if (e.code === 'auth/invalid-email'){
+      msg('El formato del correo no es válido.');
     } else {
       msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
     }
@@ -453,7 +459,7 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
   }
 });
 
-/* ======= Reset contraseña (usa chequeo de email, no login) ======= */
+/* ======= Reset contraseña ======= */
 document.getElementById('btn-reset').addEventListener('click', async ()=>{
   const email=($('#login-email').value||'').trim().toLowerCase();
   if(!email) return msg('Escribe tu correo para enviarte el enlace.');
