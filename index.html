@@ -385,46 +385,66 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
   }
 });
 
-/* ======= LOGIN ultra-rápido (una sola llamada) ======= */
+// === LOGIN ultra-rápido con watchdog (NO usa fetchSignInMethods) ===
 document.getElementById('btn-login').addEventListener('click', async ()=>{
-  const email = ($('#login-email').value||'').trim().toLowerCase();
-  const pass  = ($('#login-pass').value||'').trim();
+  const email = (document.getElementById('login-email').value||'').trim().toLowerCase();
+  const pass  = (document.getElementById('login-pass').value||'').trim();
 
   if(!emailOk(email)) return msg('El formato del correo no es válido.');
-  if(!pass) return msg('Ingresa tu contraseña.');
+  if(!pass)           return msg('Ingresa tu contraseña.');
 
-  const btn = $('#btn-login'); btn.disabled = true;
+  const btn = document.getElementById('btn-login');
+  btn.disabled = true;
   msg('Validando contraseña…');
 
+  // Una sola llamada a Firebase
+  const signPromise = auth.signInWithEmailAndPassword(email, pass);
+
+  // Watchdogs para evitar “pantalla congelada”
+  let finished = false;
+  const t1 = setTimeout(()=>{ if(!finished) msg('Conectando…'); }, 1200);
+  const t2 = setTimeout(()=>{ if(!finished) msg('Aún conectando, casi listo…'); }, 3000);
+  const t3 = setTimeout(()=>{ if(!finished) msg('La red está lenta. No cierres esta ventana…'); }, 5000);
+
+  // Corte duro a los 12 s (reintento limpio)
+  const hard = setTimeout(async ()=>{
+    if(!finished){
+      try{ await auth.signOut(); }catch(_){}
+      finished = true;
+      btn.disabled = false;
+      msg('No pudimos conectar con el servidor. Intenta nuevamente.');
+    }
+  }, 12000);
+
+  function clearAll(){ clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(hard); }
+
   try{
-    // Usamos timeout sólo para feedback visual (no cancela la request real)
-    await withTimeout(auth.signInWithEmailAndPassword(email, pass), 3500);
+    const cred = await signPromise;   // esperamos el resultado real
+    finished = true; clearAll();
     msg('Sesión iniciada. Entrando…');
 
-    if (auth.currentUser?.emailVerified){
-      showCourse();   // entrar sin esperar Firestore
+    // Entra inmediatamente sin esperar Firestore
+    if (cred.user?.emailVerified){
+      showCourse();
     } else {
       document.getElementById('verify-box').style.display='block';
     }
   }catch(e){
-    // Si fue timeout, la request puede seguir en vuelo: el onAuthStateChanged te meterá cuando llegue.
-    if (e.message === 'timeout'){
-      msg('La red está lenta. Espera un momento…');
-      // Dejamos el botón activo por si quiere reintentar
-      btn.disabled = false;
-      return;
-    }
+    finished = true; clearAll();
+
     if (e.code === 'auth/wrong-password' ||
-        e.code==='auth/invalid-credential' ||
-        e.code==='auth/invalid-login-credentials'){
+        e.code === 'auth/invalid-credential' ||
+        e.code === 'auth/invalid-login-credentials'){
       msg('Contraseña incorrecta.');
-    } else if (e.code === 'auth/user-not-found') {
+    } else if (e.code === 'auth/user-not-found'){
       msg('Correo no registrado.');
-      setTab('reg'); $('#reg-email').value = email;
-    } else if (e.code === 'auth/too-many-requests') {
+      setTab('reg'); document.getElementById('reg-email').value = email;
+    } else if (e.code === 'auth/too-many-requests'){
       msg('Demasiados intentos. Intenta más tarde.');
-    } else if (e.code === 'auth/unauthorized-domain') {
-      msg('Dominio no autorizado en Firebase Auth. Revisa Auth → Settings → Authorized domains.');
+    } else if (e.code === 'auth/unauthorized-domain'){
+      msg('Dominio no autorizado en Firebase Auth.');
+    } else if (e.code === 'auth/network-request-failed'){
+      msg('Error de red. Revisa tu conexión e inténtalo de nuevo.');
     } else {
       msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
     }
