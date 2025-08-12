@@ -363,7 +363,7 @@ const msg = (t, where='#auth-msg')=>{ const el=$(where); if(el) el.textContent=t
 const emailOk = (e)=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((e||'').trim().toLowerCase());
 
 let CURRENT_UID = null;
-function keyFor(uid){ return soulmv_${uid||'anon'}; }
+function keyFor(uid){ return `soulmv_${uid||'anon'}`; }
 function loadState(uid){ try{ return JSON.parse(localStorage.getItem(keyFor(uid))||'{}'); }catch{ return {}; } }
 function saveState(uid, st){ localStorage.setItem(keyFor(uid), JSON.stringify(st)); }
 let state = {}; // por usuario
@@ -397,7 +397,7 @@ const specCombo = $('#spec-combo'), specInput = $('#spec-input'), specList = $('
 function renderSpecList(filter=''){
   const f = filter.trim().toLowerCase();
   const opts = ESPECIALIDADES.filter(x=>x.toLowerCase().includes(f));
-  specList.innerHTML = opts.map(x=><div class="item" data-v="${x}">${x}</div>).join('') || <div class="item" data-v="">(sin resultados)</div>;
+  specList.innerHTML = opts.map(x=>`<div class="item" data-v="${x}">${x}</div>`).join('') || `<div class="item" data-v="">(sin resultados)</div>`;
 }
 specInput.addEventListener('focus', ()=>{
   const v=(specInput.value||'').trim();
@@ -655,20 +655,20 @@ function renderModules(){
   wrap.style.display='grid';
 
   mods.forEach((m,idx)=>{
-    const modKey = mod_${idx}_${m};
+    const modKey = `mod_${idx}_${m}`;
     const modState = state.modules?.[m] || { done:false, videosDone:{} , quizPassed:false };
     // Fallback de videos si no existe un set específico para este título
     const videos = (MOD_VIDEOS[m] || MOD_VIDEOS['GENERALIDADES'] || []);
 
     const card=document.createElement('article'); card.className='card module';
-    const vidsHtml = videos.map((vid,i)=>
+    const vidsHtml = videos.map((vid,i)=>`
       <div class="yt-wrap" id="wrap-${modKey}-${vid}">
         <div id="player-${modKey}-${vid}"></div>
-      </div>).join('');
+      </div>`).join('');
 
-    const quizBtn = <button class="btn ${modState.quizPassed?'btn-success':'btn-primary'}" data-quiz="${m}" ${modState.done?'':'disabled'}>${modState.quizPassed?'Evaluación aprobada ✓':'Tomar evaluación'}</button>;
+    const quizBtn = `<button class="btn ${modState.quizPassed?'btn-success':'btn-primary'}" data-quiz="${m}" ${modState.done?'':'disabled'}>${modState.quizPassed?'Evaluación aprobada ✓':'Tomar evaluación'}</button>`;
 
-    card.innerHTML=
+    card.innerHTML=`
       <div class="num">${idx+1}</div>
       <div class="meta">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
@@ -681,12 +681,12 @@ function renderModules(){
           <button class="btn ${modState.done?'btn-success':'btn-muted'}" data-complete="${m}" disabled>${modState.done?'Completado ✓':'Completar (auto)'}</button>
           ${quizBtn}
         </div>
-      </div>;
+      </div>`;
     wrap.appendChild(card);
 
     // Inicializa players
     videos.forEach((vid)=>{
-      const pid = player-${modKey}-${vid};
+      const pid = `player-${modKey}-${vid}`;
       players[pid] = new YT.Player(pid,{
         height:'360', width:'640', videoId:vid,
         playerVars:{rel:0,modestbranding:1,controls:1,disablekb:1},
@@ -696,8 +696,8 @@ function renderModules(){
               state.modules=state.modules||{}; state.modules[m]=state.modules[m]||{done:false,videosDone:{},quizPassed:false};
               state.modules[m].videosDone[vid]=true; saveState(CURRENT_UID,state);
               const all = (videos||[]).every(v=>state.modules[m].videosDone[v]);
-              const btnComp = document.querySelector([data-complete="${m}"]);
-              const btnQuiz = document.querySelector([data-quiz="${m}"]);
+              const btnComp = document.querySelector(`[data-complete="${m}"]`);
+              const btnQuiz = document.querySelector(`[data-quiz="${m}"]`);
               if(all){
                 state.modules[m].done=true; saveState(CURRENT_UID,state); setTimeout(syncToCloud,200);
                 if(btnComp){ btnComp.classList.remove('btn-muted'); btnComp.classList.add('btn-success'); btnComp.disabled=true; btnComp.textContent='Completado ✓'; }
@@ -713,8 +713,8 @@ function renderModules(){
     });
 
     // Estado inicial de botones
-    const btnComp = card.querySelector([data-complete="${m}"]);
-    const btnQuiz = card.querySelector([data-quiz="${m}"]);
+    const btnComp = card.querySelector(`[data-complete="${m}"]`);
+    const btnQuiz = card.querySelector(`[data-quiz="${m}"]`);
     const all = (videos||[]).every(v=>modState.videosDone?.[v]);
     if(all || modState.done){
       if(btnComp){ btnComp.classList.remove('btn-muted'); btnComp.classList.add('btn-success'); btnComp.disabled=true; btnComp.textContent='Completado ✓'; }
@@ -731,9 +731,9 @@ function renderModules(){
 /* ======= Evaluaciones (3 preguntas dummy por módulo) ======= */
 function questionsFor(moduleTitle){
   return [
-    { id:'q1', text:${moduleTitle}: ¿Pregunta 1?, options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}], correct:'A'},
-    { id:'q2', text:${moduleTitle}: ¿Pregunta 2?, options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}], correct:'B'},
-    { id:'q3', text:${moduleTitle}: ¿Pregunta 3?, options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}], correct:'C'},
+    { id:'q1', text:`${moduleTitle}: ¿Pregunta 1?`, options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}], correct:'A'},
+    { id:'q2', text:`${moduleTitle}: ¿Pregunta 2?`, options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}], correct:'B'},
+    { id:'q3', text:`${moduleTitle}: ¿Pregunta 3?`, options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}], correct:'C'},
   ];
 }
 function openQuiz(moduleTitle){
@@ -741,39 +741,39 @@ function openQuiz(moduleTitle){
   const overlay = document.createElement('div');
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;z-index:50;padding:16px';
   const box = document.createElement('div'); box.className='card'; box.style.maxWidth='720px'; box.style.width='100%';
-  box.innerHTML = <h3 style="margin:0 0 10px">Evaluación: ${moduleTitle}</h3>
+  box.innerHTML = `<h3 style="margin:0 0 10px">Evaluación: ${moduleTitle}</h3>
     <div id="quizbox"></div>
     <div style="display:flex;gap:8px;margin-top:10px">
       <button class="btn btn-primary" id="send-quiz">Enviar</button>
       <button class="btn btn-muted" id="close-quiz">Cancelar</button>
     </div>
-    <div id="quiz-msg" class="muted" style="margin-top:6px"></div>;
+    <div id="quiz-msg" class="muted" style="margin-top:6px"></div>`;
   overlay.appendChild(box); document.body.appendChild(overlay);
 
   const qb = box.querySelector('#quizbox');
   qs.forEach((q,idx)=>{
     const card=document.createElement('div'); card.className='card'; card.style.marginBottom='10px';
-    const opts=q.options.map(o=>
+    const opts=q.options.map(o=>`
       <label style="display:flex;gap:8px;align-items:center;margin:6px 0">
         <input type="radio" name="${q.id}" value="${o.key}"><span>${o.key}) ${o.label}</span>
-      </label>).join('');
-    card.innerHTML=<strong>${idx+1}. ${q.text}</strong><div style="margin-top:6px">${opts}</div>;
+      </label>`).join('');
+    card.innerHTML=`<strong>${idx+1}. ${q.text}</strong><div style="margin-top:6px">${opts}</div>`;
     qb.appendChild(card);
   });
 
   box.querySelector('#close-quiz').onclick=()=>overlay.remove();
   box.querySelector('#send-quiz').onclick=()=>{
-    let correct=0; qs.forEach(q=>{ const c=box.querySelector(input[name="${q.id}"]:checked); if(c && c.value===q.correct) correct++; });
+    let correct=0; qs.forEach(q=>{ const c=box.querySelector(`input[name="${q.id}"]:checked`); if(c && c.value===q.correct) correct++; });
     const pct=Math.round(correct/qs.length*100);
     if(pct>=80){
       state.modules=state.modules||{}; state.modules[moduleTitle]=state.modules[moduleTitle]||{done:false,videosDone:{},quizPassed:false};
       state.modules[moduleTitle].quizPassed=true; saveState(CURRENT_UID,state); setTimeout(syncToCloud,200);
-      const btnQuiz = document.querySelector([data-quiz="${moduleTitle}"]);
+      const btnQuiz = document.querySelector(`[data-quiz="${moduleTitle}"]`);
       if(btnQuiz){ btnQuiz.classList.remove('btn-primary'); btnQuiz.classList.add('btn-success'); btnQuiz.textContent='Evaluación aprobada ✓'; }
-      box.querySelector('#quiz-msg').textContent = ✅ Aprobado (${pct}%).;
+      box.querySelector('#quiz-msg').textContent = `✅ Aprobado (${pct}%).`;
       setTimeout(()=>{ overlay.remove(); updateProgress(); }, 700);
     }else{
-      box.querySelector('#quiz-msg').textContent = ❌ ${pct}%. Debes alcanzar 80%.;
+      box.querySelector('#quiz-msg').textContent = `❌ ${pct}%. Debes alcanzar 80%.`;
     }
   };
 }
@@ -788,20 +788,20 @@ function updateProgress(){
 
   const pct = totalMods? Math.round(((evalsDone)/totalMods)*100) : 0;
   $('#bar').style.width=pct+'%';
-  $('#progress-label').textContent=${pct}% completado de evaluaciones (${evalsDone}/${totalMods});
-  $('#progress-sub').textContent = Videos: ${videosDone}/${videosTotal};
+  $('#progress-label').textContent=`${pct}% completado de evaluaciones (${evalsDone}/${totalMods})`;
+  $('#progress-sub').textContent = `Videos: ${videosDone}/${videosTotal}`;
 
   const allOk = totalMods>0 && evalsDone===totalMods;
   if(allOk){
     if(!document.getElementById('btn-cert-global')){
       const cont = document.createElement('div'); cont.className='card'; cont.style.marginTop='12px';
-      cont.innerHTML = <button id="btn-cert-global" class="btn btn-success">Mostrar certificado</button>;
+      cont.innerHTML = `<button id="btn-cert-global" class="btn btn-success">Mostrar certificado</button>`;
       $('#progress').appendChild(cont);
       cont.querySelector('#btn-cert-global').addEventListener('click', ()=>{
         const preferName = state.profile?.name || auth.currentUser?.displayName || '';
         document.getElementById('cert-nombre').textContent = preferName;
         const f=new Date(); const fecha=f.toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'});
-        document.getElementById('cert-fecha').textContent=Fecha: ${fecha};
+        document.getElementById('cert-fecha').textContent=`Fecha: ${fecha}`;
         document.getElementById('certificado').classList.add('show'); setTimeout(()=>window.print(),400);
       });
     }
