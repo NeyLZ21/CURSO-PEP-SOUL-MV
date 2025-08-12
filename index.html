@@ -161,7 +161,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
       <div>
         <label>Especialidad</label>
         <div class="combo" id="spec-combo">
-          <input id="spec-input" type="text" placeholder="Escribe para buscar..." autocomplete="off">
+          <input id="spec-input" type="text" placeholder="Escribe para buscar..." autocomplete="off" autocorrect="off" autocapitalize="off" inputmode="search" name="spec-avoid-autofill-123">
           <div class="list" id="spec-list"></div>
         </div>
         <div class="muted" style="margin-top:6px">Selecciona de la lista. Esto define los módulos que verás.</div>
@@ -216,13 +216,118 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
-/* ======= Datos desde tu Excel ======= */
-/* Lista completa de especialidades (92) y módulos por especialidad: */
-const ESPECIALIDADES = ["ACUPUNTURA","ALERGOLOGIA","ANESTESIOLOGIA","CARDIOLOGIA","CARDIOLOGIA HEMODINAMIA","CARDIOLOGIA INTERVENCIONISTA","CARDIOLOGIA PEDIATRICA","CIR. GENERAL-COLOPROCTOLOGIA","CIR. MANO/MUÑE-NERVIO PERI/BRA","CIRUGIA CARDIACA","CIRUGIA DE CABEZA Y CUELLO","CIRUGIA GENERAL","CIRUGIA PLASTICA","CIRUGIA TORAX","CIRUGIA VASCULAR","CLINICA MEDICA","DERMATOLOGIA","DIABETOLOGIA","ECOGRAFIA","EMERGENCIOLOGIA","ENDOCRINOLOGIA","ENFERMERIA","FISIOTERAPIA","GASTROENTEROLOGIA","GERIATRIA","GINECOLOGIA Y OBSTETRICIA","HEMATOLOGIA","HEMATO-ONCOLOGIA PEDIATRICA","HEMOTERAPIA","INFECTOLOGIA","INFECTOLOGIA PEDIATRICA","INTENSIVISTA","LABORATORIO CLINICO","MEDICAMENTOS","MEDICINA FAMILIAR","MEDICINA FISICA Y REHABILITACION","MEDICINA INTERNA","MEDICINA INTERNA e 4","MEDICINA INTERNA e 4 t","MEDICINA INTERNA 44","MEDICINA NUCLEAR","NEFROLOGIA","NEFROLOGIA PEDIATRICA","NEONATOLOGIA","NEUROCIRUGIA","NEUROLOGIA","NEUMOLOGIA","NUTRICION","NUTRICION CLINICA","OFTALMOLOGIA","ONCOLOGIA","ONCOLOGIA PEDIATRICA","ORTOPEDIA Y TRAUMATOLOGIA","OTORRINOLARINGOLOGIA","PALIATIVOS","PEDIATRIA","PERFUSIONISTA","PSICOLOGIA","PSIQUIATRIA","RADIOLOGIA","RADIOTERAPIA","REUMATOLOGIA","SALUD OCUPACIONAL","TERAPIA RESPIRATORIA","TOXICOLOGIA","TRANSPLANTE","UCI ADULTOS","UCI PEDIATRICA","UCI NEONATAL","UROLOGIA","ANESTESIOLOGIA PEDIATRICA","CARDIOLOGIA ADULTOS","CIRUGIA ONCOLOGICA","CIRUGIA PEDIATRICA","CIRUGIA MAXILOFACIAL","HEMATOLOGIA Y HEMOTERAPIA","MEDICINA INTERNA HOSPITALARIA","EMERGENCIOLOGIA PEDIATRICA","ENDOCRINOLOGIA PEDIATRICA","GASTROENTEROLOGIA PEDIATRICA","GERONTOLOGIA","GINECOLOGIA ONCOLOGICA","IMAGENOLOGIA","INTERVENCIONISMO","NEUROLOGIA PEDIATRICA","NEUMOLOGIA PEDIATRICA","NUTRICION PEDIATRICA","OTORRINOPEDIATRIA","REHABILITACION PEDIATRICA","REUMATOLOGIA PEDIATRICA","TRAUMATOLOGIA PEDIATRICA","UROLOGIA PEDIATRICA","ALERGOLOGIA PEDIATRICA","CIRUGIA BARIATRICA","DIAGNOSTICO POR IMAGEN","MEDICINA GENERAL","MEDICINA DE EMERGENCIAS"];
-const MAPA_MODULOS = {"ACUPUNTURA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"ALERGOLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"ANESTESIOLOGIA":["GENERALIDADES","ANESTESIOLOGÍA"],"CARDIOLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"CARDIOLOGIA HEMODINAMIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"CARDIOLOGIA INTERVENCIONISTA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"CARDIOLOGIA PEDIATRICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"CIR. GENERAL-COLOPROCTOLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"CIR. MANO/MUÑE-NERVIO PERI/BRA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"CIRUGIA CARDIACA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"CIRUGIA DE CABEZA Y CUELLO":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"CIRUGIA GENERAL":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"CIRUGIA PLASTICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"CIRUGIA TORAX":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"CIRUGIA VASCULAR":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"CLINICA MEDICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"DERMATOLOGIA":["GENERALIDADES","CONSULTA EXTERNA"],"DIABETOLOGIA":["GENERALIDADES","CONSULTA EXTERNA"],"ECOGRAFIA":["GENERALIDADES","CONSULTA EXTERNA"],"EMERGENCIOLOGIA":["GENERALIDADES","EMERGENCIAS"],"ENDOCRINOLOGIA":["GENERALIDADES","CONSULTA EXTERNA"],"ENFERMERIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","EMERGENCIAS"],"FISIOTERAPIA":["GENERALIDADES","CONSULTA EXTERNA"],"GASTROENTEROLOGIA":["GENERALIDADES","CONSULTA EXTERNA","HOSPITALIZACIÓN-HDD"],"GERIATRIA":["GENERALIDADES","CONSULTA EXTERNA","HOSPITALIZACIÓN-HDD"],"GINECOLOGIA Y OBSTETRICIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"HEMATOLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"HEMATO-ONCOLOGIA PEDIATRICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"HEMOTERAPIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"INFECTOLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"INFECTOLOGIA PEDIATRICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"INTENSIVISTA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","EMERGENCIAS"],"LABORATORIO CLINICO":["GENERALIDADES"],"MEDICAMENTOS":["GENERALIDADES"],"MEDICINA FAMILIAR":["GENERALIDADES","CONSULTA EXTERNA"],"MEDICINA FISICA Y REHABILITACION":["GENERALIDADES","CONSULTA EXTERNA"],"MEDICINA INTERNA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"MEDICINA INTERNA e 4":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"MEDICINA INTERNA e 4 t":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"MEDICINA INTERNA 44":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"MEDICINA NUCLEAR":["GENERALIDADES"],"NEFROLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"NEFROLOGIA PEDIATRICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"NEONATOLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"NEUROCIRUGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"NEUROLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"NEUMOLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"NUTRICION":["GENERALIDADES","CONSULTA EXTERNA"],"NUTRICION CLINICA":["GENERALIDADES","CONSULTA EXTERNA"],"OFTALMOLOGIA":["GENERALIDADES","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],"ONCOLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"ONCOLOGIA PEDIATRICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"ORTOPEDIA Y TRAUMATOLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"OTORRINOLARINGOLOGIA":["GENERALIDADES","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],"PALIATIVOS":["GENERALIDADES","CONSULTA EXTERNA"],"PEDIATRIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"PERFUSIONISTA":["GENERALIDADES","CENTRO QUIRÚRGICO"],"PSICOLOGIA":["GENERALIDADES","CONSULTA EXTERNA"],"PSIQUIATRIA":["GENERALIDADES","CONSULTA EXTERNA"],"RADIOLOGIA":["GENERALIDADES"],"RADIOTERAPIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"REUMATOLOGIA":["GENERALIDADES","CONSULTA EXTERNA"],"SALUD OCUPACIONAL":["GENERALIDADES","CONSULTA EXTERNA"],"TERAPIA RESPIRATORIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"TOXICOLOGIA":["GENERALIDADES","EMERGENCIAS"],"TRANSPLANTE":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"UCI ADULTOS":["GENERALIDADES","HOSPITALIZACIÓN-HDD","EMERGENCIAS"],"UCI PEDIATRICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","EMERGENCIAS"],"UCI NEONATAL":["GENERALIDADES","HOSPITALIZACIÓN-HDD","EMERGENCIAS"],"UROLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"ANESTESIOLOGIA PEDIATRICA":["GENERALIDADES","ANESTESIOLOGÍA"],"CARDIOLOGIA ADULTOS":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"CIRUGIA ONCOLOGICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"CIRUGIA PEDIATRICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"CIRUGIA MAXILOFACIAL":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"HEMATOLOGIA Y HEMOTERAPIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"MEDICINA INTERNA HOSPITALARIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"EMERGENCIOLOGIA PEDIATRICA":["GENERALIDADES","EMERGENCIAS"],"ENDOCRINOLOGIA PEDIATRICA":["GENERALIDADES","CONSULTA EXTERNA"],"GASTROENTEROLOGIA PEDIATRICA":["GENERALIDADES","CONSULTA EXTERNA"],"GERONTOLOGIA":["GENERALIDADES","CONSULTA EXTERNA"],"GINECOLOGIA ONCOLOGICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"IMAGENOLOGIA":["GENERALIDADES"],"INTERVENCIONISMO":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"NEUROLOGIA PEDIATRICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"NEUMOLOGIA PEDIATRICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"NUTRICION PEDIATRICA":["GENERALIDADES","CONSULTA EXTERNA"],"OTORRINOPEDIATRIA":["GENERALIDADES","CENTRO QUIRÚRGICO"],"REHABILITACION PEDIATRICA":["GENERALIDADES","CONSULTA EXTERNA"],"REUMATOLOGIA PEDIATRICA":["GENERALIDADES","CONSULTA EXTERNA"],"TRAUMATOLOGIA PEDIATRICA":["GENERALIDADES","CENTRO QUIRÚRGICO"],"UROLOGIA PEDIATRICA":["GENERALIDADES","CENTRO QUIRÚRGICO"],"ALERGOLOGIA PEDIATRICA":["GENERALIDADES","CONSULTA EXTERNA"],"CIRUGIA BARIATRICA":["GENERALIDADES","CENTRO QUIRÚRGICO"],"DIAGNOSTICO POR IMAGEN":["GENERALIDADES"],"MEDICINA GENERAL":["GENERALIDADES","CONSULTA EXTERNA"],"MEDICINA DE EMERGENCIAS":["GENERALIDADES","EMERGENCIAS"]};
+/* ======= LISTA DESDE TU EXCEL (inyectada) ======= */
+/* Generé esto a partir de tu archivo. Si prefieres, puedes cargarlo desde un .js externo */
+const ESPECIALIDADES = ["ACUPUNTURA","ALERGOLOGIA","ANESTESIOLOGIA","CARDIOLOGIA","CARDIOLOGIA ADULTOS","CARDIOLOGIA HEMODINAMIA","CARDIOLOGIA INTERVENCIONISTA","CARDIOLOGIA PEDIATRICA","CIR. GENERAL-COLOPROCTOLOGIA","CIR. MANO/MUÑE-NERVIO PERI/BRA","CIRUGIA BARIATRICA","CIRUGIA CARDIACA","CIRUGIA DE CABEZA Y CUELLO","CIRUGIA GENERAL","CIRUGIA MAXILOFACIAL","CIRUGIA ONCOLOGICA","CIRUGIA PEDIATRICA","CIRUGIA PLASTICA","CIRUGIA TORAX","CIRUGIA VASCULAR","CLINICA MEDICA","DERMATOLOGIA","DIABETOLOGIA","DIAGNOSTICO POR IMAGEN","ECOGRAFIA","EMERGENCIOLOGIA","EMERGENCIOLOGIA PEDIATRICA","ENDOCRINOLOGIA","ENDOCRINOLOGIA PEDIATRICA","ENFERMERIA","FISIOTERAPIA","GASTROENTEROLOGIA","GASTROENTEROLOGIA PEDIATRICA","GERIATRIA","GERONTOLOGIA","GINECOLOGIA ONCOLOGICA","GINECOLOGIA Y OBSTETRICIA","HEMATO-ONCOLOGIA PEDIATRICA","HEMATOLOGIA","HEMATOLOGIA Y HEMOTERAPIA","HEMOTERAPIA","IMAGENOLOGIA","INFECTOLOGIA","INFECTOLOGIA PEDIATRICA","INTENSIVISTA","INTERVENCIONISMO","LABORATORIO CLINICO","MEDICAMENTOS","MEDICINA DE EMERGENCIAS","MEDICINA FAMILIAR","MEDICINA FISICA Y REHABILITACION","MEDICINA GENERAL","MEDICINA INTERNA","MEDICINA INTERNA 44","MEDICINA INTERNA HOSPITALARIA","MEDICINA INTERNA e 4","MEDICINA INTERNA e 4 t","MEDICINA NUCLEAR","NEFROLOGIA","NEFROLOGIA PEDIATRICA","NEONATOLOGIA","NEUROCIRUGIA","NEUROLOGIA","NEUROLOGIA PEDIATRICA","NEUMOLOGIA","NEUMOLOGIA PEDIATRICA","NUTRICION","NUTRICION CLINICA","NUTRICION PEDIATRICA","OFTALMOLOGIA","ONCOLOGIA","ONCOLOGIA PEDIATRICA","ORTOPEDIA Y TRAUMATOLOGIA","OTORRINOLARINGOLOGIA","OTORRINOPEDIATRIA","PALIATIVOS","PEDIATRIA","PERFUSIONISTA","PSICOLOGIA","PSIQUIATRIA","RADIOLOGIA","RADIOTERAPIA","REHABILITACION PEDIATRICA","REUMATOLOGIA","REUMATOLOGIA PEDIATRICA","SALUD OCUPACIONAL","TERAPIA RESPIRATORIA","TOXICOLOGIA","TRANSPLANTE","TRAUMATOLOGIA PEDIATRICA","UCI ADULTOS","UCI NEONATAL","UCI PEDIATRICA","UROLOGIA","UROLOGIA PEDIATRICA","ALERGOLOGIA PEDIATRICA"];
+const MAPA_MODULOS = {
+"ACUPUNTURA":["MODULO 1","MODULO 2","MODULO 4"],
+"ALERGOLOGIA":["MODULO 1","MODULO 2","MODULO 4"],
+"ANESTESIOLOGIA":["MODULO 3"],
+"CARDIOLOGIA":["MODULO 1","MODULO 2","MODULO 4"],
+"CARDIOLOGIA ADULTOS":["MODULO 1","MODULO 2","MODULO 4"],
+"CARDIOLOGIA HEMODINAMIA":["MODULO 1","MODULO 2","MODULO 4"],
+"CARDIOLOGIA INTERVENCIONISTA":["MODULO 1","MODULO 2","MODULO 4"],
+"CARDIOLOGIA PEDIATRICA":["MODULO 1","MODULO 2","MODULO 4"],
+"CIR. GENERAL-COLOPROCTOLOGIA":["MODULO 1","MODULO 3","MODULO 4"],
+"CIR. MANO/MUÑE-NERVIO PERI/BRA":["MODULO 1","MODULO 3","MODULO 4"],
+"CIRUGIA BARIATRICA":["MODULO 1","MODULO 4"],
+"CIRUGIA CARDIACA":["MODULO 1","MODULO 3","MODULO 4"],
+"CIRUGIA DE CABEZA Y CUELLO":["MODULO 1","MODULO 3","MODULO 4"],
+"CIRUGIA GENERAL":["MODULO 1","MODULO 3","MODULO 4"],
+"CIRUGIA MAXILOFACIAL":["MODULO 1","MODULO 3","MODULO 4"],
+"CIRUGIA ONCOLOGICA":["MODULO 1","MODULO 3","MODULO 4"],
+"CIRUGIA PEDIATRICA":["MODULO 1","MODULO 3","MODULO 4"],
+"CIRUGIA PLASTICA":["MODULO 1","MODULO 3","MODULO 4"],
+"CIRUGIA TORAX":["MODULO 1","MODULO 3","MODULO 4"],
+"CIRUGIA VASCULAR":["MODULO 1","MODULO 3","MODULO 4"],
+"CLINICA MEDICA":["MODULO 1","MODULO 2","MODULO 4"],
+"DERMATOLOGIA":["MODULO 1","MODULO 2"],
+"DIABETOLOGIA":["MODULO 1","MODULO 2"],
+"DIAGNOSTICO POR IMAGEN":["MODULO 1"],
+"ECOGRAFIA":["MODULO 1","MODULO 2"],
+"EMERGENCIOLOGIA":["MODULO 1","MODULO 5"],
+"EMERGENCIOLOGIA PEDIATRICA":["MODULO 1","MODULO 5"],
+"ENDOCRINOLOGIA":["MODULO 1","MODULO 2"],
+"ENDOCRINOLOGIA PEDIATRICA":["MODULO 1","MODULO 2"],
+"ENFERMERIA":["MODULO 1","MODULO 4","MODULO 5"],
+"FISIOTERAPIA":["MODULO 1","MODULO 2"],
+"GASTROENTEROLOGIA":["MODULO 1","MODULO 2","MODULO 4"],
+"GASTROENTEROLOGIA PEDIATRICA":["MODULO 1","MODULO 2"],
+"GERIATRIA":["MODULO 1","MODULO 2","MODULO 4"],
+"GERONTOLOGIA":["MODULO 1","MODULO 2"],
+"GINECOLOGIA ONCOLOGICA":["MODULO 1","MODULO 3","MODULO 4"],
+"GINECOLOGIA Y OBSTETRICIA":["MODULO 1","MODULO 3","MODULO 4"],
+"HEMATO-ONCOLOGIA PEDIATRICA":["MODULO 1","MODULO 2","MODULO 4"],
+"HEMATOLOGIA":["MODULO 1","MODULO 2","MODULO 4"],
+"HEMATOLOGIA Y HEMOTERAPIA":["MODULO 1","MODULO 4"],
+"HEMOTERAPIA":["MODULO 1","MODULO 4"],
+"IMAGENOLOGIA":["MODULO 1"],
+"INFECTOLOGIA":["MODULO 1","MODULO 2","MODULO 4"],
+"INFECTOLOGIA PEDIATRICA":["MODULO 1","MODULO 4"],
+"INTENSIVISTA":["MODULO 1","MODULO 4","MODULO 5"],
+"INTERVENCIONISMO":["MODULO 1","MODULO 4"],
+"LABORATORIO CLINICO":["MODULO 1"],
+"MEDICAMENTOS":["MODULO 1"],
+"MEDICINA DE EMERGENCIAS":["MODULO 1","MODULO 5"],
+"MEDICINA FAMILIAR":["MODULO 1","MODULO 2"],
+"MEDICINA FISICA Y REHABILITACION":["MODULO 1","MODULO 2"],
+"MEDICINA GENERAL":["MODULO 1","MODULO 2"],
+"MEDICINA INTERNA":["MODULO 1","MODULO 2","MODULO 4"],
+"MEDICINA INTERNA 44":["MODULO 1","MODULO 2","MODULO 4"],
+"MEDICINA INTERNA HOSPITALARIA":["MODULO 1","MODULO 2","MODULO 4"],
+"MEDICINA INTERNA e 4":["MODULO 1","MODULO 2","MODULO 4"],
+"MEDICINA INTERNA e 4 t":["MODULO 1","MODULO 2","MODULO 4"],
+"MEDICINA NUCLEAR":["MODULO 1"],
+"NEFROLOGIA":["MODULO 1","MODULO 2","MODULO 4"],
+"NEFROLOGIA PEDIATRICA":["MODULO 1","MODULO 4"],
+"NEONATOLOGIA":["MODULO 1","MODULO 4"],
+"NEUROCIRUGIA":["MODULO 1","MODULO 3","MODULO 4"],
+"NEUROLOGIA":["MODULO 1","MODULO 2","MODULO 4"],
+"NEUROLOGIA PEDIATRICA":["MODULO 1","MODULO 4"],
+"NEUMOLOGIA":["MODULO 1","MODULO 2","MODULO 4"],
+"NEUMOLOGIA PEDIATRICA":["MODULO 1","MODULO 4"],
+"NUTRICION":["MODULO 1","MODULO 2"],
+"NUTRICION CLINICA":["MODULO 1","MODULO 2"],
+"NUTRICION PEDIATRICA":["MODULO 1","MODULO 2"],
+"OFTALMOLOGIA":["MODULO 1","MODULO 2","MODULO 3"],
+"ONCOLOGIA":["MODULO 1","MODULO 2","MODULO 4"],
+"ONCOLOGIA PEDIATRICA":["MODULO 1","MODULO 4"],
+"ORTOPEDIA Y TRAUMATOLOGIA":["MODULO 1","MODULO 4","MODULO 3"],
+"OTORRINOLARINGOLOGIA":["MODULO 1","MODULO 2","MODULO 3"],
+"OTORRINOPEDIATRIA":["MODULO 1","MODULO 3"],
+"PALIATIVOS":["MODULO 1","MODULO 2"],
+"PEDIATRIA":["MODULO 1","MODULO 4","MODULO 2"],
+"PERFUSIONISTA":["MODULO 1","MODULO 3"],
+"PSICOLOGIA":["MODULO 1","MODULO 2"],
+"PSIQUIATRIA":["MODULO 1","MODULO 2"],
+"RADIOLOGIA":["MODULO 1"],
+"RADIOTERAPIA":["MODULO 1","MODULO 4"],
+"REHABILITACION PEDIATRICA":["MODULO 1","MODULO 2"],
+"REUMATOLOGIA":["MODULO 1","MODULO 2"],
+"REUMATOLOGIA PEDIATRICA":["MODULO 1","MODULO 2"],
+"SALUD OCUPACIONAL":["MODULO 1","MODULO 2"],
+"TERAPIA RESPIRATORIA":["MODULO 1","MODULO 4"],
+"TOXICOLOGIA":["MODULO 1","MODULO 5"],
+"TRANSPLANTE":["MODULO 1","MODULO 4"],
+"TRAUMATOLOGIA PEDIATRICA":["MODULO 1","MODULO 3"],
+"UCI ADULTOS":["MODULO 1","MODULO 4","MODULO 5"],
+"UCI NEONATAL":["MODULO 1","MODULO 4","MODULO 5"],
+"UCI PEDIATRICA":["MODULO 1","MODULO 4","MODULO 5"],
+"UROLOGIA":["MODULO 1","MODULO 4","MODULO 3"],
+"UROLOGIA PEDIATRICA":["MODULO 1","MODULO 3"],
+"ALERGOLOGIA PEDIATRICA":["MODULO 1","MODULO 2"]
+};
 
-/* 5 videos de prueba por módulo */
-const MOD_VIDEOS = {"ANESTESIOLOGÍA":["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0","3JZ_D3ELwOQ","kXYiU_JCYtU"],"CENTRO QUIRÚRGICO":["l482T0yNkeo","9bZkp7q19f0","3JZ_D3ELwOQ","kXYiU_JCYtU","CevxZvSJLk8"],"CONSULTA EXTERNA":["9bZkp7q19f0","3JZ_D3ELwOQ","kXYiU_JCYtU","CevxZvSJLk8","RgKAFK5djSk"],"EMERGENCIAS":["3JZ_D3ELwOQ","kXYiU_JCYtU","CevxZvSJLk8","RgKAFK5djSk","OPf0YbXqDm0"],"GENERALIDADES":["kXYiU_JCYtU","CevxZvSJLk8","RgKAFK5djSk","OPf0YbXqDm0","YVkUvmDQ3HY"],"HOSPITALIZACIÓN-HDD":["CevxZvSJLk8","RgKAFK5djSk","OPf0YbXqDm0","YVkUvmDQ3HY","hTWKbfoikeg"]};
+/* ======= Videos por módulo (fallback GENERALIDADES si falta) ======= */
+const MOD_VIDEOS = {
+  "ANESTESIOLOGÍA": ["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0","3JZ_D3ELwOQ","kXYiU_JCYtU"],
+  "CENTRO QUIRÚRGICO": ["l482T0yNkeo","9bZkp7q19f0","3JZ_D3ELwOQ","kXYiU_JCYtU","CevxZvSJLk8"],
+  "CONSULTA EXTERNA": ["9bZkp7q19f0","3JZ_D3ELwOQ","kXYiU_JCYtU","CevxZvSJLk8","RgKAFK5djSk"],
+  "EMERGENCIAS": ["3JZ_D3ELwOQ","kXYiU_JCYtU","CevxZvSJLk8","RgKAFK5djSk","OPf0YbXqDm0"],
+  "GENERALIDADES": ["kXYiU_JCYtU","CevxZvSJLk8","RgKAFK5djSk","OPf0YbXqDm0","YVkUvmDQ3HY"],
+  "HOSPITALIZACIÓN-HDD": ["CevxZvSJLk8","RgKAFK5djSk","OPf0YbXqDm0","YVkUvmDQ3HY","hTWKbfoikeg"],
+  /* Para los títulos "MODULO 1", "MODULO 2", "MODULO 3", "MODULO 4", "MODULO 5" usa GENERALIDADES como respaldo */
+};
 
 /* ======= Firebase ======= */
 const firebaseConfig = {
@@ -287,15 +392,23 @@ document.querySelectorAll('.eye').forEach(btn=>{
   });
 });
 
-/* ======= Combo de especialidad (buscador + lista estricta) ======= */
+/* ======= Combo de especialidad (estricto) ======= */
 const specCombo = $('#spec-combo'), specInput = $('#spec-input'), specList = $('#spec-list');
 function renderSpecList(filter=''){
   const f = filter.trim().toLowerCase();
   const opts = ESPECIALIDADES.filter(x=>x.toLowerCase().includes(f));
   specList.innerHTML = opts.map(x=>`<div class="item" data-v="${x}">${x}</div>`).join('') || `<div class="item" data-v="">(sin resultados)</div>`;
 }
-specInput.addEventListener('focus', ()=>{ specCombo.classList.add('show'); renderSpecList(specInput.value); });
+specInput.addEventListener('focus', ()=>{
+  const v=(specInput.value||'').trim();
+  if(!ESPECIALIDADES.includes(v)) specInput.value='';
+  specCombo.classList.add('show'); renderSpecList(specInput.value);
+});
 specInput.addEventListener('input', ()=>renderSpecList(specInput.value));
+specInput.addEventListener('blur', ()=>{
+  const v=(specInput.value||'').trim();
+  if(!ESPECIALIDADES.includes(v)) specInput.value='';
+});
 document.addEventListener('click', (e)=>{ if(!specCombo.contains(e.target)) specCombo.classList.remove('show'); });
 specList.addEventListener('click', (e)=>{ const it=e.target.closest('.item'); if(!it) return; const v=it.dataset.v; if(v){ specInput.value=v; } specCombo.classList.remove('show'); });
 
@@ -313,16 +426,15 @@ auth.onAuthStateChanged(async (user)=>{
   state = loadState(CURRENT_UID);
   $('#auth-user').textContent = user.email || '';
 
-  // Gate de verificación SOLO tras registro
   if (justRegistered && !user.emailVerified){
     $('#verify-box').style.display='block';
-    showLogin(); // no mostrar curso
+    showLogin();
     return;
   } else {
     $('#verify-box').style.display='none';
   }
 
-  showCourse(); // UI rápida
+  showCourse();
   syncFromCloud(user).catch(()=>{});
 });
 
@@ -344,11 +456,10 @@ $('#btn-register-2').addEventListener('click', async ()=>{
     const { user } = await auth.createUserWithEmailAndPassword(email, pass);
     if (auth.currentUser?.uid !== user.uid) await auth.updateCurrentUser(user);
 
-    // Base en Firestore (no bloquea)
     db.collection('users').doc(user.uid).collection('courses').doc('soulmv').set({}, { merge:true }).catch(()=>{});
 
     const actionCodeSettings = { url: location.href.replace(location.search,'')+'?verified=1', handleCodeInApp:false };
-    justRegistered = true; // gate
+    justRegistered = true;
     try{ await auth.currentUser.sendEmailVerification(actionCodeSettings); msg('Cuenta creada. Te enviamos el correo de verificación (revisa Spam).','#auth-msg2'); }catch(_){ msg('Cuenta creada. Si no te llegó, usa “Reenviar verificación”.','#auth-msg2'); }
     $('#verify-box').style.display='block';
     setTab('login'); $('#login-email').value=email;
@@ -381,7 +492,7 @@ $('#btn-login').addEventListener('click', async ()=>{
     const u = cred.user || auth.currentUser;
     msg('Sesión iniciada.');
     $('#verify-box').style.display='none';
-    justRegistered=false; // solo para flujos antiguos
+    justRegistered=false;
     showCourse();
     syncFromCloud(u).catch(()=>{});
   }catch(e){
@@ -417,7 +528,6 @@ function showCourse(){
   $('#btn-logout').style.display='inline-flex';
   $('#profile').style.display='block';
 
-  // preparar combo con valor actual si hay
   specInput.value = state.profile?.spec || '';
 
   if (profileComplete()) {
@@ -514,7 +624,6 @@ async function saveProfile(){
   if(!name || !iddoc || !spec){ pfMsg.textContent='Completa nombre, cédula/pasaporte y especialidad.'; return; }
   if(!ESPECIALIDADES.includes(spec)){ pfMsg.textContent='Selecciona la especialidad desde la lista (no es texto libre).'; return; }
 
-  // UI optimista
   state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
   pfMsg.classList.add('saving'); pfMsg.textContent='Guardando…';
   btn.disabled=true; savingProfile = true; toggleCourse(true); setProfileReadonly(true);
@@ -548,7 +657,8 @@ function renderModules(){
   mods.forEach((m,idx)=>{
     const modKey = `mod_${idx}_${m}`;
     const modState = state.modules?.[m] || { done:false, videosDone:{} , quizPassed:false };
-    const videos = MOD_VIDEOS[m] || [];
+    // Fallback de videos si no existe un set específico para este título
+    const videos = (MOD_VIDEOS[m] || MOD_VIDEOS['GENERALIDADES'] || []);
 
     const card=document.createElement('article'); card.className='card module';
     const vidsHtml = videos.map((vid,i)=>`
@@ -565,7 +675,7 @@ function renderModules(){
           <h3 style="margin:0">${m}</h3>
           <span class="badge">${videos.length} videos</span>
         </div>
-        <p class="muted" style="margin:6px 0 10px">Mira los 5 videos para habilitar la evaluación.</p>
+        <p class="muted" style="margin:6px 0 10px">Mira los videos para habilitar la evaluación.</p>
         ${vidsHtml}
         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
           <button class="btn ${modState.done?'btn-success':'btn-muted'}" data-complete="${m}" disabled>${modState.done?'Completado ✓':'Completar (auto)'}</button>
@@ -583,11 +693,9 @@ function renderModules(){
         events:{
           onStateChange:(ev)=>{
             if(ev.data===YT.PlayerState.ENDED){
-              // marca video como visto
               state.modules=state.modules||{}; state.modules[m]=state.modules[m]||{done:false,videosDone:{},quizPassed:false};
               state.modules[m].videosDone[vid]=true; saveState(CURRENT_UID,state);
-              // si todos listos => habilita evaluar y completa
-              const all = (MOD_VIDEOS[m]||[]).every(v=>state.modules[m].videosDone[v]);
+              const all = (videos||[]).every(v=>state.modules[m].videosDone[v]);
               const btnComp = document.querySelector(`[data-complete="${m}"]`);
               const btnQuiz = document.querySelector(`[data-quiz="${m}"]`);
               if(all){
@@ -607,7 +715,7 @@ function renderModules(){
     // Estado inicial de botones
     const btnComp = card.querySelector(`[data-complete="${m}"]`);
     const btnQuiz = card.querySelector(`[data-quiz="${m}"]`);
-    const all = (MOD_VIDEOS[m]||[]).every(v=>modState.videosDone?.[v]);
+    const all = (videos||[]).every(v=>modState.videosDone?.[v]);
     if(all || modState.done){
       if(btnComp){ btnComp.classList.remove('btn-muted'); btnComp.classList.add('btn-success'); btnComp.disabled=true; btnComp.textContent='Completado ✓'; }
       if(btnQuiz){ btnQuiz.disabled=false; btnQuiz.classList.toggle('btn-success', !!modState.quizPassed); btnQuiz.classList.toggle('btn-primary', !modState.quizPassed); btnQuiz.textContent = modState.quizPassed?'Evaluación aprobada ✓':'Tomar evaluación'; }
@@ -617,7 +725,6 @@ function renderModules(){
     }
   });
 
-  // Listener de evaluaciones
   wrap.querySelectorAll('[data-quiz]').forEach(b=>b.addEventListener('click', (e)=>openQuiz(e.currentTarget.getAttribute('data-quiz')) ));
 }
 
@@ -675,8 +782,8 @@ function openQuiz(moduleTitle){
 function updateProgress(){
   const mods = currentModules();
   const totalMods = mods.length;
-  const videosTotal = mods.reduce((acc,m)=>acc+(MOD_VIDEOS[m]||[]).length,0);
-  const videosDone  = mods.reduce((acc,m)=>acc+((MOD_VIDEOS[m]||[]).filter(v=>state.modules?.[m]?.videosDone?.[v]).length),0);
+  const videosTotal = mods.reduce((acc,m)=>acc+((MOD_VIDEOS[m] || MOD_VIDEOS['GENERALIDADES'] || []).length),0);
+  const videosDone  = mods.reduce((acc,m)=>acc+((MOD_VIDEOS[m] || MOD_VIDEOS['GENERALIDADES'] || []).filter(v=>state.modules?.[m]?.videosDone?.[v]).length),0);
   const evalsDone   = mods.filter(m=>state.modules?.[m]?.quizPassed).length;
 
   const pct = totalMods? Math.round(((evalsDone)/totalMods)*100) : 0;
@@ -684,10 +791,8 @@ function updateProgress(){
   $('#progress-label').textContent=`${pct}% completado de evaluaciones (${evalsDone}/${totalMods})`;
   $('#progress-sub').textContent = `Videos: ${videosDone}/${videosTotal}`;
 
-  // Certificado global cuando TODAS las evals aprobadas
   const allOk = totalMods>0 && evalsDone===totalMods;
   if(allOk){
-    // botón certificado (crear/mostrar)
     if(!document.getElementById('btn-cert-global')){
       const cont = document.createElement('div'); cont.className='card'; cont.style.marginTop='12px';
       cont.innerHTML = `<button id="btn-cert-global" class="btn btn-success">Mostrar certificado</button>`;
