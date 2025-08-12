@@ -32,16 +32,15 @@ p.small{margin:0 0 14px}
 .input-wrap{position:relative}
 .eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:0;cursor:pointer}
 .hidden{display:none !important}
-hr{border:0;border-top:1px dashed var(--bd);margin:6px 0}
 .badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:600}
-.ok{color:var(--ok)}
-.err{color:#b91c1c}
+.ok{color:var(--ok)} .err{color:#b91c1c}
+#version{position:fixed;right:10px;bottom:10px;font-size:12px;color:#6b7280;background:#fff;border:1px dashed #e5e7eb;border-radius:10px;padding:4px 8px}
 </style>
 </head>
 <body>
 <div class="container">
   <h1>Acceso</h1>
-  <p class="small">Si la cuenta existe y la contraseña es correcta, iniciará sesión. En registro enviamos verificación al correo.</p>
+  <p class="small">Login con mensaje genérico (sin revelar si el correo existe). En registro enviamos verificación automáticamente.</p>
 
   <div class="card">
     <div class="row tabs" style="margin-bottom:8px">
@@ -53,7 +52,7 @@ hr{border:0;border-top:1px dashed var(--bd);margin:6px 0}
     <section id="view-login" class="grid">
       <label>Correo electrónico
         <input id="login-email" type="email" class="input" placeholder="usuario@dominio.com"
-               autocomplete="username" autocapitalize="none" autocorrect="off" inputmode="email" name="username">
+               autocomplete="username" name="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email">
       </label>
       <label>Contraseña
         <div class="input-wrap">
@@ -72,7 +71,7 @@ hr{border:0;border-top:1px dashed var(--bd);margin:6px 0}
     <section id="view-register" class="grid hidden">
       <label>Correo electrónico
         <input id="reg-email" type="email" class="input" placeholder="usuario@dominio.com"
-               autocomplete="email" autocapitalize="none" autocorrect="off" inputmode="email" name="email">
+               autocomplete="email" name="email" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email">
       </label>
       <label>Contraseña
         <div class="input-wrap">
@@ -92,7 +91,7 @@ hr{border:0;border-top:1px dashed var(--bd);margin:6px 0}
       <div id="reg-msg" class="small" style="min-height:18px"></div>
 
       <div id="verify-box" class="hidden" style="margin-top:10px">
-        <p class="small">Te enviamos un correo para <strong>verificar tu cuenta</strong> (revisa Spam).</p>
+        <p class="small">Te enviamos un email para <strong>verificar tu cuenta</strong> (revisa Spam).</p>
         <div class="row">
           <button id="btn-check-verify" class="btn btn-primary" type="button">Ya verifiqué</button>
           <button id="btn-resend-verify" class="btn btn-muted" type="button">Reenviar verificación</button>
@@ -108,11 +107,16 @@ hr{border:0;border-top:1px dashed var(--bd);margin:6px 0}
   </div>
 </div>
 
+<div id="version">HVQ v0812c</div>
+
 <!-- Firebase compat -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
 <script>
+// =================== MARCA DE CONSTRUCCIÓN ===================
+console.log('BUILD: hvq-login v0812c');
+
 // =================== Firebase ===================
 const firebaseConfig = {
   apiKey: "AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",
@@ -161,29 +165,40 @@ auth.onAuthStateChanged(user=>{
 });
 
 // =================== LOGIN (sin enumeración) ===================
-$('#btn-login').addEventListener('click', async ()=>{
+async function handleLogin(){
   const email = ($('#login-email').value||'').trim().toLowerCase();
   const pass  = ($('#login-pass').value||'').trim();
   const msgEl = $('#login-msg');
 
+  console.log('Click Confirmar →', { email, passLen: pass.length });
+
   if(!emailOk(email)) return setMsg(msgEl,'El formato del correo no es válido.','err');
   if(!pass)          return setMsg(msgEl,'Ingresa tu contraseña.','err');
 
-  $('#btn-login').disabled = true; setMsg(msgEl,'Validando…');
+  const btn = $('#btn-login');
+  btn.disabled = true; setMsg(msgEl,'Validando…');
+
   try{
     await auth.signInWithEmailAndPassword(email, pass);
+    console.log('Login OK');
     setMsg(msgEl,'Sesión iniciada.','ok');
-    // aquí podrías redirigir a módulos si quieres
+    // Redirige si quieres:
     // location.href = './modulos/index.html';
   }catch(e){
-    if (e.code==='auth/too-many-requests')          setMsg(msgEl,'Demasiados intentos. Intenta más tarde.','err');
-    else if (e.code==='auth/network-request-failed') setMsg(msgEl,'Error de red. Revisa tu conexión.','err');
+    console.warn('Login error:', e.code, e.message);
+    if (e.code === 'auth/network-request-failed')      setMsg(msgEl,'Error de red. Revisa tu conexión.','err');
+    else if (e.code === 'auth/too-many-requests')      setMsg(msgEl,'Demasiados intentos. Intenta más tarde.','err');
     else if (['auth/wrong-password','auth/user-not-found','auth/invalid-credential','auth/invalid-login-credentials'].includes(e.code))
-      setMsg(msgEl,'Correo o contraseña incorrectos.','err');
-    else setMsg(msgEl,'Error: ' + (e.message||''),'err');
-  }finally{
-    $('#btn-login').disabled = false;
+                                                       setMsg(msgEl,'Correo o contraseña incorrectos.','err');
+    else                                               setMsg(msgEl,'Error: '+(e.message||''),'err');
+  } finally {
+    btn.disabled = false;
   }
+}
+$('#btn-login').addEventListener('click', handleLogin);
+// Enter para login
+document.querySelector('#view-login').addEventListener('keydown', e=>{
+  if(e.key==='Enter') { e.preventDefault(); handleLogin(); }
 });
 
 // =================== RESET (sin revelar existencia) ===================
@@ -201,8 +216,8 @@ $('#btn-reset').addEventListener('click', async ()=>{
   }
 });
 
-// =================== REGISTRO ===================
-$('#btn-register').addEventListener('click', async ()=>{
+// =================== REGISTRO (intenta crear y captura duplicado) ===================
+async function handleRegister(){
   const email = ($('#reg-email').value||'').trim().toLowerCase();
   const pass  = ($('#reg-pass').value||'').trim();
   const pass2 = ($('#reg-pass2').value||'').trim();
@@ -212,11 +227,13 @@ $('#btn-register').addEventListener('click', async ()=>{
   if(pass.length<6)   return setMsg(msgEl,'La contraseña es muy corta (mínimo 6).','err');
   if(pass!==pass2)    return setMsg(msgEl,'Las contraseñas no coinciden.','err');
 
-  $('#btn-register').disabled = true; setMsg(msgEl,'Creando cuenta…');
+  const btn = $('#btn-register');
+  btn.disabled = true; setMsg(msgEl,'Creando cuenta…');
+
   try{
     const cred = await auth.createUserWithEmailAndPassword(email, pass);
 
-    // Enviar verificación (primer envío automático)
+    // Enviar verificación
     try{
       await cred.user.sendEmailVerification({
         url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1',
@@ -227,15 +244,20 @@ $('#btn-register').addEventListener('click', async ()=>{
       setMsg(msgEl,'Cuenta creada. No se pudo enviar automáticamente. Usa “Reenviar verificación”.','err');
     }
     $('#verify-box').classList.remove('hidden');
-    show('login'); // opcional: regresar a login
+    show('login'); // opcional: volver al login
   }catch(e){
     if (e.code==='auth/email-already-in-use') return setMsg(msgEl,'Ese correo ya tiene cuenta. Usa Iniciar sesión.','err');
     if (e.code==='auth/weak-password')        return setMsg(msgEl,'La contraseña es muy corta (mínimo 6).','err');
     if (e.code==='auth/invalid-email')        return setMsg(msgEl,'El correo no es válido.','err');
     setMsg(msgEl,'No se pudo registrar: ' + (e.message||''),'err');
   } finally {
-    $('#btn-register').disabled = false;
+    btn.disabled = false;
   }
+}
+$('#btn-register').addEventListener('click', handleRegister);
+// Enter para registro
+document.querySelector('#view-register').addEventListener('keydown', e=>{
+  if(e.key==='Enter') { e.preventDefault(); handleRegister(); }
 });
 
 // =================== Verificación & Logout ===================
