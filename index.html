@@ -56,6 +56,10 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 /* Bloques de quiz dentro de cada módulo */
 .quiz-wrap{margin-top:12px;border-top:1px solid #e5e7eb;padding-top:12px}
 .quiz-hint{font-size:13px}
+
+/* Estilo cuando el combo está bloqueado (solo lectura) */
+.combo.locked input{background:#eef2ff; cursor:not-allowed}
+.combo.locked .arrow{opacity:.5}
 </style>
 </head>
 <body>
@@ -221,6 +225,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
    3) Arreglos UX:
       - Render inmediato de módulos al guardar perfil
       - Combo: cerrar lista al seleccionar (stopPropagation fix)
+      - Nuevo: bloquear combo si el perfil está en solo lectura
  ================================================================= */
 
 /* === 1) ESPECIALIDADES === */
@@ -354,7 +359,16 @@ document.querySelectorAll('.eye').forEach(btn=>{
   });
 });
 
-/* ========= Combo Especialidad (buscador; se cierra al seleccionar) ========= */
+/* ========= Combo Especialidad ========= */
+function setSpecLocked(locked){
+  const wrap=document.getElementById('spec-combo');
+  const input=document.getElementById('pf-spec');
+  if(!wrap||!input) return;
+  wrap.dataset.locked = locked ? '1' : '0';
+  wrap.classList.toggle('locked', !!locked);
+  input.title = locked ? 'Haz clic en “Modificar” para cambiar la especialidad' : 'Escribe para buscar…';
+}
+
 (function setupSpecCombo(){
   const wrap  = document.getElementById('spec-combo');
   const input = document.getElementById('pf-spec');
@@ -363,8 +377,7 @@ document.querySelectorAll('.eye').forEach(btn=>{
   let filtered = ESPECIALIDADES.slice();
   let open = false;
 
-  // Arranca bloqueado; se habilita al hacer clic en el cuadro
-  input.readOnly = true;
+  input.readOnly = true; // solo se habilita al abrir
 
   function render(list){
     panel.innerHTML = '';
@@ -373,7 +386,7 @@ document.querySelectorAll('.eye').forEach(btn=>{
       div.className = 'opt';
       div.textContent = name;
 
-      // USAR mousedown para cerrar ANTES de que burbujee el click
+      // cerrar antes de que burbujee
       div.addEventListener('mousedown', (e)=>{
         e.preventDefault();
         e.stopPropagation();
@@ -390,8 +403,9 @@ document.querySelectorAll('.eye').forEach(btn=>{
   function show(){ wrap.classList.add('show'); open = true; }
   function hide(){ wrap.classList.remove('show'); open = false; }
 
-  // Abrir y habilitar buscador al hacer clic en el cuadro
+  // Abrir solo si NO está bloqueado
   wrap.addEventListener('mousedown', ()=>{
+    if (wrap.dataset.locked === '1') return;   // bloqueado → no abrir
     if (!open) {
       input.readOnly = false;
       input.focus();
@@ -401,7 +415,6 @@ document.querySelectorAll('.eye').forEach(btn=>{
     }
   });
 
-  // Buscar mientras escribes (solo si está habilitado)
   input.addEventListener('input', ()=>{
     if (input.readOnly) return;
     const q = input.value.trim().toLowerCase();
@@ -410,7 +423,6 @@ document.querySelectorAll('.eye').forEach(btn=>{
     show();
   });
 
-  // Selección rápida con ENTER / cierre con ESC
   input.addEventListener('keydown', (e)=>{
     if (e.key === 'Enter') {
       if (filtered.length > 0) {
@@ -427,7 +439,6 @@ document.querySelectorAll('.eye').forEach(btn=>{
     }
   });
 
-  // Cerrar al hacer clic fuera
   document.addEventListener('mousedown',(e)=>{
     if (!wrap.contains(e.target)) {
       hide();
@@ -435,13 +446,11 @@ document.querySelectorAll('.eye').forEach(btn=>{
     }
   });
 
-  // Validación: solo valores de la lista
   input.addEventListener('change', ()=>{
     const v = input.value.trim();
     if (v && !ESPECIALIDADES.includes(v)) input.value = '';
   });
 
-  // Render inicial
   render(filtered);
 })();
 
@@ -532,8 +541,15 @@ function showCourse(){
   $('#step-welcome').style.display='none';
   $('#btn-logout').style.display='inline-flex';
   $('#profile').style.display='block';
-  if(profileComplete()){ setProfileReadonly(true); $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.'; }
-  else{ setProfileReadonly(false); $('#pf-help').textContent='Completa todos los campos para habilitar los módulos.'; }
+
+  if(profileComplete()){
+    setProfileReadonly(true);
+    $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.';
+  }else{
+    setProfileReadonly(false); // primer registro → desbloqueado
+    $('#pf-help').textContent='Completa todos los campos para habilitar los módulos.';
+  }
+
   renderAllBySpecialty(getSpecialty());
   updateGlobalProgress();
   startProfileRealtime();
@@ -546,20 +562,25 @@ function showCourse(){
 function showLogin(){ $('#step-welcome').style.display='block'; $('#profile').style.display='none'; $('#progress').style.display='none'; $('#modules').style.display='none'; }
 function profileComplete(){ const p=state.profile||{}; return !!(p.name&&p.iddoc&&p.spec&&ESPECIALIDADES.includes(p.spec)); }
 function setProfileReadonly(ro){
-  ['pf-name','pf-id','pf-spec'].forEach(id=>{
+  ['pf-name','pf-id'].forEach(id=>{
     const el=document.getElementById(id);
-    el.readOnly=(id==='pf-spec')?false:ro; // pf-spec lo gestiona el combo
-    el.style.background=ro&&id!=='pf-spec'?'#eef2ff':'#fff';
+    el.readOnly=ro;
+    el.style.background=ro?'#eef2ff':'#fff';
   });
+  // El combo de especialidad se bloquea o desbloquea aquí:
+  setSpecLocked(!!ro);
+
   $('#btn-edit-profile').style.display=ro?'inline-flex':'none';
   $('#btn-save-profile').style.display=ro?'none':'inline-flex';
 }
-document.getElementById('btn-edit-profile').addEventListener('click',()=>{ setProfileReadonly(false); $('#pf-help').textContent='Edita tus datos y guarda los cambios.'; });
+document.getElementById('btn-edit-profile').addEventListener('click',()=>{
+  setProfileReadonly(false);
+  $('#pf-help').textContent='Edita tus datos y guarda los cambios.';
+});
 
 /* ========= Perfil: realtime + guardado ========= */
 function getSpecialty(){ return (state.profile?.spec||'').trim(); }
 
-/* Limpia jugadores de YouTube al cambiar módulos */
 function destroyPlayers(){
   try{
     Object.keys(players).forEach(k=>{
@@ -646,7 +667,7 @@ async function saveProfile(){
       savingProfile=false;
       pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Perfil guardado.';
       setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; },3000);
-      setProfileReadonly(true);
+      setProfileReadonly(true); // vuelve a bloquear el combo
     }).catch(()=>{
       savingProfile=false;
       pfMsg.classList.remove('saving');
