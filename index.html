@@ -4,9 +4,21 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Inducción a PEP-SOUL MV • Hospital Vozandes</title>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+<!-- Rendimiento YouTube -->
+<link rel="preconnect" href="https://www.youtube.com">
+<link rel="preconnect" href="https://i.ytimg.com">
+<link rel="preconnect" href="https://i9.ytimg.com">
+<link rel="preconnect" href="https://googlevideo.com" crossorigin>
+<link rel="dns-prefetch" href="https://www.youtube.com">
+<link rel="dns-prefetch" href="https://i.ytimg.com">
+<link rel="dns-prefetch" href="https://i9.ytimg.com">
+<link rel="dns-prefetch" href="https://googlevideo.com">
+
 <style>
 :root{--brand:#781C38;--ink:#1f2937;--muted:#6b7280;--bg:#f8fafc;--card:#ffffff;--ok:#15803d}
 *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
@@ -24,6 +36,8 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .module{display:flex;gap:16px;align-items:flex-start}.module .num{flex:0 0 auto;width:36px;height:36px;border-radius:10px;background:#f3f4f6;display:grid;place-content:center;font-weight:700}.module .meta{flex:1}
 .yt-wrap{position:relative;padding-top:56.25%;border-radius:16px;overflow:hidden;background:#000;margin-top:12px}
 .yt-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.yt-wrap .thumb{position:absolute;inset:0;background:#0b0b0b center/cover no-repeat;display:grid;place-content:center;color:#fff;font-weight:800;font-size:22px;letter-spacing:.5px}
+.yt-wrap .thumb .cta{background:rgba(0,0,0,.55);padding:10px 14px;border-radius:999px}
 .lock{position:absolute;inset:0;display:grid;place-content:center;background:rgba(17,24,39,.65);color:#fff;font-weight:700;font-size:14px;border-radius:16px;backdrop-filter:blur(1px)}
 .muted{color:var(--muted)} .footer{margin-top:24px;color:var(--muted);font-size:13px}
 /* Certificado */
@@ -41,7 +55,6 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 /* Spinner “Guardando…” */
 .saving::after{content:'';display:inline-block;width:14px;height:14px;margin-left:8px;border:2px solid #9ca3af;border-top-color:transparent;border-radius:999px;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-
 /* Combo de especialidad */
 .combo{position:relative}
 .combo input{padding-right:36px}
@@ -50,7 +63,6 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .combo .opt{padding:10px 12px;cursor:pointer}
 .combo .opt:hover{background:#1f2937}
 .combo.show .panel{display:block}
-
 /* Bloques de quiz dentro de cada módulo */
 .quiz-wrap{margin-top:12px;border-top:1px solid #e5e7eb;padding-top:12px}
 .quiz-hint{font-size:13px}
@@ -205,9 +217,9 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
   <div class="footer no-print">© <span id="year"></span> Hospital Vozandes — Inducción Soul MV</div>
 </div>
 
-<!-- YouTube API -->
+<!-- YouTube API (cárgala normal, lazy se maneja en JS) -->
 <script src="https://www.youtube.com/iframe_api"></script>
-<!-- Firebase (compat) -->
+<!-- Firebase (compat) SIN defer para que la verificación funcione bien -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -316,28 +328,51 @@ let state=loadState(null);
 let unsubProfile=null;
 let savingProfile=false;
 
-/* ===========================================
-   Player Manager (robusto, anti-seek, progreso)
-=========================================== */
+/* ================================================================
+   Player Manager: lazy + concurrencia + resiliencia + anti-seek
+================================================================= */
 let ytApiReady=false;
 const players = {}; // pid -> {player, meta}
-const pendingPlayers=[]; // configs en cola
 
-function mkModule(id,titulo,ytIds){
-  const vids=(ytIds&&ytIds.length?ytIds:DEFAULT_VIDEOS).slice(0,5).map((v,i)=>({yt:v,dur:'08:00',n:i+1}));
-  const quiz=[
-    {id:`${id}-q1`,text:'Pregunta 1 del módulo',options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'A'},
-    {id:`${id}-q2`,text:'Pregunta 2 del módulo',options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'B'},
-    {id:`${id}-q3`,text:'Pregunta 3 del módulo',options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'B'}
-  ];
-  return {id,titulo,videos:vids,quiz};
+/* --- Lazy + concurrencia limitada --- */
+const creationQueue = [];      // configs pendientes
+let creatingNow = 0;
+const MAX_CONCURRENT_CREATION = 2;
+const io = new IntersectionObserver(onVisible, {root:null, rootMargin:"300px 0px", threshold:0.01});
+
+function ytThumb(id){ return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`; }
+
+function createOrQueuePlayer(cfg){
+  const holder = document.getElementById(cfg.pid);
+  if(holder){ io.observe(holder); }
+  creationQueue.push(cfg);
 }
 
-function safeGet(obj, path, def){
-  try{
-    return path.split('.').reduce((a,k)=>a&&a[k], obj) ?? def;
-  }catch{ return def; }
+function onVisible(entries){
+  entries.forEach(entry=>{
+    if(!entry.isIntersecting) return;
+    const pid = entry.target.id;
+    const i = creationQueue.findIndex(c=>c.pid===pid);
+    if(i>=0){
+      const cfg = creationQueue.splice(i,1)[0];
+      io.unobserve(entry.target);
+      createWhenSlotFree(cfg);
+    }
+  });
 }
+
+function createWhenSlotFree(cfg){
+  if(creatingNow >= MAX_CONCURRENT_CREATION){
+    setTimeout(()=>createWhenSlotFree(cfg), 150);
+    return;
+  }
+  creatingNow++;
+  actuallyCreatePlayer(cfg).finally(()=>{
+    creatingNow = Math.max(0, creatingNow-1);
+  });
+}
+
+const pendingPlayers=[]; // para API no lista
 
 function ensureStoreFor(mid, vid){
   state.play = state.play || {};
@@ -345,185 +380,104 @@ function ensureStoreFor(mid, vid){
   state.play[mid][vid] = state.play[mid][vid] || {t:0, allow:0, dur:0};
   return state.play[mid][vid];
 }
-
-function throttleSaveProgress(){
-  if(!CURRENT_UID){ saveState(null,state); return; }
-  saveState(CURRENT_UID,state);
-  // opcionalmente subir a nube de forma ligera
-}
-
-function createOrQueuePlayer(cfg){
-  if(ytApiReady) return actuallyCreatePlayer(cfg);
-  pendingPlayers.push(cfg);
-}
-
-function flushPending(){
-  while(pendingPlayers.length){
-    const cfg=pendingPlayers.shift();
-    actuallyCreatePlayer(cfg);
-  }
-}
+function throttleSaveProgress(){ saveState(CURRENT_UID,state); }
 
 function actuallyCreatePlayer({pid, videoId, moduleId, index}){
-  if(players[pid]) return; // ya existe
+  if(players[pid]) return Promise.resolve();
+  return new Promise((resolve)=>{
+    const store = ensureStoreFor(moduleId, videoId);
+    const meta = { pid, videoId, moduleId, index, retries:0, tick:null };
+    players[pid] = { player:null, meta };
 
-  const store = ensureStoreFor(moduleId, videoId);
-  const meta = {
-    pid, videoId, moduleId, index,
-    retries: 0,
-    tick: null,
-    lastT: 0
-  };
+    const locked = document.getElementById(`lock-${moduleId}-${index}`);
+    const startTick=()=>{
+      stopTick();
+      meta.tick = setInterval(()=>{
+        const p=players[pid]?.player; if(!p) return;
+        const st=p.getPlayerState?.();
+        const cur=p.getCurrentTime?.()||0;
+        const dur=p.getDuration?.()||0;
+        if(dur && (!store.dur || Math.abs(store.dur - dur) > 0.5)){ store.dur = dur; throttleSaveProgress(); }
+        if(cur > (store.allow + 1.0)){ try{ p.seekTo(store.allow, true); }catch(_){ } return; }
+        if(st===YT?.PlayerState?.PLAYING){ if(cur>store.allow) store.allow=cur; store.t=cur; } else { store.t=cur; }
+      }, 500);
+    };
+    const stopTick=()=>{ if(meta.tick){ clearInterval(meta.tick); meta.tick=null; } };
 
-  function startTick(){
-    stopTick();
-    meta.tick = setInterval(()=>{
-      const p = players[pid]?.player; if(!p) return;
-      const st = p.getPlayerState();
-      const cur = p.getCurrentTime?.() || 0;
-      const dur = p.getDuration?.() || 0;
-      if(dur && (!store.dur || Math.abs(store.dur - dur) > 0.5)){ store.dur = dur; throttleSaveProgress(); }
-
-      // Anti-seek: no permitir ir más allá de "allow" + 1s
-      if(cur > (store.allow + 1.0)){
-        p.seekTo(store.allow, true);
-        return;
-      }
-
-      // Si está reproduciendo, avanzar "allow" y guardar progreso
-      if(st === YT.PlayerState.PLAYING){
-        if(cur > store.allow) { store.allow = cur; }
-        store.t = cur;
-      } else {
-        // Si pausó y movieron hacia atrás manualmente, respetamos
-        store.t = cur;
-      }
-
-      meta.lastT = cur;
-    }, 500);
-  }
-
-  function stopTick(){ if(meta.tick){ clearInterval(meta.tick); meta.tick=null; } }
-
-  players[pid] = { player: null, meta };
-
-  const locked = document.getElementById(`lock-${pid}`);
-  const prevDone = index === 0 ? true : safeGet(state, `videosDone.${moduleId}.${(players[`${moduleId}-${index-1}`]?.meta?.videoId) || ''}`, false);
-
-  players[pid].player = new YT.Player(pid, {
-    height:'360', width:'640', videoId,
-    host: 'https://www.youtube.com',
-    playerVars:{
-      rel:0, modestbranding:1, controls:1, disablekb:1, playsinline:1, origin: location.origin
-    },
-    events:{
-      onReady: (ev)=>{
-        const p=ev.target;
-        try{ p.unMute(); p.setVolume(100); }catch(_){}
-        // Gateo por overlay: si está bloqueado, no reproducir
-        if(locked){ locked.style.display = prevDone ? 'none' : 'grid'; }
-
-        // Reanudar desde última posición válida (no más que allow)
-        const startAt = Math.min(store.t || 0, store.allow || 0);
-        if(startAt>1){ try{ p.seekTo(startAt, true); }catch(_){} }
-
-        // Intento de reproducción al entrar (puede que el navegador lo bloquee; está bien)
-        // No forzamos autoplay; queda listo para reproducir con sonido
-        startTick();
-      },
-      onStateChange: (ev)=>{
-        const p=ev.target;
-        if(ev.data === YT.PlayerState.PLAYING){
-          startTick();
-        } else if(ev.data === YT.PlayerState.PAUSED){
-          throttleSaveProgress();
-        } else if(ev.data === YT.PlayerState.ENDED){
-          stopTick();
-          // Marcar este video como completado
-          state.videosDone = state.videosDone || {};
-          state.videosDone[moduleId] = state.videosDone[moduleId] || {};
-          state.videosDone[moduleId][videoId] = true;
-          // Al finalizar, permitir avance completo
-          store.allow = store.dur || store.allow;
-          store.t = store.allow;
-          throttleSaveProgress();
-
-          // Desbloquear siguiente video en el módulo (si existe)
-          const nextLock = document.getElementById(`lock-${moduleId}-${index+1}-${videoId}`);
-          const next = document.querySelector(`[data-next-lock="${moduleId}-${index+1}"]`);
-          const nextOverlay = document.getElementById(`lock-player-${moduleId}-${index+1}-${videoId}`);
-          const lockEl = document.getElementById(`lock-player-${moduleId}-${index+1}`);
-          const nLock = document.getElementById(`lock-${moduleId}-${index+1}`);
-          const nId = `lock-player-${moduleId}-${index+1}`;
-          const lockById = document.getElementById(nId);
-          const nextOverlay2 = document.getElementById(`lock-${moduleId}-${index+1}`);
-          const nextLockEl = document.getElementById(`lock-player-${moduleId}-${index+1}`);
-          const overlay = document.getElementById(`lock-${moduleId}-${index+1}`);
-          const realNextLock = document.getElementById(`lock-${moduleId}-${index+1}-${players[`${moduleId}-${index+1}`]?.meta?.videoId||''}`);
-          const nextLockFinal = document.getElementById(`lock-${moduleId}-${index+1}`);
-          const overlayNext = document.getElementById(`lock-${moduleId}-${index+1}`);
-          const nextOverlayFinal = document.getElementById(`lock-${moduleId}-${index+1}`);
-          const unlockEl = document.getElementById(`lock-${moduleId}-${index+1}`);
-          if(unlockEl) unlockEl.style.display='none';
-
-          updateGlobalProgress();
-          maybeEnableQuiz({id: moduleId, videos: (state.course?.modules||[]).find(mm=>mm.id===moduleId)?.videos || []});
-        }
-      },
-      onError: (e)=>{
-        // Reintentar (errores 2/5/100/101/150)
-        if(meta.retries<3){
-          meta.retries++;
-          setTimeout(()=>{
-            try{ ev.target.destroy(); }catch(_){}
-            delete players[pid];
-            actuallyCreatePlayer({pid, videoId, moduleId, index});
-          }, 600 * meta.retries);
-        } else {
-          console.warn('YouTube error en', pid, e.data);
-          const holder = document.getElementById(pid);
-          if(holder){
-            holder.innerHTML = '<div style="color:#fff;display:grid;place-content:center;height:100%">No se pudo cargar el video. Intenta recargar.</div>';
+    function buildWithAPI(){
+      if(!window.YT || !YT.Player){ setTimeout(buildWithAPI, 120); return; }
+      players[pid].player = new YT.Player(pid, {
+        height:'360', width:'640', videoId,
+        host:'https://www.youtube.com',
+        playerVars:{ rel:0, modestbranding:1, controls:1, disablekb:1, playsinline:1, origin: location.origin },
+        events:{
+          onReady:(ev)=>{
+            const p=ev.target; try{ p.unMute(); p.setVolume(100); }catch(_){}
+            if(locked){ locked.style.display = (index===0)?'none':'grid'; }
+            const startAt=Math.min(store.t||0, store.allow||0);
+            if(startAt>1){ try{ p.seekTo(startAt, true); }catch(_){ } }
+            // ocultar thumbnail si aún está
+            const thumb=document.querySelector(`[data-thumb-for="${pid}"]`); if(thumb) thumb.style.display='none';
+            startTick(); resolve();
+          },
+          onStateChange:(ev)=>{
+            if(ev.data===YT.PlayerState.PLAYING){ startTick(); }
+            else if(ev.data===YT.PlayerState.PAUSED){ throttleSaveProgress(); }
+            else if(ev.data===YT.PlayerState.ENDED){
+              stopTick();
+              state.videosDone = state.videosDone || {};
+              state.videosDone[moduleId] = state.videosDone[moduleId] || {};
+              state.videosDone[moduleId][videoId] = true;
+              store.allow = store.dur || store.allow;
+              store.t = store.allow;
+              throttleSaveProgress();
+              updateGlobalProgress();
+              maybeEnableQuiz({id: moduleId, videos: (state.course?.modules||[]).find(mm=>mm.id===moduleId)?.videos || []});
+            }
+          },
+          onError:()=>{
+            if(meta.retries<5){
+              meta.retries++;
+              setTimeout(()=>{ try{ players[pid]?.player?.destroy?.(); }catch(_){ } players[pid].player=null; buildWithAPI(); }, 500*meta.retries);
+            }else{
+              // Fallback a iframe simple
+              const holder=document.getElementById(pid);
+              if(holder){
+                holder.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&controls=1&playsinline=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
+                const thumb=document.querySelector(`[data-thumb-for="${pid}"]`); if(thumb) thumb.style.display='none';
+              }
+              resolve();
+            }
           }
         }
-      }
+      });
     }
+
+    if(ytApiReady){ buildWithAPI(); }
+    else{ pendingPlayers.push({buildWithAPI}); }
   });
 }
 
 function destroyPlayers(){
   Object.keys(players).forEach(k=>{
-    try{
-      players[k]?.player?.stopVideo?.();
-      players[k]?.player?.destroy?.();
-    }catch(_){}
+    try{ players[k]?.player?.stopVideo?.(); players[k]?.player?.destroy?.(); }catch(_){}
     delete players[k];
   });
 }
+window.onYouTubeIframeAPIReady=function(){ ytApiReady=true; while(pendingPlayers.length){ const {buildWithAPI}=pendingPlayers.shift(); try{ buildWithAPI(); }catch(_){ } } };
 
 /* Guardar progreso al salir / ocultar */
-function saveAllProgress(){
-  throttleSaveProgress();
-}
+function saveAllProgress(){ throttleSaveProgress(); }
 document.addEventListener('visibilitychange', ()=>{
-  if(document.hidden){
-    // pausar y guardar
-    Object.values(players).forEach(({player})=>{
-      try{ player.pauseVideo(); }catch(_){}
-    });
-    saveAllProgress();
-  }else{
-    // Al volver, intentar reanudar el último que estaba en PLAY (si el navegador lo permite)
-    // Dejamos que el usuario haga clic si el autoplay con sonido está bloqueado.
-  }
+  if(document.hidden){ Object.values(players).forEach(({player})=>{ try{ player.pauseVideo(); }catch(_){} }); saveAllProgress(); }
 });
 window.addEventListener('pagehide', saveAllProgress);
 window.addEventListener('beforeunload', saveAllProgress);
 
 /* ================================================================
-   Auth + UI (igual que antes, con pequeño fix del combo)
+   Auth + UI (igual que antes)
 ================================================================= */
-let allowEditSpec = true; // Se habilita en registro o al pulsar "Modificar"
+let allowEditSpec = true;
 
 function setTab(which){
   const onLogin=which==='login';
@@ -689,7 +643,7 @@ function showCourse(){
   $('#btn-logout').style.display='inline-flex';
   $('#profile').style.display='block';
 
-  allowEditSpec = !profileComplete(); // solo al crear, o cuando se pulse "Modificar"
+  allowEditSpec = !profileComplete();
 
   if(profileComplete()){ setProfileReadonly(true); $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.'; }
   else{ setProfileReadonly(false); $('#pf-help').textContent='Completa todos los campos para habilitar los módulos.'; }
@@ -711,7 +665,7 @@ function setProfileReadonly(ro){
   ['pf-name','pf-id','pf-spec'].forEach(id=>{
     const el=document.getElementById(id);
     if(id==='pf-spec'){
-      el.readOnly = !allowEditSpec ? true : false; // lo controla allowEditSpec
+      el.readOnly = !allowEditSpec ? true : false;
       el.style.background = allowEditSpec ? '#fff' : '#eef2ff';
     }else{
       el.readOnly = ro;
@@ -756,7 +710,7 @@ function startProfileRealtime(){
       const pfMsg=$('#pf-msg'); pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Perfil guardado.';
       setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; },3000);
       setProfileReadonly(true);
-      allowEditSpec=false; // al guardar, vuelve a bloquear
+      allowEditSpec=false;
     }
   });
 }
@@ -788,7 +742,6 @@ async function saveProfile(){
 
   state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
 
-  // Render inmediato
   renderAllBySpecialty(spec);
   updateGlobalProgress();
   document.getElementById('modules')?.scrollIntoView({behavior:'smooth',block:'start'});
@@ -808,7 +761,7 @@ async function saveProfile(){
       pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Perfil guardado.';
       setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; },3000);
       setProfileReadonly(true);
-      allowEditSpec=false; // bloquear otra vez
+      allowEditSpec=false;
     }).catch(()=>{
       savingProfile=false;
       pfMsg.classList.remove('saving');
@@ -829,9 +782,21 @@ async function saveProfile(){
 document.getElementById('btn-save-profile').addEventListener('click',saveProfile);
 
 /* ================================================================
-   Render de módulos + creación de players
+   Render de módulos + thumbnails + lazy
 ================================================================= */
+function mkModule(id,titulo,ytIds){
+  const vids=(ytIds&&ytIds.length?ytIds:DEFAULT_VIDEOS).slice(0,5).map((v,i)=>({yt:v,dur:'08:00',n:i+1}));
+  const quiz=[
+    {id:`${id}-q1`,text:'Pregunta 1 del módulo',options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'A'},
+    {id:`${id}-q2`,text:'Pregunta 2 del módulo',options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'B'},
+    {id:`${id}-q3`,text:'Pregunta 3 del módulo',options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'B'}
+  ];
+  return {id,titulo,videos:vids,quiz};
+}
 function pickModulesFor(spec){
+  const M = { CE:"CONSULTA EXTERNA", H:"HOSPITALIZACIÓN-HDD", CQ:"CENTRO QUIRÚRGICO", G:"GENERALIDADES", AN:"ANESTESIOLOGÍA", EM:"EMERGENCIAS" };
+  const BASE_MEDICA=[M.G,M.H,M.CE], BASE_QUIR=[M.G,M.H,M.CE,M.CQ];
+  const ESPEC_MODS = window.ESPEC_MODS; // ya definida arriba
   const wanted=ESPEC_MODS[spec]||[M.G];
   const list=wanted.map((titulo,idx)=>{
     const ids=VIDEO_DEFAULTS[titulo]||DEFAULT_VIDEOS;
@@ -853,18 +818,6 @@ function renderAllBySpecialty(spec){
 
   renderModules(modulesDef);
   updateGlobalProgress();
-
-  // Crear players (cola segura si la API no está lista)
-  modulesDef.forEach(m=>{
-    m.videos.forEach((v,idx)=>{
-      createOrQueuePlayer({
-        pid:`player-${m.id}-${idx}`,
-        videoId:v.yt,
-        moduleId:m.id,
-        index:idx
-      });
-    });
-  });
 }
 
 function renderModules(modulesDef){
@@ -874,9 +827,14 @@ function renderModules(modulesDef){
     const videosHtml = m.videos.map((v,i)=>{
       const prevDone = (i===0) ? true : !!doneVideos[m.videos[i-1].yt];
       const lockId = `lock-${m.id}-${i}`;
+      const pid = `player-${m.id}-${i}`;
+      const bg = ytThumb(v.yt);
       return `
         <div class="yt-wrap" style="margin-top:8px">
-          <div id="player-${m.id}-${i}"></div>
+          <div class="thumb" style="background-image:url('${bg}')" data-thumb-for="${pid}">
+            <div class="cta">▶ Reproducir</div>
+          </div>
+          <div id="${pid}"></div>
           <div class="lock" id="${lockId}" style="display:${prevDone?'none':'grid'}">🔒 Termina el video anterior</div>
         </div>`;
     }).join('');
@@ -909,15 +867,27 @@ function renderModules(modulesDef){
         </div>
       </div>`;
     wrap.appendChild(card);
+
+    // preparar lazy + click-to-load por cada player
+    m.videos.forEach((v,i)=>{
+      const pid=`player-${m.id}-${i}`;
+      const thumb=document.querySelector(`[data-thumb-for="${pid}"]`);
+      if(thumb){
+        thumb.addEventListener('click', ()=>{
+          thumb.style.display='none';
+          createOrQueuePlayer({pid, videoId:v.yt, moduleId:m.id, index:i});
+        }, {once:true});
+      }
+      // también por scroll (si no se hace click)
+      createOrQueuePlayer({pid, videoId:v.yt, moduleId:m.id, index:i});
+    });
+
     document.getElementById(`btn-${m.id}`).addEventListener('click',()=>{
       if(state.quizzes?.[m.id]?.passed) return;
       renderQuizForModule(m);
     });
   });
 }
-
-/* Cola de la API de YouTube */
-window.onYouTubeIframeAPIReady=function(){ ytApiReady=true; flushPending(); };
 
 /* ================================================================
    Quiz + progreso global
@@ -1021,8 +991,9 @@ async function syncToCloud(){
 }
 
 /* ================================================================
-   Utilidad: toggles de pestañas y ojitos (ya arriba)
+   Utilidad
 ================================================================= */
+function showLogin(){ $('#step-welcome').style.display='block'; $('#profile').style.display='none'; $('#progress').style.display='none'; $('#modules').style.display='none'; }
 </script>
 </body>
-</html> 
+</html>
