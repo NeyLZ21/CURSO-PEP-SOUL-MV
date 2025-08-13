@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Inducción a PEP-SOUL MV • Hospital Vozandes</title>
+<title>Inducción a Soul MV • Hospital Vozandes</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
@@ -61,7 +61,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 <body>
 <div class="container">
   <header class="no-print">
-    <div class="logo">HVQ</div>
+    <div class="logo">HV</div>
     <div style="flex:1">
       <h1>Inducción a Soul MV</h1>
       <div class="subtitle">Curso para nuevos médicos • Hospital Vozandes</div>
@@ -77,7 +77,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     <div class="grid cols-2" style="align-items:start">
       <div>
         <h2 style="margin:0 0 6px">Acceso</h2>
-        <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña.</strong>. Tu progreso queda guardado en la nube.</p>
+        <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña. Te pediremos verificar el correo <strong>solo al registrarte</strong>. Tu progreso queda guardado en la nube.</p>
 
         <div class="grid" id="auth-forms">
           <div style="display:flex; gap:8px; margin-bottom:8px">
@@ -355,104 +355,73 @@ document.querySelectorAll('.eye').forEach(btn=>{
   });
 });
 
-/* ========= Combo Especialidad (buscador; se cierra al seleccionar) ========= */
+/* ========= Combo Especialidad (buscador; cierra al seleccionar) ========= */
 (function setupSpecCombo(){
-  const wrap  = document.getElementById('spec-combo');
-  const input = document.getElementById('pf-spec');
-  const panel = document.getElementById('spec-panel');
-
+  const wrap = $('#spec-combo');
+  const input = $('#pf-spec');
+  const panel = $('#spec-panel');
   let filtered = ESPECIALIDADES.slice();
-  let open = false;
+  let open=false;
 
-  // Arranca bloqueado; se habilita al hacer clic en el cuadro
+  // Arranca bloqueado; solo clic lo habilita
   input.readOnly = true;
 
   function render(list){
-    panel.innerHTML = '';
+    panel.innerHTML='';
     list.forEach(name=>{
-      const div = document.createElement('div');
-      div.className = 'opt';
-      div.textContent = name;
-
-      // USAR mousedown para cerrar ANTES de que burbujee el click
-      div.addEventListener('mousedown', (e)=>{
-        e.preventDefault();   // evita que el input reciba un click extra
-        e.stopPropagation();  // evita que el contenedor reabra el panel
-        input.value = name;
+      const div=document.createElement('div');
+      div.className='opt';
+      div.textContent=name;
+      div.addEventListener('click',(e)=>{
+        // FIX: evitar que el clic burbujee y vuelva a abrir el panel.
+        e.stopPropagation();
+        input.value=name;
         hide();
-        input.readOnly = true;
-        input.blur();         // saca el foco para que no se reabra
+        input.readOnly=true; // bloquear de nuevo
       });
-
       panel.appendChild(div);
     });
   }
+  function show(){ wrap.classList.add('show'); open=true; }
+  function hide(){ wrap.classList.remove('show'); open=false; }
+  render(filtered);
 
-  function show(){
-    wrap.classList.add('show');
-    open = true;
-  }
-  function hide(){
-    wrap.classList.remove('show');
-    open = false;
-  }
-
-  // Abrir y habilitar buscador al hacer clic en el cuadro
-  wrap.addEventListener('mousedown', (e)=>{
-    // Si ya está abierto, no hagas nada; si está cerrado, habilita
-    if (!open) {
-      input.readOnly = false;
+  // Habilitar al hacer clic en el cuadro (manteniendo el buscador)
+  wrap.addEventListener('click', ()=>{
+    if(!open){
+      input.readOnly=false;
       input.focus();
-      // refresca listado completo al abrir
-      filtered = ESPECIALIDADES.slice();
+      // Si deseas limpiar al abrir: input.select();
+      filtered=ESPECIALIDADES.slice();
       render(filtered);
       show();
     }
   });
 
-  // Buscar mientras escribes (solo si está habilitado)
+  // Búsqueda (solo si está habilitado)
   input.addEventListener('input', ()=>{
-    if (input.readOnly) return;
-    const q = input.value.trim().toLowerCase();
-    filtered = ESPECIALIDADES.filter(e=> e.toLowerCase().includes(q));
+    if(input.readOnly) return;
+    const q=input.value.trim().toLowerCase();
+    filtered=ESPECIALIDADES.filter(e=>e.toLowerCase().includes(q));
     render(filtered);
     show();
   });
 
-  // Selección rápida con ENTER (primera coincidencia)
-  input.addEventListener('keydown', (e)=>{
-    if (e.key === 'Enter') {
-      if (filtered.length > 0) {
-        input.value = filtered[0];
-        hide();
-        input.readOnly = true;
-        input.blur();
-        e.preventDefault();
-      }
-    } else if (e.key === 'Escape') {
+  // Cerrar si haces clic fuera
+  document.addEventListener('click',(e)=>{
+    if(!wrap.contains(e.target)){
       hide();
-      input.readOnly = true;
-      input.blur();
+      input.readOnly=true;
     }
   });
 
-  // Cerrar al hacer clic fuera
-  document.addEventListener('mousedown',(e)=>{
-    if (!wrap.contains(e.target)) {
-      hide();
-      input.readOnly = true;
-    }
-  });
-
-  // Validación: solo valores de la lista
+  // Validación del valor
   input.addEventListener('change', ()=>{
-    const v = input.value.trim();
-    if (v && !ESPECIALIDADES.includes(v)) input.value = '';
+    const v=input.value.trim();
+    if(v && !ESPECIALIDADES.includes(v)){
+      input.value='';
+    }
   });
-
-  // Render inicial
-  render(filtered);
-})();
 
   // Tecla ESC para cerrar
   input.addEventListener('keydown',(e)=>{
