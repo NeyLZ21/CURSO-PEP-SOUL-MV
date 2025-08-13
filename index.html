@@ -38,12 +38,8 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .alert{border-radius:12px;padding:12px 14px;font-size:14px}
 .alert-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
 /* Spinner “Guardando…” */
-.saving::after{
-  content:''; display:inline-block; width:14px; height:14px; margin-left:8px;
-  border:2px solid #9ca3af; border-top-color:transparent; border-radius:999px; animation:spin .8s linear infinite;
-}
+.saving::after{content:''; display:inline-block; width:14px; height:14px; margin-left:8px;border:2px solid #9ca3af; border-top-color:transparent; border-radius:999px; animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
-
 /* Combo de especialidad */
 .combo{position:relative}
 .combo input{padding-right:36px}
@@ -52,7 +48,6 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .combo .opt{padding:10px 12px;cursor:pointer}
 .combo .opt:hover{background:#1f2937}
 .combo.show .panel{display:block}
-
 /* Bloques de quiz dentro de cada módulo */
 .quiz-wrap{margin-top:12px;border-top:1px solid #e5e7eb;padding-top:12px}
 .quiz-hint{font-size:13px}
@@ -78,13 +73,11 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
       <div>
         <h2 style="margin:0 0 6px">Acceso</h2>
         <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña. Te pediremos verificar el correo <strong>solo al registrarte</strong>. Tu progreso queda guardado en la nube.</p>
-
         <div class="grid" id="auth-forms">
           <div style="display:flex; gap:8px; margin-bottom:8px">
             <button id="tab-login" class="btn btn-primary">Iniciar sesión</button>
             <button id="tab-register" class="btn btn-muted">Registrarme</button>
           </div>
-
           <!-- LOGIN -->
           <div id="form-login">
             <label>Correo electrónico<br>
@@ -101,7 +94,6 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
               <button class="btn" id="btn-reset" style="background:#e5e7eb">Restablecer contraseña</button>
             </div>
           </div>
-
           <!-- REGISTRO -->
           <div id="form-register" style="display:none">
             <label>Correo electrónico<br>
@@ -123,7 +115,6 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
               <button class="btn btn-muted" id="btn-register-2">Crear cuenta</button>
             </div>
           </div>
-
           <div id="auth-msg" class="muted" style="min-height:18px"></div>
         </div>
 
@@ -217,121 +208,28 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 <script>
 /* ================================================================
    1) LISTA EXACTA DEL EXCEL (mismo orden, sin .sort())
-   2) ESPEC_MODS: módulos por especialidad (editables si tu Excel difiere)
-   3) VIDEO_DEFAULTS: IDs de YouTube por tipo de módulo
+   2) ESPEC_MODS: módulos por especialidad (calcados de tu tabla)
+   3) VIDEO_DEFAULTS: IDs de YouTube por tipo de módulo (placeholders)
    ================================================================ */
 
 // === 1) ESPECIALIDADES (exactamente como enviaste, mismo orden) ===
 const ESPECIALIDADES = [
-  "ACUPUNTURA",
-  "ALERGOLOGIA",
-  "ANESTESIOLOGIA",
-  "CARDIOLOGIA",
-  "CARDIOLOGIA HEMODINAMIA",
-  "CARDIOLOGIA INTERVENCIONISTA",
-  "CARDIOLOGIA PEDIATRICA",
-  "CIR. GENERAL-COLOPROCTOLOGIA",
-  "CIR. MANO/MUÑE-NERVIO PERI/BRA",
-  "CIRUGIA CARDIACA",
-  "CIRUGIA DE CABEZA Y CUELLO",
-  "CIRUGIA DE COLUMNA",
-  "CIRUGIA DE HOMBRO Y CODO",
-  "CIRUGIA GENERAL",
-  "CIRUGIA ONCOLOGICA",
-  "CIRUGIA PEDIATRICA",
-  "CIRUGIA PLASTICA",
-  "CIRUGIA TORACICA",
-  "CIRUGIA VASCULAR",
-  "COLOPROCTOLOGIA",
-  "CUIDADOS PALIATIVOS",
-  "DERMATOLOGIA",
-  "DIABETOLOGIA",
-  "EMERGENCIAS Y DESASTRES",
-  "ENDOCRINO PEDIATRA",
-  "ENDOCRINOLOGIA",
-  "ENFERMEDADES AUTOINMUNES",
-  "FISIATRIA",
-  "FONOAUDIOLOGIA",
-  "GASTROENTEROLOGIA",
-  "GASTROENTEROLOGIA PEDIATRICA",
-  "GENETICA MEDICA",
-  "GERIATRIA",
-  "GINECOLOGIA  INFANTO JUVENIL",
-  "GINECOLOGIA ONCOLOGICA",
-  "GINECOLOGIA Y OBSTETRICIA",
-  "HEMATOLOGIA",
-  "HEMATOLOGO ONCOLOGO PEDIATRA",
-  "HEPATOLOGIA",
-  "INFECTOLOGIA",
-  "INFECTOLOGIA PEDIATRICA",
-  "INTERVENCIONISMO",
-  "MASTOLOGIA",
-  "MAXILO FACIAL",
-  "MEDICINA CRITICA",
-  "MEDICINA CRITICA PEDIATRICA",
-  "MEDICINA DEL DEPORTE",
-  "MEDICINA FAMILIAR",
-  "MEDICINA FAMILIAR EMERGENCIA",
-  "MEDICINA GENERAL",
-  "MEDICINA INTERNA",
-  "MEDICINA MATERNO FETAL",
-  "MEDICINA PALIATIVA",
-  "MICROBIOLOGIA",
-  "NEFROLOGIA",
-  "NEFROLOGIA PEDIATRICA",
-  "NEONATOLOGIA",
-  "NEUMOLOGIA",
-  "NEUMOLOGIA PEDIATRICA",
-  "NEUROCIRUGIA",
-  "NEUROFISIOLOGIA CLINICA",
-  "NEUROLOGIA",
-  "NEUROLOGIA PEDIATRICA",
-  "NEUROPSICOLOGIA",
-  "NEURORADIOL INTERVENCIONISTA",
-  "NEURORADIOLOGIA",
-  "NUTRICION",
-  "ODONTOLOGIA",
-  "ODONTOPEDIATRIA",
-  "OFTALMOLOGIA",
-  "OFTALMOLOGIA PEDIATRICA",
-  "ONCOLOGIA CLINICA",
-  "OTORRINOLARINGOLOGIA",
-  "PATOLOGIA",
-  "PEDIATRIA",
-  "PSICOLOGIA",
-  "PSIQUIATRIA",
-  "RADIOLOGIA",
-  "RADIOLOGIA INTERVENCIONISTA",
-  "RADIOTERAPIA",
-  "RESIDENTE/INTERNO",
-  "REUMATOLOGIA",
-  "REUMATOLOGIA PEDIATRICA",
-  "SEXOLOGIA",
-  "TRATAMIENTO DEL DOLOR",
-  "TRAUMATO PEDIATRICA DE COLUMNA",
-  "TRAUMATOLOGIA DEL COLUMNA",
-  "TRAUMATOLOGIA ONCOLOGICA",
-  "TRAUMATOLOGIA PEDIATRICA",
-  "TRAUMATOLOGIA Y ORTOPEDIA",
-  "UROLOGIA",
-  "UROLOGIA PEDIATRICA"
+  "ACUPUNTURA","ALERGOLOGIA","ANESTESIOLOGIA","CARDIOLOGIA","CARDIOLOGIA HEMODINAMIA","CARDIOLOGIA INTERVENCIONISTA","CARDIOLOGIA PEDIATRICA","CIR. GENERAL-COLOPROCTOLOGIA","CIR. MANO/MUÑE-NERVIO PERI/BRA","CIRUGIA CARDIACA","CIRUGIA DE CABEZA Y CUELLO","CIRUGIA DE COLUMNA","CIRUGIA DE HOMBRO Y CODO","CIRUGIA GENERAL","CIRUGIA ONCOLOGICA","CIRUGIA PEDIATRICA","CIRUGIA PLASTICA","CIRUGIA TORACICA","CIRUGIA VASCULAR","COLOPROCTOLOGIA","CUIDADOS PALIATIVOS","DERMATOLOGIA","DIABETOLOGIA","EMERGENCIAS Y DESASTRES","ENDOCRINO PEDIATRA","ENDOCRINOLOGIA","ENFERMEDADES AUTOINMUNES","FISIATRIA","FONOAUDIOLOGIA","GASTROENTEROLOGIA","GASTROENTEROLOGIA PEDIATRICA","GENETICA MEDICA","GERIATRIA","GINECOLOGIA  INFANTO JUVENIL","GINECOLOGIA ONCOLOGICA","GINECOLOGIA Y OBSTETRICIA","HEMATOLOGIA","HEMATOLOGO ONCOLOGO PEDIATRA","HEPATOLOGIA","INFECTOLOGIA","INFECTOLOGIA PEDIATRICA","INTERVENCIONISMO","MASTOLOGIA","MAXILO FACIAL","MEDICINA CRITICA","MEDICINA CRITICA PEDIATRICA","MEDICINA DEL DEPORTE","MEDICINA FAMILIAR","MEDICINA FAMILIAR EMERGENCIA","MEDICINA GENERAL","MEDICINA INTERNA","MEDICINA MATERNO FETAL","MEDICINA PALIATIVA","MICROBIOLOGIA","NEFROLOGIA","NEFROLOGIA PEDIATRICA","NEONATOLOGIA","NEUMOLOGIA","NEUMOLOGIA PEDIATRICA","NEUROCIRUGIA","NEUROFISIOLOGIA CLINICA","NEUROLOGIA","NEUROLOGIA PEDIATRICA","NEUROPSICOLOGIA","NEURORADIOL INTERVENCIONISTA","NEURORADIOLOGIA","NUTRICION","ODONTOLOGIA","ODONTOPEDIATRIA","OFTALMOLOGIA","OFTALMOLOGIA PEDIATRICA","ONCOLOGIA CLINICA","OTORRINOLARINGOLOGIA","PATOLOGIA","PEDIATRIA","PSICOLOGIA","PSIQUIATRIA","RADIOLOGIA","RADIOLOGIA INTERVENCIONISTA","RADIOTERAPIA","RESIDENTE/INTERNO","REUMATOLOGIA","REUMATOLOGIA PEDIATRICA","SEXOLOGIA","TRATAMIENTO DEL DOLOR","TRAUMATO PEDIATRICA DE COLUMNA","TRAUMATOLOGIA DEL COLUMNA","TRAUMATOLOGIA ONCOLOGICA","TRAUMATOLOGIA PEDIATRICA","TRAUMATOLOGIA Y ORTOPEDIA","UROLOGIA","UROLOGIA PEDIATRICA"
 ];
 
-// === 2) MÓDULOS POR ESPECIALIDAD ===
-// Si el Excel tiene combinaciones específicas distintas a estas,
-// reemplaza el arreglo de cada especialidad por los valores exactos.
+// === 2) MÓDULOS POR ESPECIALIDAD (idénticos a tu tabla) ===
 const M = {
   CE: "CONSULTA EXTERNA",
-  H: "HOSPITALIZACIÓN-HDD",
+  H:  "HOSPITALIZACIÓN-HDD",
   CQ: "CENTRO QUIRÚRGICO",
-  G: "GENERALIDADES",
-  AN: "ANESTESIOLOGÍA"
+  G:  "GENERALIDADES",
+  AN: "ANESTESIOLOGÍA",
+  EM: "EMERGENCIAS"
 };
 const BASE_MEDICA = [M.G, M.H, M.CE];
-const BASE_QUIR = [M.G, M.H, M.CE, M.CQ];
-const SOLO_GH = [M.G, M.H];
+const BASE_QUIR   = [M.G, M.H, M.CE, M.CQ];
 
-// Mapeo razonado (ajústalo si tu Excel difiere en alguno):
+// Atención: cada línea respeta exactamente tu mapeo
 const ESPEC_MODS = {
   "ACUPUNTURA": BASE_MEDICA,
   "ALERGOLOGIA": BASE_MEDICA,
@@ -356,68 +254,68 @@ const ESPEC_MODS = {
   "CUIDADOS PALIATIVOS": BASE_MEDICA,
   "DERMATOLOGIA": BASE_MEDICA,
   "DIABETOLOGIA": BASE_MEDICA,
-  "EMERGENCIAS Y DESASTRES": [M.G, M.H, M.CE],
+  "EMERGENCIAS Y DESASTRES": [M.G, M.EM],
   "ENDOCRINO PEDIATRA": BASE_MEDICA,
   "ENDOCRINOLOGIA": BASE_MEDICA,
   "ENFERMEDADES AUTOINMUNES": BASE_MEDICA,
   "FISIATRIA": BASE_MEDICA,
   "FONOAUDIOLOGIA": BASE_MEDICA,
-  "GASTROENTEROLOGIA": BASE_MEDICA,
-  "GASTROENTEROLOGIA PEDIATRICA": BASE_MEDICA,
+  "GASTROENTEROLOGIA": BASE_QUIR,
+  "GASTROENTEROLOGIA PEDIATRICA": BASE_QUIR,
   "GENETICA MEDICA": BASE_MEDICA,
   "GERIATRIA": BASE_MEDICA,
   "GINECOLOGIA  INFANTO JUVENIL": BASE_QUIR,
   "GINECOLOGIA ONCOLOGICA": BASE_QUIR,
   "GINECOLOGIA Y OBSTETRICIA": BASE_QUIR,
-  "HEMATOLOGIA": BASE_MEDICA,
-  "HEMATOLOGO ONCOLOGO PEDIATRA": BASE_MEDICA,
+  "HEMATOLOGIA": BASE_QUIR,
+  "HEMATOLOGO ONCOLOGO PEDIATRA": BASE_QUIR,
   "HEPATOLOGIA": BASE_MEDICA,
   "INFECTOLOGIA": BASE_MEDICA,
   "INFECTOLOGIA PEDIATRICA": BASE_MEDICA,
   "INTERVENCIONISMO": BASE_QUIR,
   "MASTOLOGIA": BASE_QUIR,
   "MAXILO FACIAL": BASE_QUIR,
-  "MEDICINA CRITICA": SOLO_GH,
-  "MEDICINA CRITICA PEDIATRICA": SOLO_GH,
+  "MEDICINA CRITICA": BASE_MEDICA,
+  "MEDICINA CRITICA PEDIATRICA": BASE_MEDICA,
   "MEDICINA DEL DEPORTE": BASE_MEDICA,
-  "MEDICINA FAMILIAR": BASE_MEDICA,
-  "MEDICINA FAMILIAR EMERGENCIA": BASE_MEDICA,
+  "MEDICINA FAMILIAR": [M.G, M.CE],
+  "MEDICINA FAMILIAR EMERGENCIA": [M.G, M.EM],
   "MEDICINA GENERAL": BASE_MEDICA,
   "MEDICINA INTERNA": BASE_MEDICA,
-  "MEDICINA MATERNO FETAL": BASE_QUIR,
+  "MEDICINA MATERNO FETAL": BASE_MEDICA,
   "MEDICINA PALIATIVA": BASE_MEDICA,
-  "MICROBIOLOGIA": SOLO_GH,
+  "MICROBIOLOGIA": BASE_MEDICA,
   "NEFROLOGIA": BASE_MEDICA,
   "NEFROLOGIA PEDIATRICA": BASE_MEDICA,
-  "NEONATOLOGIA": SOLO_GH,
+  "NEONATOLOGIA": BASE_MEDICA,
   "NEUMOLOGIA": BASE_MEDICA,
   "NEUMOLOGIA PEDIATRICA": BASE_MEDICA,
   "NEUROCIRUGIA": BASE_QUIR,
   "NEUROFISIOLOGIA CLINICA": BASE_MEDICA,
-  "NEUROLOGIA": BASE_MEDICA,
-  "NEUROLOGIA PEDIATRICA": BASE_MEDICA,
+  "NEUROLOGIA": BASE_QUIR,
+  "NEUROLOGIA PEDIATRICA": BASE_QUIR,
   "NEUROPSICOLOGIA": BASE_MEDICA,
   "NEURORADIOL INTERVENCIONISTA": BASE_QUIR,
-  "NEURORADIOLOGIA": BASE_MEDICA,
+  "NEURORADIOLOGIA": BASE_QUIR,
   "NUTRICION": BASE_MEDICA,
   "ODONTOLOGIA": BASE_QUIR,
   "ODONTOPEDIATRIA": BASE_QUIR,
   "OFTALMOLOGIA": BASE_QUIR,
   "OFTALMOLOGIA PEDIATRICA": BASE_QUIR,
-  "ONCOLOGIA CLINICA": BASE_MEDICA,
+  "ONCOLOGIA CLINICA": BASE_QUIR,
   "OTORRINOLARINGOLOGIA": BASE_QUIR,
-  "PATOLOGIA": SOLO_GH,
+  "PATOLOGIA": BASE_MEDICA,
   "PEDIATRIA": BASE_MEDICA,
   "PSICOLOGIA": BASE_MEDICA,
   "PSIQUIATRIA": BASE_MEDICA,
-  "RADIOLOGIA": SOLO_GH,
+  "RADIOLOGIA": BASE_QUIR,
   "RADIOLOGIA INTERVENCIONISTA": BASE_QUIR,
-  "RADIOTERAPIA": SOLO_GH,
+  "RADIOTERAPIA": BASE_QUIR,
   "RESIDENTE/INTERNO": BASE_QUIR,
   "REUMATOLOGIA": BASE_MEDICA,
   "REUMATOLOGIA PEDIATRICA": BASE_MEDICA,
   "SEXOLOGIA": BASE_MEDICA,
-  "TRATAMIENTO DEL DOLOR": BASE_MEDICA,
+  "TRATAMIENTO DEL DOLOR": BASE_QUIR,
   "TRAUMATO PEDIATRICA DE COLUMNA": BASE_QUIR,
   "TRAUMATOLOGIA DEL COLUMNA": BASE_QUIR,
   "TRAUMATOLOGIA ONCOLOGICA": BASE_QUIR,
@@ -433,7 +331,8 @@ const VIDEO_DEFAULTS = {
   "HOSPITALIZACIÓN-HDD": ["eY52Zsg-KVI","fJ9rUzIMcZQ","L_jWHffIx5E"],
   "CONSULTA EXTERNA": ["kXYiU_JCYtU","hTWKbfoikeg","QH2-TGUlwu4"],
   "CENTRO QUIRÚRGICO": ["3JZ_D3ELwOQ","04854XqcfCY","ktvTqknDobU"],
-  "ANESTESIOLOGÍA": ["60ItHLz5WEA","CevxZvSJLk8","ktvTqknDobU"]
+  "ANESTESIOLOGÍA": ["60ItHLz5WEA","CevxZvSJLk8","ktvTqknDobU"],
+  "EMERGENCIAS": ["2vjPBrBU-TM","hTWKbfoikeg","lWA2pjMjpBs"]
 };
 const DEFAULT_VIDEOS = ["dQw4w9WgXcQ"];
 
@@ -441,15 +340,9 @@ const DEFAULT_VIDEOS = ["dQw4w9WgXcQ"];
 function mkModule(id,titulo,ytIds){
   const vids = (ytIds && ytIds.length ? ytIds : DEFAULT_VIDEOS).slice(0,5).map((v,i)=>({yt:v,dur:'08:00',n:i+1}));
   const quiz = [
-    { id:`${id}-q1`, text:'Pregunta 1 del módulo', options:[
-      {key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}], correct:'A'
-    },
-    { id:`${id}-q2`, text:'Pregunta 2 del módulo', options:[
-      {key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}], correct:'B'
-    },
-    { id:`${id}-q3`, text:'Pregunta 3 del módulo', options:[
-      {key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}], correct:'B'
-    }
+    { id:`${id}-q1`, text:'Pregunta 1 del módulo', options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}], correct:'A' },
+    { id:`${id}-q2`, text:'Pregunta 2 del módulo', options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}], correct:'B' },
+    { id:`${id}-q3`, text:'Pregunta 3 del módulo', options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}], correct:'B' }
   ];
   return { id, titulo, videos:vids, quiz };
 }
