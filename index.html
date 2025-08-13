@@ -10,7 +10,7 @@
 <style>
 :root{--brand:#781C38;--ink:#1f2937;--muted:#6b7280;--bg:#f8fafc;--card:#ffffff;--ok:#15803d}
 *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
-.container{max-width:980px;margin:auto;padding:24px}
+.container{max-width:1000px;margin:auto;padding:24px}
 header{display:flex;gap:16px;align-items:center;margin:12px 0 20px}
 header .logo{width:48px;height:48px;border-radius:12px;background:var(--brand);display:grid;place-content:center;color:#fff;font-weight:800}
 h1{font-size:clamp(22px,3.5vw,34px);margin:0}.subtitle{color:var(--muted);margin-top:4px}
@@ -37,7 +37,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .input-wrap{position:relative} .input-wrap input{width:100%;padding:12px 40px 12px 12px;border-radius:12px;border:1px solid #e5e7eb}
 .eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;border:0;background:transparent;font-size:16px}
 
-/* Alertas */
+/* Avisos */
 .alert{border-radius:12px;padding:12px 14px;font-size:14px}
 .alert-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
 
@@ -48,13 +48,15 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 }
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* Combo especialidad */
+/* Combobox (buscador de especialidad) */
 .combo{position:relative}
 .combo input{width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb}
-.combo .list{position:absolute;z-index:20;left:0;right:0;top:100%;background:#fff;border:1px solid #e5e7eb;border-radius:12px;margin-top:6px;max-height:260px;overflow:auto;display:none;box-shadow:0 8px 20px rgba(0,0,0,.08)}
-.combo .item{padding:10px 12px;cursor:pointer}
-.combo .item:hover{background:#f3f4f6}
-.combo.show .list{display:block}
+.combo .list{position:absolute;z-index:20;top:100%;left:0;right:0;background:#fff;border:1px solid #e5e7eb;border-radius:12px;margin-top:6px;max-height:260px;overflow:auto;box-shadow:0 10px 24px rgba(0,0,0,.08);display:none}
+.combo.open .list{display:block}
+.combo .opt{padding:10px 12px;cursor:pointer}
+.combo .opt:hover,.combo .opt[aria-selected="true"]{background:#f3f4f6}
+.small{font-size:12px;color:var(--muted)}
+hr.sep{border:0;border-top:1px solid #e5e7eb;margin:10px 0}
 </style>
 </head>
 <body>
@@ -76,7 +78,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     <div class="grid cols-2" style="align-items:start">
       <div>
         <h2 style="margin:0 0 6px">Acceso</h2>
-        <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña. Te pediremos verificar el correo <strong>solo al registrarte</strong>. Tu progreso quedará guardado en la nube.</p>
+        <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña. <strong>Debes verificar el correo para ingresar al curso.</strong> Tu progreso quedará guardado en la nube.</p>
 
         <div class="grid" id="auth-forms">
           <div style="display:flex; gap:8px; margin-bottom:8px">
@@ -99,7 +101,6 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
               <button class="btn btn-primary" id="btn-login">Confirmar</button>
               <button class="btn" id="btn-reset" style="background:#e5e7eb">Restablecer contraseña</button>
             </div>
-            <div id="auth-msg" class="muted" style="min-height:18px;margin-top:6px"></div>
           </div>
 
           <!-- REGISTRO -->
@@ -122,12 +123,14 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn btn-muted" id="btn-register-2">Crear cuenta</button>
             </div>
-            <div id="auth-msg2" class="muted" style="min-height:18px;margin-top:6px"></div>
           </div>
+
+          <div id="auth-msg" class="muted" style="min-height:18px"></div>
         </div>
 
         <div id="verify-box" class="alert alert-warn" style="display:none;margin-top:10px">
           <strong>Verifica tu correo:</strong> te enviamos un email de verificación. Confírmalo y vuelve a esta pantalla para continuar.
+          <div class="small">Si ya verificaste, pulsa “Ya verifiqué mi correo”.</div>
           <div style="display:flex;gap:8px;margin-top:8px">
             <button id="btn-check-verify" class="btn btn-primary">Ya verifiqué mi correo</button>
             <button id="btn-resend-verify" class="btn btn-muted">Reenviar verificación</button>
@@ -139,8 +142,8 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
         <div class="badge"><span>ℹ️</span> Requisitos</div>
         <ul>
           <li>Tener acceso a Internet</li>
-          <li>Completar todos los módulos que te correspondan</li>
-          <li>Correo válido (cualquier dominio).</li>
+          <li>Completar todos los videos y evaluaciones de tu especialidad</li>
+          <li>Correo válido y verificado</li>
         </ul>
       </div>
     </div>
@@ -157,14 +160,13 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
       <label>Cédula o Pasaporte<br>
         <input id="pf-id" type="text" required style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
       </label>
-
       <div>
         <label>Especialidad</label>
-        <div class="combo" id="spec-combo">
-          <input id="spec-input" type="text" placeholder="Escribe para buscar..." autocomplete="off">
+        <div id="spec-combo" class="combo">
+          <input id="pf-spec" type="text" placeholder="Escribe para buscar..." autocomplete="off">
           <div class="list" id="spec-list"></div>
         </div>
-        <div class="muted" style="margin-top:6px">Selecciona de la lista. Esto define los módulos que verás.</div>
+        <div class="small">Selecciona de la lista. Esto define los módulos que verás.</div>
       </div>
     </div>
     <div class="actions" style="display:flex;gap:8px;margin-top:10px">
@@ -174,22 +176,26 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     <div id="pf-msg" class="muted" style="margin-top:6px"></div>
   </section>
 
-  <!-- Progreso -->
+  <!-- Resumen -->
   <section id="progress" class="no-print" style="display:none;margin:18px 0">
     <div class="card">
-      <div class="grid cols-2" style="align-items:center">
-        <div>
-          <strong>Progreso del curso</strong>
-          <div class="muted" id="progress-label">0% completado</div>
-          <div class="muted" id="progress-sub" style="font-size:12px"></div>
-        </div>
-        <div class="progress"><span id="bar" style="width:0%"></span></div>
+      <div>
+        <strong>Progreso del curso</strong>
+        <div class="small" id="progress-extra">0% completado</div>
       </div>
+      <div class="progress" style="margin-top:10px"><span id="bar" style="width:0%"></span></div>
     </div>
   </section>
 
   <!-- Módulos -->
   <section id="modules" class="grid no-print" style="display:none"></section>
+
+  <!-- Certificado -->
+  <section id="cert-area" class="card no-print" style="display:none;margin-top:16px">
+    <h2 style="margin:0 0 8px">Certificado</h2>
+    <p class="muted">Se habilita cuando completes todos los módulos (videos + evaluaciones) de tu especialidad.</p>
+    <button id="btn-cert" class="btn btn-success" disabled>Mostrar certificado</button>
+  </section>
 
   <!-- Certificado imprimible -->
   <section id="certificado" class="container">
@@ -216,15 +222,28 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
-/* ======= Datos desde tu Excel ======= */
-/* Lista completa de especialidades (92) y módulos por especialidad: */
-const ESPECIALIDADES = ["ACUPUNTURA","ALERGOLOGIA","ANESTESIOLOGIA","CARDIOLOGIA","CARDIOLOGIA HEMODINAMIA","CARDIOLOGIA INTERVENCIONISTA","CARDIOLOGIA PEDIATRICA","CIR. GENERAL-COLOPROCTOLOGIA","CIR. MANO/MUÑE-NERVIO PERI/BRA","CIRUGIA CARDIACA","CIRUGIA DE CABEZA Y CUELLO","CIRUGIA GENERAL","CIRUGIA PLASTICA","CIRUGIA TORAX","CIRUGIA VASCULAR","CLINICA MEDICA","DERMATOLOGIA","DIABETOLOGIA","ECOGRAFIA","EMERGENCIOLOGIA","ENDOCRINOLOGIA","ENFERMERIA","FISIOTERAPIA","GASTROENTEROLOGIA","GERIATRIA","GINECOLOGIA Y OBSTETRICIA","HEMATOLOGIA","HEMATO-ONCOLOGIA PEDIATRICA","HEMOTERAPIA","INFECTOLOGIA","INFECTOLOGIA PEDIATRICA","INTENSIVISTA","LABORATORIO CLINICO","MEDICAMENTOS","MEDICINA FAMILIAR","MEDICINA FISICA Y REHABILITACION","MEDICINA INTERNA","MEDICINA INTERNA e 4","MEDICINA INTERNA e 4 t","MEDICINA INTERNA 44","MEDICINA NUCLEAR","NEFROLOGIA","NEFROLOGIA PEDIATRICA","NEONATOLOGIA","NEUROCIRUGIA","NEUROLOGIA","NEUMOLOGIA","NUTRICION","NUTRICION CLINICA","OFTALMOLOGIA","ONCOLOGIA","ONCOLOGIA PEDIATRICA","ORTOPEDIA Y TRAUMATOLOGIA","OTORRINOLARINGOLOGIA","PALIATIVOS","PEDIATRIA","PERFUSIONISTA","PSICOLOGIA","PSIQUIATRIA","RADIOLOGIA","RADIOTERAPIA","REUMATOLOGIA","SALUD OCUPACIONAL","TERAPIA RESPIRATORIA","TOXICOLOGIA","TRANSPLANTE","UCI ADULTOS","UCI PEDIATRICA","UCI NEONATAL","UROLOGIA","ANESTESIOLOGIA PEDIATRICA","CARDIOLOGIA ADULTOS","CIRUGIA ONCOLOGICA","CIRUGIA PEDIATRICA","CIRUGIA MAXILOFACIAL","HEMATOLOGIA Y HEMOTERAPIA","MEDICINA INTERNA HOSPITALARIA","EMERGENCIOLOGIA PEDIATRICA","ENDOCRINOLOGIA PEDIATRICA","GASTROENTEROLOGIA PEDIATRICA","GERONTOLOGIA","GINECOLOGIA ONCOLOGICA","IMAGENOLOGIA","INTERVENCIONISMO","NEUROLOGIA PEDIATRICA","NEUMOLOGIA PEDIATRICA","NUTRICION PEDIATRICA","OTORRINOPEDIATRIA","REHABILITACION PEDIATRICA","REUMATOLOGIA PEDIATRICA","TRAUMATOLOGIA PEDIATRICA","UROLOGIA PEDIATRICA","ALERGOLOGIA PEDIATRICA","CIRUGIA BARIATRICA","DIAGNOSTICO POR IMAGEN","MEDICINA GENERAL","MEDICINA DE EMERGENCIAS"];
-const MAPA_MODULOS = {"ACUPUNTURA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"ALERGOLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"ANESTESIOLOGIA":["GENERALIDADES","ANESTESIOLOGÍA"],"CARDIOLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"CARDIOLOGIA HEMODINAMIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"CARDIOLOGIA INTERVENCIONISTA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"CARDIOLOGIA PEDIATRICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"CIR. GENERAL-COLOPROCTOLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"CIR. MANO/MUÑE-NERVIO PERI/BRA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"CIRUGIA CARDIACA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"CIRUGIA DE CABEZA Y CUELLO":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"CIRUGIA GENERAL":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"CIRUGIA PLASTICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"CIRUGIA TORAX":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"CIRUGIA VASCULAR":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"CLINICA MEDICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"DERMATOLOGIA":["GENERALIDADES","CONSULTA EXTERNA"],"DIABETOLOGIA":["GENERALIDADES","CONSULTA EXTERNA"],"ECOGRAFIA":["GENERALIDADES","CONSULTA EXTERNA"],"EMERGENCIOLOGIA":["GENERALIDADES","EMERGENCIAS"],"ENDOCRINOLOGIA":["GENERALIDADES","CONSULTA EXTERNA"],"ENFERMERIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","EMERGENCIAS"],"FISIOTERAPIA":["GENERALIDADES","CONSULTA EXTERNA"],"GASTROENTEROLOGIA":["GENERALIDADES","CONSULTA EXTERNA","HOSPITALIZACIÓN-HDD"],"GERIATRIA":["GENERALIDADES","CONSULTA EXTERNA","HOSPITALIZACIÓN-HDD"],"GINECOLOGIA Y OBSTETRICIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"HEMATOLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"HEMATO-ONCOLOGIA PEDIATRICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"HEMOTERAPIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"INFECTOLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"INFECTOLOGIA PEDIATRICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"INTENSIVISTA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","EMERGENCIAS"],"LABORATORIO CLINICO":["GENERALIDADES"],"MEDICAMENTOS":["GENERALIDADES"],"MEDICINA FAMILIAR":["GENERALIDADES","CONSULTA EXTERNA"],"MEDICINA FISICA Y REHABILITACION":["GENERALIDADES","CONSULTA EXTERNA"],"MEDICINA INTERNA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"MEDICINA INTERNA e 4":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"MEDICINA INTERNA e 4 t":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"MEDICINA INTERNA 44":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"MEDICINA NUCLEAR":["GENERALIDADES"],"NEFROLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"NEFROLOGIA PEDIATRICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"NEONATOLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"NEUROCIRUGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"NEUROLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"NEUMOLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"NUTRICION":["GENERALIDADES","CONSULTA EXTERNA"],"NUTRICION CLINICA":["GENERALIDADES","CONSULTA EXTERNA"],"OFTALMOLOGIA":["GENERALIDADES","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],"ONCOLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"ONCOLOGIA PEDIATRICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"ORTOPEDIA Y TRAUMATOLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"OTORRINOLARINGOLOGIA":["GENERALIDADES","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],"PALIATIVOS":["GENERALIDADES","CONSULTA EXTERNA"],"PEDIATRIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"PERFUSIONISTA":["GENERALIDADES","CENTRO QUIRÚRGICO"],"PSICOLOGIA":["GENERALIDADES","CONSULTA EXTERNA"],"PSIQUIATRIA":["GENERALIDADES","CONSULTA EXTERNA"],"RADIOLOGIA":["GENERALIDADES"],"RADIOTERAPIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"REUMATOLOGIA":["GENERALIDADES","CONSULTA EXTERNA"],"SALUD OCUPACIONAL":["GENERALIDADES","CONSULTA EXTERNA"],"TERAPIA RESPIRATORIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"TOXICOLOGIA":["GENERALIDADES","EMERGENCIAS"],"TRANSPLANTE":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"UCI ADULTOS":["GENERALIDADES","HOSPITALIZACIÓN-HDD","EMERGENCIAS"],"UCI PEDIATRICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","EMERGENCIAS"],"UCI NEONATAL":["GENERALIDADES","HOSPITALIZACIÓN-HDD","EMERGENCIAS"],"UROLOGIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"ANESTESIOLOGIA PEDIATRICA":["GENERALIDADES","ANESTESIOLOGÍA"],"CARDIOLOGIA ADULTOS":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"CIRUGIA ONCOLOGICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"CIRUGIA PEDIATRICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"CIRUGIA MAXILOFACIAL":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"HEMATOLOGIA Y HEMOTERAPIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"MEDICINA INTERNA HOSPITALARIA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],"EMERGENCIOLOGIA PEDIATRICA":["GENERALIDADES","EMERGENCIAS"],"ENDOCRINOLOGIA PEDIATRICA":["GENERALIDADES","CONSULTA EXTERNA"],"GASTROENTEROLOGIA PEDIATRICA":["GENERALIDADES","CONSULTA EXTERNA"],"GERONTOLOGIA":["GENERALIDADES","CONSULTA EXTERNA"],"GINECOLOGIA ONCOLOGICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD","CENTRO QUIRÚRGICO"],"IMAGENOLOGIA":["GENERALIDADES"],"INTERVENCIONISMO":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"NEUROLOGIA PEDIATRICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"NEUMOLOGIA PEDIATRICA":["GENERALIDADES","HOSPITALIZACIÓN-HDD"],"NUTRICION PEDIATRICA":["GENERALIDADES","CONSULTA EXTERNA"],"OTORRINOPEDIATRIA":["GENERALIDADES","CENTRO QUIRÚRGICO"],"REHABILITACION PEDIATRICA":["GENERALIDADES","CONSULTA EXTERNA"],"REUMATOLOGIA PEDIATRICA":["GENERALIDADES","CONSULTA EXTERNA"],"TRAUMATOLOGIA PEDIATRICA":["GENERALIDADES","CENTRO QUIRÚRGICO"],"UROLOGIA PEDIATRICA":["GENERALIDADES","CENTRO QUIRÚRGICO"],"ALERGOLOGIA PEDIATRICA":["GENERALIDADES","CONSULTA EXTERNA"],"CIRUGIA BARIATRICA":["GENERALIDADES","CENTRO QUIRÚRGICO"],"DIAGNOSTICO POR IMAGEN":["GENERALIDADES"],"MEDICINA GENERAL":["GENERALIDADES","CONSULTA EXTERNA"],"MEDICINA DE EMERGENCIAS":["GENERALIDADES","EMERGENCIAS"]};
+/* ================== 1) Catálogo por especialidad =================== */
+/* Reemplaza/expande SPECIALTY_MAP con tu lista completa */
+const SAMPLE_VIDS = ["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0","kXYiU_JCYtU","60ItHLz5WEA"]; // 5 ids demo
+const mk = (titulo) => ({ titulo, videos: [...SAMPLE_VIDS] });
 
-/* 5 videos de prueba por módulo */
-const MOD_VIDEOS = {"ANESTESIOLOGÍA":["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0","3JZ_D3ELwOQ","kXYiU_JCYtU"],"CENTRO QUIRÚRGICO":["l482T0yNkeo","9bZkp7q19f0","3JZ_D3ELwOQ","kXYiU_JCYtU","CevxZvSJLk8"],"CONSULTA EXTERNA":["9bZkp7q19f0","3JZ_D3ELwOQ","kXYiU_JCYtU","CevxZvSJLk8","RgKAFK5djSk"],"EMERGENCIAS":["3JZ_D3ELwOQ","kXYiU_JCYtU","CevxZvSJLk8","RgKAFK5djSk","OPf0YbXqDm0"],"GENERALIDADES":["kXYiU_JCYtU","CevxZvSJLk8","RgKAFK5djSk","OPf0YbXqDm0","YVkUvmDQ3HY"],"HOSPITALIZACIÓN-HDD":["CevxZvSJLk8","RgKAFK5djSk","OPf0YbXqDm0","YVkUvmDQ3HY","hTWKbfoikeg"]};
+const SPECIALTY_MAP = {
+  "MEDICINA INTERNA": [
+    mk("Generalidades"), mk("Hospitalización"), mk("HDD"), mk("Consulta externa")
+  ],
+  "CARDIOLOGIA": [
+    mk("Ingreso y epicrisis"), mk("Orden médica y prescripción"), mk("Protocolos cardiología"), mk("Alta y referencias")
+  ],
+  "ANESTESIOLOGIA": [
+    mk("Preanestesia"), mk("Registro intraoperatorio"), mk("Analgesia postoperatoria"), mk("Notas y auditoría")
+  ],
+  "ACUPUNTURA": [ mk("Generalidades"), mk("Registro de procedimiento"), mk("Indicaciones y cuidados") ],
+  "MEDICINA INTERNA 44": [ mk("Generalidades"), mk("Hospitalización") ] // ejemplo de tu lista
+};
+// Lista para el buscador
+const SPECIALTIES = Object.keys(SPECIALTY_MAP).sort();
 
-/* ======= Firebase ======= */
+/* ================== 2) Firebase =================== */
 const firebaseConfig = {
   apiKey: "AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",
   authDomain: "induccion-pep-hvq.firebaseapp.com",
@@ -238,9 +257,10 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-/* ======= Helpers/estado por usuario ======= */
+/* ================== 3) Estado/Helpers =================== */
 const $ = s => document.querySelector(s);
 $('#year').textContent = new Date().getFullYear();
+
 const MSGS = {
   'auth/email-already-in-use':'Ese correo ya tiene una cuenta. Usa Iniciar sesión.',
   'auth/invalid-email':'El formato del correo no es válido.',
@@ -254,7 +274,7 @@ const MSGS = {
   'auth/too-many-requests':'Demasiados intentos. Intenta más tarde.',
   'auth/network-request-failed':'Error de red. Revisa tu conexión.'
 };
-const msg = (t, where='#auth-msg')=>{ const el=$(where); if(el) el.textContent=t; };
+const msg = (t)=>{ const el=$('#auth-msg'); if(el) el.textContent=t; };
 const emailOk = (e)=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((e||'').trim().toLowerCase());
 
 let CURRENT_UID = null;
@@ -263,11 +283,55 @@ function loadState(uid){ try{ return JSON.parse(localStorage.getItem(keyFor(uid)
 function saveState(uid, st){ localStorage.setItem(keyFor(uid), JSON.stringify(st)); }
 let state = {}; // por usuario
 
-let justRegistered = false; // gate de verificación POST-registro
-let unsubProfile = null;
-let savingProfile = false;
+// progreso por módulo -> { [moduleKey]: { videosSeen: {videoId:true}, evalPassed: bool } }
+function ensureProgressStruct(){ state.progress = state.progress || {}; }
 
-/* ======= Tabs + ojitos ======= */
+/* ================== 4) Combobox de especialidad (controlado) =================== */
+(function initCombo(){
+  const root = $('#spec-combo');
+  const input = $('#pf-spec');
+  const list = $('#spec-list');
+  let selected = null;
+
+  function renderList(filter=""){
+    list.innerHTML = "";
+    const f = filter.trim().toLowerCase();
+    const items = SPECIALTIES.filter(s => s.toLowerCase().includes(f));
+    items.forEach((txt, i)=>{
+      const div = document.createElement('div');
+      div.className='opt';
+      div.textContent = txt;
+      div.setAttribute('role','option');
+      div.addEventListener('click',()=>{
+        selected = txt;
+        input.value = txt;
+        input.dataset.valid = "1";
+        root.classList.remove('open');
+      });
+      list.appendChild(div);
+    });
+    if(items.length===0){
+      const none = document.createElement('div');
+      none.className='opt'; none.style.color='#9ca3af'; none.textContent='Sin resultados';
+      none.style.cursor='default';
+      list.appendChild(none);
+    }
+  }
+  renderList();
+
+  input.addEventListener('focus', ()=>{ root.classList.add('open'); renderList(input.value); });
+  input.addEventListener('input', ()=>{ root.classList.add('open'); input.dataset.valid=""; renderList(input.value); });
+  document.addEventListener('click', (e)=>{ if(!root.contains(e.target)) root.classList.remove('open'); });
+
+  // Validación estricta al perder foco
+  input.addEventListener('blur', ()=>{
+    setTimeout(()=>{
+      if(!SPECIALTIES.includes(input.value)) { input.value=""; input.dataset.valid=""; selected=null; }
+    }, 150);
+  });
+})();
+
+/* ================== 5) UI básica =================== */
 function setTab(which){
   const onLogin = which==='login';
   $('#form-login').style.display = onLogin ? 'block' : 'none';
@@ -287,115 +351,87 @@ document.querySelectorAll('.eye').forEach(btn=>{
   });
 });
 
-/* ======= Combo de especialidad (buscador + lista estricta) ======= */
-const specCombo = $('#spec-combo'), specInput = $('#spec-input'), specList = $('#spec-list');
-function renderSpecList(filter=''){
-  const f = filter.trim().toLowerCase();
-  const opts = ESPECIALIDADES.filter(x=>x.toLowerCase().includes(f));
-  specList.innerHTML = opts.map(x=>`<div class="item" data-v="${x}">${x}</div>`).join('') || `<div class="item" data-v="">(sin resultados)</div>`;
-}
-specInput.addEventListener('focus', ()=>{ specCombo.classList.add('show'); renderSpecList(specInput.value); });
-specInput.addEventListener('input', ()=>renderSpecList(specInput.value));
-document.addEventListener('click', (e)=>{ if(!specCombo.contains(e.target)) specCombo.classList.remove('show'); });
-specList.addEventListener('click', (e)=>{ const it=e.target.closest('.item'); if(!it) return; const v=it.dataset.v; if(v){ specInput.value=v; } specCombo.classList.remove('show'); });
-
-/* ======= Auth listener ======= */
+/* ================== 6) Auth/Flujo de verificación =================== */
 auth.onAuthStateChanged(async (user)=>{
   if(!user){
     CURRENT_UID=null; state={}; $('#auth-user').textContent='';
     $('#btn-logout').style.display='none';
     $('#verify-box').style.display='none';
-    setTab('login'); showLogin();
-    if (unsubProfile) { try{unsubProfile();}catch(_){} unsubProfile=null; }
-    return;
+    setTab('login'); showLogin(); return;
   }
   CURRENT_UID = user.uid;
   state = loadState(CURRENT_UID);
   $('#auth-user').textContent = user.email || '';
 
-  // Gate de verificación SOLO tras registro
-  if (justRegistered && !user.emailVerified){
+  // Si no está verificado, muestro aviso y bloqueo curso
+  await user.reload();
+  if(!user.emailVerified){
+    showLogin(); // oculta todo
     $('#verify-box').style.display='block';
-    showLogin(); // no mostrar curso
     return;
-  } else {
-    $('#verify-box').style.display='none';
   }
 
-  showCourse(); // UI rápida
+  // verificado: entro al curso
+  $('#verify-box').style.display='none';
+  showCourse();
   syncFromCloud(user).catch(()=>{});
 });
 
-/* ======= Registro ======= */
-$('#btn-register-2').addEventListener('click', async ()=>{
+document.getElementById('btn-register-2').addEventListener('click', async ()=>{
   const email= ($('#reg-email').value||'').trim().toLowerCase();
   const pass  = ($('#reg-pass').value||'').trim();
   const pass2 = ($('#reg-pass2').value||'').trim();
-  if(!email || !pass || !pass2) return msg('Completa todos los campos.','#auth-msg2');
-  if(!emailOk(email)) return msg('El formato del correo no es válido.','#auth-msg2');
-  if(pass!==pass2) return msg('Las contraseñas no coinciden.','#auth-msg2');
+  if(!email || !pass || !pass2) return msg('Completa todos los campos.');
+  if(!emailOk(email)) return msg('El formato del correo no es válido.');
+  if(pass!==pass2) return msg('Las contraseñas no coinciden.');
 
   try{
     const methods = await auth.fetchSignInMethodsForEmail(email);
     if(methods && methods.length){
-      setTab('login'); $('#login-email').value = email;
-      return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.','#auth-msg2');
+      setTab('login');
+      $('#login-email').value = email;
+      return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.');
     }
     const { user } = await auth.createUserWithEmailAndPassword(email, pass);
     if (auth.currentUser?.uid !== user.uid) await auth.updateCurrentUser(user);
 
-    // Base en Firestore (no bloquea)
-    db.collection('users').doc(user.uid).collection('courses').doc('soulmv').set({}, { merge:true }).catch(()=>{});
-
-    const actionCodeSettings = { url: location.href.replace(location.search,'')+'?verified=1', handleCodeInApp:false };
-    justRegistered = true; // gate
-    try{ await auth.currentUser.sendEmailVerification(actionCodeSettings); msg('Cuenta creada. Te enviamos el correo de verificación (revisa Spam).','#auth-msg2'); }catch(_){ msg('Cuenta creada. Si no te llegó, usa “Reenviar verificación”.','#auth-msg2'); }
+    // envía verificación
+    const actionCodeSettings = { url: location.href.split('?')[0]+'?verified=1', handleCodeInApp:false };
+    await auth.currentUser.sendEmailVerification(actionCodeSettings).catch(()=>{});
+    msg('Cuenta creada. Te enviamos el correo de verificación (revisa Spam).');
     $('#verify-box').style.display='block';
-    setTab('login'); $('#login-email').value=email;
-
-  }catch(e){ msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.','#auth-msg2'); }
+    setTab('login');
+    $('#login-email').value = email;
+  }catch(e){ msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.'); }
 });
 
-$('#btn-check-verify').addEventListener('click', async ()=>{
-  if(auth.currentUser){ await auth.currentUser.reload(); if(auth.currentUser.emailVerified){ justRegistered=false; $('#verify-box').style.display='none'; showCourse(); } }
-});
-$('#btn-resend-verify').addEventListener('click', async ()=>{
-  try{
-    const actionCodeSettings = { url: location.href.replace(location.search,'')+'?verified=1', handleCodeInApp:false };
-    if(auth.currentUser){ await auth.currentUser.sendEmailVerification(actionCodeSettings); msg('Te enviamos el correo de verificación.','#auth-msg'); }
-    else { msg('Primero inicia sesión.','#auth-msg'); }
-  }catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.','#auth-msg'); }
-});
-if(new URLSearchParams(location.search).get('verified')){ /* nada */ }
-
-/* ======= Login robusto ======= */
-$('#btn-login').addEventListener('click', async ()=>{
+document.getElementById('btn-login').addEventListener('click', async ()=>{
   const email=($('#login-email').value||'').trim().toLowerCase();
-  const pass =( $('#login-pass').value||'').trim();
+  const pass =($('#login-pass').value||'').trim();
   if(!email || !pass) return msg('Ingresa correo y contraseña.');
   if(!emailOk(email)) return msg('El formato del correo no es válido.');
-
   const btn=$('#btn-login'); btn.disabled=true;
   try{
     const cred = await auth.signInWithEmailAndPassword(email, pass);
-    const u = cred.user || auth.currentUser;
+    await cred.user.reload();
+    if(!cred.user.emailVerified){
+      msg('Correo no verificado. Revisa tu email y confirma.');
+      $('#verify-box').style.display='block';
+      showLogin();
+      return;
+    }
     msg('Sesión iniciada.');
     $('#verify-box').style.display='none';
-    justRegistered=false; // solo para flujos antiguos
-    showCourse();
-    syncFromCloud(u).catch(()=>{});
+    showCourse(); syncFromCloud(cred.user).catch(()=>{});
   }catch(e){
     let methods=[]; try{ methods = await auth.fetchSignInMethodsForEmail(email); }catch(_){}
     if(!methods || methods.length===0){ msg('Correo no registrado.'); setTab('reg'); $('#reg-email').value = email; }
     else if(['auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials'].includes(e.code)){ msg('Contraseña incorrecta.'); }
-    else if(e.code==='auth/too-many-requests'){ msg('Demasiados intentos. Intenta más tarde.'); }
-    else if(e.code==='auth/invalid-email'){ msg('El formato del correo no es válido.'); }
-    else{ msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.'); }
+    else msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.');
   }finally{ btn.disabled=false; }
 });
 
-/* ======= Reset contraseña ======= */
-$('#btn-reset').addEventListener('click', async ()=>{
+document.getElementById('btn-reset').addEventListener('click', async ()=>{
   const email=($('#login-email').value||'').trim().toLowerCase();
   if(!email) return msg('Escribe tu correo para enviarte el enlace.');
   if(!emailOk(email)) return msg('El formato del correo no es válido.');
@@ -407,303 +443,299 @@ $('#btn-reset').addEventListener('click', async ()=>{
   }catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.'); }
 });
 
-/* ======= Logout ======= */
-$('#btn-logout').addEventListener('click', async ()=>{ await auth.signOut(); msg('Sesión cerrada.'); });
+document.getElementById('btn-check-verify').addEventListener('click', async ()=>{
+  if(auth.currentUser){ await auth.currentUser.reload(); if(auth.currentUser.emailVerified){ $('#verify-box').style.display='none'; showCourse(); } else { msg('Aún no se ha verificado. Revisa tu correo.'); } }
+});
+document.getElementById('btn-resend-verify').addEventListener('click', async ()=>{
+  try{
+    const actionCodeSettings = { url: location.href.split('?')[0]+'?verified=1', handleCodeInApp:false };
+    if(auth.currentUser){
+      await auth.currentUser.sendEmailVerification(actionCodeSettings);
+      msg('Te enviamos el correo de verificación (revisa Spam).');
+    }else{ msg('Primero inicia sesión.'); }
+  }catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.'); }
+});
 
-/* ======= Vistas / flujo ======= */
+document.getElementById('btn-logout').addEventListener('click', async ()=>{ await auth.signOut(); msg('Sesión cerrada.'); });
+
+/* ================== 7) Vistas y Perfil =================== */
 function showCourse(){
   if(!auth.currentUser) return;
   $('#step-welcome').style.display='none';
   $('#btn-logout').style.display='inline-flex';
   $('#profile').style.display='block';
-
-  // preparar combo con valor actual si hay
-  specInput.value = state.profile?.spec || '';
+  $('#cert-area').style.display='block';
 
   if (profileComplete()) {
-    toggleCourse(true);
     setProfileReadonly(true);
-    $('#pf-help').textContent = 'Puedes actualizar tus datos cuando quieras.';
+    $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.';
+    buildModulesForSpec(state.profile.spec);
+    $('#modules').style.display='grid';
+    $('#progress').style.display='block';
   } else {
-    toggleCourse(false);
     setProfileReadonly(false);
-    $('#pf-help').textContent = 'Completa todos los campos para habilitar los módulos.';
+    $('#pf-help').textContent='Completa todos los campos para habilitar los módulos.';
+    $('#modules').style.display='none';
+    $('#progress').style.display='none';
   }
 
-  renderModules(); updateProgress();
-  startProfileRealtime();
-  loadProfile().then(()=>{ const c=profileComplete(); toggleCourse(c); setProfileReadonly(c); if(c) $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.'; }).catch(()=>{});
+  updateTotalsAndProgress();
 }
 
 function showLogin(){
   $('#step-welcome').style.display='block';
   $('#profile').style.display='none';
-  $('#progress').style.display='none';
   $('#modules').style.display='none';
+  $('#progress').style.display='none';
+  $('#cert-area').style.display='none';
 }
 
 function profileComplete(){
   const p = state.profile || {};
-  return !!(p.name && p.iddoc && p.spec && ESPECIALIDADES.includes(p.spec));
+  return !!(p.name && p.iddoc && p.spec && SPECIALTIES.includes(p.spec));
 }
 
-function toggleCourse(enabled){
-  if(enabled){
-    $('#progress').style.display='block';
-    $('#modules').style.display='grid';
-  }else{
-    $('#progress').style.display='none';
-    $('#modules').style.display='none';
-  }
-}
-
-/* ======= Perfil: realtime, Ver/Modificar, Guardado rápido ======= */
 function setProfileReadonly(ro){
-  ['pf-name','pf-id','spec-input'].forEach(id=>{
+  ['pf-name','pf-id','pf-spec'].forEach(id=>{
     const el=document.getElementById(id);
-    el.readOnly=ro; el.style.background=ro?'#eef2ff':'#fff';
+    el.readOnly = (id==='pf-spec') ? true : ro;   // spec solo se cambia al pulsar Modificar
+    el.style.background= ro ? '#eef2ff' : '#fff';
   });
   $('#btn-edit-profile').style.display = ro ? 'inline-flex' : 'none';
-  $('#btn-save-profile').style.display = ro ? 'none' : 'inline-flex';
+  $('#btn-save-profile').style.display  = ro ? 'none'       : 'inline-flex';
 }
-$('#btn-edit-profile').addEventListener('click', ()=>{ setProfileReadonly(false); $('#pf-help').textContent='Edita tus datos y guarda los cambios.'; });
+$('#btn-edit-profile').addEventListener('click', ()=>{
+  setProfileReadonly(false);
+  $('#pf-help').textContent='Edita tus datos y guarda los cambios.';
+});
 
-function startProfileRealtime(){
-  if (unsubProfile) { try{unsubProfile();}catch(_){} unsubProfile=null; }
-  const uid = auth.currentUser?.uid; if(!uid) return;
-  const ref = db.collection('users').doc(uid).collection('profile').doc('main');
-  unsubProfile = ref.onSnapshot((snap)=>{
-    if(!snap.exists) return;
-    state.profile = snap.data() || {}; saveState(CURRENT_UID,state);
-
-    if($('#pf-name').readOnly){ $('#pf-name').value = state.profile?.name || auth.currentUser?.displayName || ''; $('#pf-id').value   = state.profile?.iddoc || ''; specInput.value = state.profile?.spec  || ''; }
-
-    if (savingProfile){
-      savingProfile = false;
-      const pfMsg = $('#pf-msg'); pfMsg.classList.remove('saving'); pfMsg.textContent = '✅ Perfil guardado.';
-      setProfileReadonly(true); toggleCourse(profileComplete());
-      setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; }, 2000);
-      renderModules(); updateProgress();
-    }
-  });
-}
-
+// Carga/guarda perfil
 async function loadProfile(){
-  $('#pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
-  $('#pf-id').value   = state.profile?.iddoc || '';
-  specInput.value     = state.profile?.spec  || '';
-
+  // cargar desde nube y reflejar
   try{
     const uid=auth.currentUser?.uid; if(!uid) return;
     const s=await db.collection('users').doc(uid).collection('profile').doc('main').get();
-    if(s.exists){
-      state.profile=s.data(); saveState(CURRENT_UID,state);
-      $('#pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
-      $('#pf-id').value   = state.profile?.iddoc || '';
-      specInput.value     = state.profile?.spec  || '';
-    }
-  }catch(e){ console.warn('Perfil no disponible',e); }
+    if(s.exists){ state.profile=s.data(); saveState(CURRENT_UID,state); }
+  }catch(_){}
+  // refleja UI (local o nube)
+  $('#pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
+  $('#pf-id').value   = state.profile?.iddoc || '';
+  $('#pf-spec').value = state.profile?.spec  || '';
 }
 
 async function saveProfile(){
   const name=($('#pf-name').value||'').trim();
   const iddoc=($('#pf-id').value||'').trim();
-  const spec =(specInput.value||'').trim();
+  const spec =($('#pf-spec').value||'').trim();
   const pfMsg=$('#pf-msg'); const btn=$('#btn-save-profile');
 
-  if(!name || !iddoc || !spec){ pfMsg.textContent='Completa nombre, cédula/pasaporte y especialidad.'; return; }
-  if(!ESPECIALIDADES.includes(spec)){ pfMsg.textContent='Selecciona la especialidad desde la lista (no es texto libre).'; return; }
+  if(!name || !iddoc || !spec) { pfMsg.textContent='Completa nombre, cédula/pasaporte y especialidad.'; return; }
+  if(!SPECIALTIES.includes(spec)){ pfMsg.textContent='Selecciona una especialidad válida de la lista.'; return; }
 
   // UI optimista
   state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
   pfMsg.classList.add('saving'); pfMsg.textContent='Guardando…';
-  btn.disabled=true; savingProfile = true; toggleCourse(true); setProfileReadonly(true);
+  btn.disabled=true; setProfileReadonly(true);
   try{ if(name){ await auth.currentUser.updateProfile({displayName:name}); } }catch(_){}
 
   try{
     const uid=auth.currentUser?.uid; if(!uid) throw new Error('Sin UID');
-    const ref = db.collection('users').doc(uid).collection('profile').doc('main');
-    const payload = { ...state.profile, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
-    const write = ref.set(payload,{merge:true});
-    write.then(()=>{ if (!savingProfile) return; savingProfile=false; pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Perfil guardado.'; setProfileReadonly(true); toggleCourse(profileComplete()); setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; }, 2000); renderModules(); updateProgress(); }).catch(()=>{ savingProfile=false; pfMsg.classList.remove('saving'); pfMsg.textContent='No se pudo guardar en la nube; tus datos quedan localmente.'; setProfileReadonly(false); });
-    await Promise.race([write,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),7000))]);
+    await db.collection('users').doc(uid).collection('profile').doc('main')
+      .set({...state.profile, updatedAt: firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+
+    // Si cambió de especialidad, reseteo progreso de módulos
+    if(state.activeSpec !== spec){
+      state.progress={}; state.activeSpec=spec; saveState(CURRENT_UID,state);
+      buildModulesForSpec(spec);
+    }
+
+    pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Perfil guardado.';
+    setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; }, 2000);
+    setProfileReadonly(true);
+    $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.';
+    $('#modules').style.display='grid';
+    $('#progress').style.display='block';
+    updateTotalsAndProgress();
+    syncToCloud().catch(()=>{});
   }catch(e){
-    if(e && e.message!=='timeout'){ savingProfile=false; pfMsg.classList.remove('saving'); pfMsg.textContent='No se pudo guardar en la nube; tus datos quedan localmente.'; setProfileReadonly(false); }
+    pfMsg.classList.remove('saving');
+    pfMsg.textContent='No se pudo guardar en la nube; intenta nuevamente.';
+    setProfileReadonly(false);
   }finally{ btn.disabled=false; }
 }
 $('#btn-save-profile').addEventListener('click', saveProfile);
 
-/* ======= Módulos por especialidad ======= */
-const players = {};  // YT players por videoId
-function currentModules(){
-  const spec = state.profile?.spec || '';
-  return (MAPA_MODULOS[spec]||[]);
-}
-function renderModules(){
+/* ================== 8) Módulos por especialidad =================== */
+let players = {}; // {playerId: YT.Player}
+function buildModulesForSpec(spec){
   const wrap=$('#modules'); wrap.innerHTML='';
-  const mods = currentModules();
-  if(!mods.length){ wrap.style.display='none'; return; }
-  wrap.style.display='grid';
+  if(!SPECIALTY_MAP[spec]){ wrap.innerHTML='<div class="card">No hay módulos definidos para esta especialidad.</div>'; return; }
+  ensureProgressStruct();
 
-  mods.forEach((m,idx)=>{
-    const modKey = `mod_${idx}_${m}`;
-    const modState = state.modules?.[m] || { done:false, videosDone:{} , quizPassed:false };
-    const videos = MOD_VIDEOS[m] || [];
+  SPECIALTY_MAP[spec].forEach((mod, idx)=>{
+    const moduleKey = `${spec}__${idx}`;
+    state.progress[moduleKey] = state.progress[moduleKey] || { videosSeen:{}, evalPassed:false };
 
     const card=document.createElement('article'); card.className='card module';
-    const vidsHtml = videos.map((vid,i)=>`
-      <div class="yt-wrap" id="wrap-${modKey}-${vid}">
-        <div id="player-${modKey}-${vid}"></div>
+    const vidsHtml = mod.videos.map((vidId,i)=>`
+      <div class="yt-wrap" style="margin-top:${i?8:12}px">
+        <div id="player-${moduleKey}-${vidId}"></div>
       </div>`).join('');
 
-    const quizBtn = `<button class="btn ${modState.quizPassed?'btn-success':'btn-primary'}" data-quiz="${m}" ${modState.done?'':'disabled'}>${modState.quizPassed?'Evaluación aprobada ✓':'Tomar evaluación'}</button>`;
-
-    card.innerHTML=`
+    card.innerHTML = `
       <div class="num">${idx+1}</div>
       <div class="meta">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
-          <h3 style="margin:0">${m}</h3>
-          <span class="badge">${videos.length} videos</span>
+          <h3 style="margin:0">${mod.titulo}</h3>
+          <span class="badge">${mod.videos.length} videos</span>
         </div>
-        <p class="muted" style="margin:6px 0 10px">Mira los 5 videos para habilitar la evaluación.</p>
         ${vidsHtml}
-        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-          <button class="btn ${modState.done?'btn-success':'btn-muted'}" data-complete="${m}" disabled>${modState.done?'Completado ✓':'Completar (auto)'}</button>
-          ${quizBtn}
+        <hr class="sep">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-primary" data-eval="${moduleKey}">Evaluación del módulo</button>
+          <span class="small" id="mod-status-${moduleKey}"></span>
         </div>
       </div>`;
     wrap.appendChild(card);
+  });
 
-    // Inicializa players
-    videos.forEach((vid)=>{
-      const pid = `player-${modKey}-${vid}`;
+  // Botones de evaluación
+  wrap.querySelectorAll('[data-eval]').forEach(b=>{
+    b.addEventListener('click', (e)=> openModuleQuiz(e.currentTarget.getAttribute('data-eval')) );
+  });
+
+  // Si API ya cargó, instancio players; si no, se hará en onYouTubeIframeAPIReady
+  if(window.YT && YT.Player){ instantiatePlayersForSpec(spec); }
+  updateModuleBadges();
+  saveState(CURRENT_UID,state);
+}
+
+function instantiatePlayersForSpec(spec){
+  SPECIALTY_MAP[spec].forEach((mod, idx)=>{
+    const moduleKey = `${spec}__${idx}`;
+    mod.videos.forEach((vidId)=>{
+      const pid = `player-${moduleKey}-${vidId}`;
+      if(players[pid]) return;
       players[pid] = new YT.Player(pid,{
-        height:'360', width:'640', videoId:vid,
+        height:'360', width:'640', videoId:vidId,
         playerVars:{rel:0,modestbranding:1,controls:1,disablekb:1},
         events:{
           onStateChange:(ev)=>{
             if(ev.data===YT.PlayerState.ENDED){
-              // marca video como visto
-              state.modules=state.modules||{}; state.modules[m]=state.modules[m]||{done:false,videosDone:{},quizPassed:false};
-              state.modules[m].videosDone[vid]=true; saveState(CURRENT_UID,state);
-              // si todos listos => habilita evaluar y completa
-              const all = (MOD_VIDEOS[m]||[]).every(v=>state.modules[m].videosDone[v]);
-              const btnComp = document.querySelector(`[data-complete="${m}"]`);
-              const btnQuiz = document.querySelector(`[data-quiz="${m}"]`);
-              if(all){
-                state.modules[m].done=true; saveState(CURRENT_UID,state); setTimeout(syncToCloud,200);
-                if(btnComp){ btnComp.classList.remove('btn-muted'); btnComp.classList.add('btn-success'); btnComp.disabled=true; btnComp.textContent='Completado ✓'; }
-                if(btnQuiz){ btnQuiz.disabled=false; btnQuiz.classList.remove('btn-muted'); btnQuiz.classList.add('btn-primary'); }
-                updateProgress();
-              }else{
-                if(btnComp){ btnComp.disabled=true; }
-              }
+              ensureProgressStruct();
+              state.progress[moduleKey] = state.progress[moduleKey] || {videosSeen:{}, evalPassed:false};
+              state.progress[moduleKey].videosSeen[vidId] = true;
+              saveState(CURRENT_UID,state);
+              updateModuleBadges(); updateTotalsAndProgress(); syncToCloud().catch(()=>{});
             }
           }
         }
       });
     });
-
-    // Estado inicial de botones
-    const btnComp = card.querySelector(`[data-complete="${m}"]`);
-    const btnQuiz = card.querySelector(`[data-quiz="${m}"]`);
-    const all = (MOD_VIDEOS[m]||[]).every(v=>modState.videosDone?.[v]);
-    if(all || modState.done){
-      if(btnComp){ btnComp.classList.remove('btn-muted'); btnComp.classList.add('btn-success'); btnComp.disabled=true; btnComp.textContent='Completado ✓'; }
-      if(btnQuiz){ btnQuiz.disabled=false; btnQuiz.classList.toggle('btn-success', !!modState.quizPassed); btnQuiz.classList.toggle('btn-primary', !modState.quizPassed); btnQuiz.textContent = modState.quizPassed?'Evaluación aprobada ✓':'Tomar evaluación'; }
-    }else{
-      if(btnComp){ btnComp.disabled=true; }
-      if(btnQuiz){ btnQuiz.disabled=true; btnQuiz.classList.remove('btn-primary'); btnQuiz.classList.add('btn-muted'); }
-    }
   });
+}
+window.onYouTubeIframeAPIReady = function(){
+  if(state.profile?.spec) instantiatePlayersForSpec(state.profile.spec);
+};
 
-  // Listener de evaluaciones
-  wrap.querySelectorAll('[data-quiz]').forEach(b=>b.addEventListener('click', (e)=>openQuiz(e.currentTarget.getAttribute('data-quiz')) ));
+function updateModuleBadges(){
+  const spec = state.profile?.spec;
+  if(!spec) return;
+  SPECIALTY_MAP[spec].forEach((mod, idx)=>{
+    const moduleKey = `${spec}__${idx}`;
+    const prog = state.progress[moduleKey] || {videosSeen:{}, evalPassed:false};
+    const seen = Object.keys(prog.videosSeen||{}).length;
+    const status = (seen>=mod.videos.length ? '🎬 Videos vistos' : `🎬 ${seen}/${mod.videos.length} videos`) +
+                   ' • ' + (prog.evalPassed ? '📝 Evaluación aprobada' : '📝 Evaluación pendiente');
+    const el = document.getElementById(`mod-status-${moduleKey}`); if(el) el.textContent = status;
+  });
 }
 
-/* ======= Evaluaciones (3 preguntas dummy por módulo) ======= */
-function questionsFor(moduleTitle){
-  return [
-    { id:'q1', text:`${moduleTitle}: ¿Pregunta 1?`, options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}], correct:'A'},
-    { id:'q2', text:`${moduleTitle}: ¿Pregunta 2?`, options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}], correct:'B'},
-    { id:'q3', text:`${moduleTitle}: ¿Pregunta 3?`, options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}], correct:'C'},
+/* ================== 9) Evaluaciones =================== */
+const PASS_PCT = 80;
+function openModuleQuiz(moduleKey){
+  const spec = state.profile?.spec;
+  const idx = Number(moduleKey.split('__')[1]||0);
+  const mod = SPECIALTY_MAP[spec][idx];
+  const q = (txt,A,B,C,correct) => ({txt,opts:[{k:'A',t:A},{k:'B',t:B},{k:'C',t:C}],correct});
+  const QUESTIONS = [
+    q(`¿Qué sección de Soul MV relacionas más con “${mod.titulo}”?`,'Documentos','Órdenes','Evoluciones','B'),
+    q('Para finalizar una nota clínica debes:','Guardar borrador','Cerrar/Finalizar el documento (FECHADO)','Imprimir sin cerrar','B'),
+    q('Las auditorías se validan contra:','Notas de enfermería','Tarifarios y documentos cerrados','Epicrisis provisional','B')
   ];
-}
-function openQuiz(moduleTitle){
-  const qs = questionsFor(moduleTitle);
-  const overlay = document.createElement('div');
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;z-index:50;padding:16px';
-  const box = document.createElement('div'); box.className='card'; box.style.maxWidth='720px'; box.style.width='100%';
-  box.innerHTML = `<h3 style="margin:0 0 10px">Evaluación: ${moduleTitle}</h3>
-    <div id="quizbox"></div>
-    <div style="display:flex;gap:8px;margin-top:10px">
+
+  const wrap = document.createElement('div');
+  wrap.className='card';
+  wrap.style.position='fixed'; wrap.style.inset='10% 10%'; wrap.style.zIndex='50'; wrap.style.overflow='auto';
+  wrap.innerHTML = `
+    <h3 style="margin-top:0">Evaluación — ${mod.titulo}</h3>
+    ${QUESTIONS.map((qq,i)=>`
+      <div class="card" style="margin-bottom:12px">
+        <strong>${i+1}. ${qq.txt}</strong>
+        ${qq.opts.map(o=>`
+          <label style="display:flex;gap:8px;align-items:center;margin:6px 0">
+            <input type="radio" name="q${i}" value="${o.k}"> <span>${o.k}) ${o.t}</span>
+          </label>`).join('')}
+      </div>`).join('')}
+    <div style="display:flex;gap:8px">
       <button class="btn btn-primary" id="send-quiz">Enviar</button>
       <button class="btn btn-muted" id="close-quiz">Cancelar</button>
-    </div>
-    <div id="quiz-msg" class="muted" style="margin-top:6px"></div>`;
-  overlay.appendChild(box); document.body.appendChild(overlay);
+    </div>`;
+  document.body.appendChild(wrap);
 
-  const qb = box.querySelector('#quizbox');
-  qs.forEach((q,idx)=>{
-    const card=document.createElement('div'); card.className='card'; card.style.marginBottom='10px';
-    const opts=q.options.map(o=>`
-      <label style="display:flex;gap:8px;align-items:center;margin:6px 0">
-        <input type="radio" name="${q.id}" value="${o.key}"><span>${o.key}) ${o.label}</span>
-      </label>`).join('');
-    card.innerHTML=`<strong>${idx+1}. ${q.text}</strong><div style="margin-top:6px">${opts}</div>`;
-    qb.appendChild(card);
-  });
-
-  box.querySelector('#close-quiz').onclick=()=>overlay.remove();
-  box.querySelector('#send-quiz').onclick=()=>{
-    let correct=0; qs.forEach(q=>{ const c=box.querySelector(`input[name="${q.id}"]:checked`); if(c && c.value===q.correct) correct++; });
-    const pct=Math.round(correct/qs.length*100);
-    if(pct>=80){
-      state.modules=state.modules||{}; state.modules[moduleTitle]=state.modules[moduleTitle]||{done:false,videosDone:{},quizPassed:false};
-      state.modules[moduleTitle].quizPassed=true; saveState(CURRENT_UID,state); setTimeout(syncToCloud,200);
-      const btnQuiz = document.querySelector(`[data-quiz="${moduleTitle}"]`);
-      if(btnQuiz){ btnQuiz.classList.remove('btn-primary'); btnQuiz.classList.add('btn-success'); btnQuiz.textContent='Evaluación aprobada ✓'; }
-      box.querySelector('#quiz-msg').textContent = `✅ Aprobado (${pct}%).`;
-      setTimeout(()=>{ overlay.remove(); updateProgress(); }, 700);
-    }else{
-      box.querySelector('#quiz-msg').textContent = `❌ ${pct}%. Debes alcanzar 80%.`;
-    }
+  wrap.querySelector('#close-quiz').onclick=()=>document.body.removeChild(wrap);
+  wrap.querySelector('#send-quiz').onclick=()=>{
+    let correct=0;
+    QUESTIONS.forEach((qq,i)=>{
+      const c=wrap.querySelector(`input[name="q${i}"]:checked`);
+      if(c && c.value===qq.correct) correct++;
+    });
+    const pct=Math.round((correct/QUESTIONS.length)*100);
+    ensureProgressStruct();
+    state.progress[moduleKey] = state.progress[moduleKey] || {videosSeen:{}, evalPassed:false};
+    state.progress[moduleKey].evalPassed = (pct>=PASS_PCT);
+    saveState(CURRENT_UID,state); updateModuleBadges(); updateTotalsAndProgress(); syncToCloud().catch(()=>{});
+    alert(`Resultado: ${correct}/${QUESTIONS.length} (${pct}%). ${pct>=PASS_PCT?'✅ Aprobado':'❌ No aprobado'}`);
+    document.body.removeChild(wrap);
   };
 }
 
-/* ======= Progreso y Certificado ======= */
-function updateProgress(){
-  const mods = currentModules();
-  const totalMods = mods.length;
-  const videosTotal = mods.reduce((acc,m)=>acc+(MOD_VIDEOS[m]||[]).length,0);
-  const videosDone  = mods.reduce((acc,m)=>acc+((MOD_VIDEOS[m]||[]).filter(v=>state.modules?.[m]?.videosDone?.[v]).length),0);
-  const evalsDone   = mods.filter(m=>state.modules?.[m]?.quizPassed).length;
+/* ================== 10) Progreso y Certificado =================== */
+function updateTotalsAndProgress(){
+  const spec = state.profile?.spec;
+  if(!spec || !SPECIALTY_MAP[spec]){ $('#progress-extra').textContent=''; $('#bar').style.width='0%'; $('#btn-cert').disabled=true; return; }
+  ensureProgressStruct();
 
-  const pct = totalMods? Math.round(((evalsDone)/totalMods)*100) : 0;
-  $('#bar').style.width=pct+'%';
-  $('#progress-label').textContent=`${pct}% completado de evaluaciones (${evalsDone}/${totalMods})`;
-  $('#progress-sub').textContent = `Videos: ${videosDone}/${videosTotal}`;
+  // totales
+  const modules = SPECIALTY_MAP[spec];
+  const totalVideos = modules.reduce((a,m)=>a+m.videos.length,0);
+  let seenVideos = 0, evalsDone = 0;
 
-  // Certificado global cuando TODAS las evals aprobadas
-  const allOk = totalMods>0 && evalsDone===totalMods;
-  if(allOk){
-    // botón certificado (crear/mostrar)
-    if(!document.getElementById('btn-cert-global')){
-      const cont = document.createElement('div'); cont.className='card'; cont.style.marginTop='12px';
-      cont.innerHTML = `<button id="btn-cert-global" class="btn btn-success">Mostrar certificado</button>`;
-      $('#progress').appendChild(cont);
-      cont.querySelector('#btn-cert-global').addEventListener('click', ()=>{
-        const preferName = state.profile?.name || auth.currentUser?.displayName || '';
-        document.getElementById('cert-nombre').textContent = preferName;
-        const f=new Date(); const fecha=f.toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'});
-        document.getElementById('cert-fecha').textContent=`Fecha: ${fecha}`;
-        document.getElementById('certificado').classList.add('show'); setTimeout(()=>window.print(),400);
-      });
-    }
-  }
+  modules.forEach((m,idx)=>{
+    const k = `${spec}__${idx}`;
+    const p = state.progress[k] || {videosSeen:{}, evalPassed:false};
+    seenVideos += Math.min(Object.keys(p.videosSeen||{}).length, m.videos.length);
+    if(p.evalPassed) evalsDone++;
+  });
+
+  const pct = Math.round(((seenVideos + evalsDone) / (totalVideos + modules.length)) * 100);
+  $('#progress-extra').textContent = `${pct}% completado — Videos ${seenVideos}/${totalVideos} • Evaluaciones ${evalsDone}/${modules.length}`;
+  $('#bar').style.width = pct+'%';
+
+  const allVideos = (seenVideos===totalVideos);
+  const allEvals  = (evalsDone===modules.length);
+  $('#btn-cert').disabled = !(allVideos && allEvals);
 }
 
-/* ======= Cloud sync ======= */
+document.getElementById('btn-cert').addEventListener('click', ()=>{
+  const preferName = state.profile?.name || auth.currentUser?.displayName || '';
+  document.getElementById('cert-nombre').textContent = preferName;
+  const f=new Date(); const fecha=f.toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('cert-fecha').textContent=`Fecha: ${fecha}`;
+  document.getElementById('certificado').classList.add('show'); setTimeout(()=>window.print(),400);
+});
+
+/* ================== 11) Cloud sync =================== */
 async function userDoc(){
   const uid=auth.currentUser?.uid; if(!uid) return null;
   return db.collection('users').doc(uid).collection('courses').doc('soulmv');
@@ -714,24 +746,34 @@ async function syncFromCloud(user){
     const snap=await ref.get();
     if(snap.exists){
       const cloud=snap.data()||{};
-      state.modules = cloud.modules || state.modules;
+      state.progress = cloud.progress || state.progress || {};
+      state.activeSpec = cloud.activeSpec || state.activeSpec;
       saveState(CURRENT_UID,state);
     }
     const psnap=await db.collection('users').doc(user.uid).collection('profile').doc('main').get();
     if(psnap.exists){ state.profile=psnap.data(); saveState(CURRENT_UID,state); }
-    renderModules(); updateProgress();
-  }catch(e){ console.warn('No se pudo leer progreso/perfil',e); }
+    await loadProfile();
+    if(profileComplete()){
+      buildModulesForSpec(state.profile.spec);
+      $('#modules').style.display='grid';
+      $('#progress').style.display='block';
+      setProfileReadonly(true);
+    }
+    updateTotalsAndProgress();
+  }catch(e){ console.warn('No se pudo leer nube',e); }
 }
 async function syncToCloud(){
   try{
     const ref=await userDoc(); if(!ref) return;
-    const payload={ modules: state.modules || {} };
-    await ref.set(payload,{merge:true});
+    await ref.set({ progress: state.progress||{}, activeSpec: state.profile?.spec||null }, {merge:true});
     const uid=auth.currentUser?.uid; if(uid && state.profile){
       await db.collection('users').doc(uid).collection('profile').doc('main').set(state.profile,{merge:true});
     }
   }catch(e){ console.warn('No se pudo guardar en la nube',e); }
 }
+
+/* ================== 12) Inicio =================== */
+loadProfile().catch(()=>{});
 </script>
 </body>
 </html>
