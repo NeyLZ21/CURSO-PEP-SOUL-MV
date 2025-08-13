@@ -355,73 +355,104 @@ document.querySelectorAll('.eye').forEach(btn=>{
   });
 });
 
-/* ========= Combo Especialidad (buscador; cierra al seleccionar) ========= */
+/* ========= Combo Especialidad (buscador; se cierra al seleccionar) ========= */
 (function setupSpecCombo(){
-  const wrap = $('#spec-combo');
-  const input = $('#pf-spec');
-  const panel = $('#spec-panel');
-  let filtered = ESPECIALIDADES.slice();
-  let open=false;
+  const wrap  = document.getElementById('spec-combo');
+  const input = document.getElementById('pf-spec');
+  const panel = document.getElementById('spec-panel');
 
-  // Arranca bloqueado; solo clic lo habilita
+  let filtered = ESPECIALIDADES.slice();
+  let open = false;
+
+  // Arranca bloqueado; se habilita al hacer clic en el cuadro
   input.readOnly = true;
 
   function render(list){
-    panel.innerHTML='';
+    panel.innerHTML = '';
     list.forEach(name=>{
-      const div=document.createElement('div');
-      div.className='opt';
-      div.textContent=name;
-      div.addEventListener('click',(e)=>{
-        // FIX: evitar que el clic burbujee y vuelva a abrir el panel.
-        e.stopPropagation();
-        input.value=name;
+      const div = document.createElement('div');
+      div.className = 'opt';
+      div.textContent = name;
+
+      // USAR mousedown para cerrar ANTES de que burbujee el click
+      div.addEventListener('mousedown', (e)=>{
+        e.preventDefault();   // evita que el input reciba un click extra
+        e.stopPropagation();  // evita que el contenedor reabra el panel
+        input.value = name;
         hide();
-        input.readOnly=true; // bloquear de nuevo
+        input.readOnly = true;
+        input.blur();         // saca el foco para que no se reabra
       });
+
       panel.appendChild(div);
     });
   }
-  function show(){ wrap.classList.add('show'); open=true; }
-  function hide(){ wrap.classList.remove('show'); open=false; }
-  render(filtered);
 
-  // Habilitar al hacer clic en el cuadro (manteniendo el buscador)
-  wrap.addEventListener('click', ()=>{
-    if(!open){
-      input.readOnly=false;
+  function show(){
+    wrap.classList.add('show');
+    open = true;
+  }
+  function hide(){
+    wrap.classList.remove('show');
+    open = false;
+  }
+
+  // Abrir y habilitar buscador al hacer clic en el cuadro
+  wrap.addEventListener('mousedown', (e)=>{
+    // Si ya está abierto, no hagas nada; si está cerrado, habilita
+    if (!open) {
+      input.readOnly = false;
       input.focus();
-      // Si deseas limpiar al abrir: input.select();
-      filtered=ESPECIALIDADES.slice();
+      // refresca listado completo al abrir
+      filtered = ESPECIALIDADES.slice();
       render(filtered);
       show();
     }
   });
 
-  // Búsqueda (solo si está habilitado)
+  // Buscar mientras escribes (solo si está habilitado)
   input.addEventListener('input', ()=>{
-    if(input.readOnly) return;
-    const q=input.value.trim().toLowerCase();
-    filtered=ESPECIALIDADES.filter(e=>e.toLowerCase().includes(q));
+    if (input.readOnly) return;
+    const q = input.value.trim().toLowerCase();
+    filtered = ESPECIALIDADES.filter(e=> e.toLowerCase().includes(q));
     render(filtered);
     show();
   });
 
-  // Cerrar si haces clic fuera
-  document.addEventListener('click',(e)=>{
-    if(!wrap.contains(e.target)){
+  // Selección rápida con ENTER (primera coincidencia)
+  input.addEventListener('keydown', (e)=>{
+    if (e.key === 'Enter') {
+      if (filtered.length > 0) {
+        input.value = filtered[0];
+        hide();
+        input.readOnly = true;
+        input.blur();
+        e.preventDefault();
+      }
+    } else if (e.key === 'Escape') {
       hide();
-      input.readOnly=true;
+      input.readOnly = true;
+      input.blur();
     }
   });
 
-  // Validación del valor
-  input.addEventListener('change', ()=>{
-    const v=input.value.trim();
-    if(v && !ESPECIALIDADES.includes(v)){
-      input.value='';
+  // Cerrar al hacer clic fuera
+  document.addEventListener('mousedown',(e)=>{
+    if (!wrap.contains(e.target)) {
+      hide();
+      input.readOnly = true;
     }
   });
+
+  // Validación: solo valores de la lista
+  input.addEventListener('change', ()=>{
+    const v = input.value.trim();
+    if (v && !ESPECIALIDADES.includes(v)) input.value = '';
+  });
+
+  // Render inicial
+  render(filtered);
+})();
 
   // Tecla ESC para cerrar
   input.addEventListener('keydown',(e)=>{
