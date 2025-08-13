@@ -52,6 +52,10 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .combo .opt{padding:10px 12px;cursor:pointer}
 .combo .opt:hover{background:#1f2937}
 .combo.show .panel{display:block}
+
+/* Bloques de quiz dentro de cada módulo */
+.quiz-wrap{margin-top:12px;border-top:1px solid #e5e7eb;padding-top:12px}
+.quiz-hint{font-size:13px}
 </style>
 </head>
 <body>
@@ -155,7 +159,6 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
         <input id="pf-id" type="text" required>
       </label>
       <label style="grid-column:1/-1">Especialidad<br>
-        <!-- combo con búsqueda -->
         <div class="combo" id="spec-combo">
           <input id="pf-spec" type="text" placeholder="Escribe para buscar…" autocomplete="off">
           <span class="arrow">▾</span>
@@ -184,20 +187,8 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     </div>
   </section>
 
-  <!-- Módulos -->
+  <!-- Módulos (cada tarjeta incluye su evaluación al final) -->
   <section id="modules" class="grid no-print" style="display:none"></section>
-
-  <!-- Evaluación + Certificado (global) -->
-  <section id="eval" class="card no-print" style="display:none;margin-top:16px">
-    <h2 style="margin-top:0">Evaluaciones por módulo</h2>
-    <p class="muted">Cada módulo se habilita cuando completes sus videos.</p>
-    <div id="eval-wrap"></div>
-    <hr style="margin:16px 0; border:0; border-top:1px solid #e5e7eb">
-    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-      <button id="btn-cert" class="btn btn-success" disabled>Emitir certificado</button>
-      <small class="muted" id="cert-hint">Se habilita cuando apruebes todas las evaluaciones de tu especialidad.</small>
-    </div>
-  </section>
 
   <!-- Certificado imprimible -->
   <section id="certificado" class="container">
@@ -224,42 +215,213 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
-/* ========= 1) ESPECIALIDADES + módulos por especialidad =========
-   👉 Pega aquí TODAS tus especialidades (una por línea en este array).
+/* ========= 1) LISTA EXACTA DEL EXCEL =========
+   ESPECIALIDADES (array) y ESPEC_MODS (módulos por especialidad)
+   👉 Los videos por tipo de módulo se configuran en VIDEO_DEFAULTS.
 */
-const ESPECIALIDADES = [
-  // === EJEMPLOS ===
-  'ACUPUNTURA','ALERGOLOGIA','ANESTESIOLOGIA','CARDIOLOGIA',
-  'CARDIOLOGIA HEMODINAMIA','MEDICINA INTERNA','MEDICINA INTERNA E 4',
-  'MEDICINA INTERNA E 4 T','MEDICINA INTERNA 44',
-  // --- Agrega aquí el resto tal cual están en tu Excel ---
-];
 
-/* Mapa de módulos por especialidad.
-   Cada módulo: { id, titulo, videos:[{yt:'id',dur:'mm:ss'}...5], quiz:[{id,text,options[],correct}] }
-   Si una especialidad no aparece, usa DEFAULT. */
-const ESPEC_MAP = {
-  DEFAULT: [
-    mkModule('gen', 'Generalidades del sistema', [
-      'dQw4w9WgXcQ','l482T0yNkeo','9bZkp7q19f0','QH2-TGUlwu4','3JZ_D3ELwOQ'
-    ]),
-    mkModule('adm', 'Admisión y hospitalización (HDD)', [
-      'eY52Zsg-KVI','fJ9rUzIMcZQ','L_jWHffIx5E','kXYiU_JCYtU','hTWKbfoikeg'
-    ]),
-  ],
-  'CARDIOLOGIA': [
-    mkModule('card-1','Ingreso cardiología', ['dQw4w9WgXcQ','l482T0yNkeo','9bZkp7q19f0','QH2-TGUlwu4','3JZ_D3ELwOQ']),
-    mkModule('card-2','Prescripción cardiológica', ['eY52Zsg-KVI','fJ9rUzIMcZQ','L_jWHffIx5E','kXYiU_JCYtU','hTWKbfoikeg'])
-  ],
-  'MEDICINA INTERNA': [
-    mkModule('mi-1','Admisión MI', ['dQw4w9WgXcQ','l482T0yNkeo','9bZkp7q19f0','QH2-TGUlwu4','3JZ_D3ELwOQ']),
-    mkModule('mi-2','Notas clínicas MI', ['eY52Zsg-KVI','fJ9rUzIMcZQ','L_jWHffIx5E','kXYiU_JCYtU','hTWKbfoikeg'])
-  ]
+// === ESPECIALIDADES (del Excel) ===
+const ESPECIALIDADES = [
+  "ACUPUNTURA",
+  "ALERGOLOGIA",
+  "ANESTESIOLOGIA",
+  "CARDIOLOGIA",
+  "CARDIOLOGIA HEMODINAMIA",
+  "CARDIOLOGIA INTERVENCIONISTA",
+  "CARDIOLOGIA PEDIATRICA",
+  "CIR. GENERAL-COLOPROCTOLOGIA",
+  "CIR. MANO/MUÑE-NERVIO PERI/BRA",
+  "CIRUGIA CARDIACA",
+  "CIRUGIA DE CABEZA Y CUELLO",
+  "CIRUGIA DE COLUMNA",
+  "CIRUGIA DE HOMBRO Y CODO",
+  "CIRUGIA GENERAL",
+  "CIRUGIA ONCOLOGICA",
+  "CIRUGIA PEDIATRICA",
+  "CIRUGIA PLASTICA",
+  "CIRUGIA TORACICA",
+  "CIRUGIA VASCULAR",
+  "COLOPROCTOLOGIA",
+  "DERMATOLOGIA",
+  "DIABETOLOGIA",
+  "DIETOLOGIA",
+  "ENDOCRINO PEDIATRA",
+  "ENDOCRINOLOGIA",
+  "FISIATRIA",
+  "GASTROENTEROLOGIA",
+  "GASTROENTEROLOGIA PEDIATR",
+  "GINECOLOGIA",
+  "GINECOLOGIA  MATERNO FETAL",
+  "GINECOLOGIA  OBS.- GINEC.",
+  "GINECOLOGIA  ONCOLOGIA",
+  "GINECOLOGIA  REPRODUCCION",
+  "GINECOLOGIA  INFANTO JUVENIL",
+  "HEMATOLOGIA",
+  "HEMATOONCOLOGIA",
+  "INFECTOLOGIA",
+  "INTERCONSULTO",
+  "MEDICINA FAM./MÉDICO GEN",
+  "MEDICINA INTERNA",
+  "MEDICINA INTERNA INTENSIVO",
+  "MEDICINA MATERNO FETAL",
+  "NEFROLOGIA",
+  "NEFROLOGIA PEDIATRICA",
+  "NEONATOLOGIA",
+  "NEUMOLOGIA",
+  "NEUROCIRUGIA",
+  "NEUROLOGIA",
+  "NEUROLOGIA PEDIATRICA",
+  "NEUROFISIOLOGIA CLINICA",
+  "NUTRICIONISTA",
+  "OFTALMOLOGIA",
+  "ONCOLOGIA CLINICA",
+  "ORTOPEDIA Y TRAUMATOLOGIA",
+  "OTORRINOLARINGOLOGIA",
+  "PEDIATRIA",
+  "PEDIATRIA  NEFROLOGIA",
+  "PEDIATRIA  NUTRICION",
+  "PEDIATRIA  ONCOLOGIA",
+  "PEDIATRIA  PSICOLOGIA",
+  "PEDIATRIA  UROLOGIA",
+  "PEDIATRIA  GASTROENTEROLOGIA",
+  "PEDIATRIA  NEUMOLOGIA",
+  "PEDIATRIA  CARDIOLOGIA",
+  "PEDIATRIA  INFECTOLOGIA",
+  "PEDIATRIA  ENDOCRINOLOGIA",
+  "PEDIATRIA  HEMATOLOGIA",
+  "PEDIATRIA  PSIQUIATRIA",
+  "PEDIATRIA  FISIATRIA",
+  "PEDIATRIA  DERMATOLOGIA",
+  "PSICOLOGIA CLINICA",
+  "PSIQUIATRIA",
+  "REHABILITACION",
+  "REUMATOLOGIA",
+  "RESIDENTE/INTERNO",
+  "SERVICIOS DE APOYO",
+  "TERAPIA FISICA",
+  "TERAPIA RESPIRATORIA",
+  "UROLOGIA",
+  "ODONTOLOGIA",
+  "ODONTOPEDIATRIA",
+  "ENDODONCIA",
+  "ODONT. ORTODONCIA",
+  "ODONT. PROTESIS",
+  "ODONT. CIRUGIA MAXILOFACIAL",
+  "ODONT. REHABILITACION ORAL",
+  "ODONT. PERIODONCIA",
+  "ODONT. IMPLANTOLOGIA",
+  "ODONT. ESTETICA"
+].sort();
+
+// === MÓDULOS POR ESPECIALIDAD (del Excel) ===
+const ESPEC_MODS = {
+  "ACUPUNTURA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "ALERGOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "ANESTESIOLOGIA": ["GENERALIDADES","ANESTESIOLOGÍA"],
+  "CARDIOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "CARDIOLOGIA HEMODINAMIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "CARDIOLOGIA INTERVENCIONISTA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "CARDIOLOGIA PEDIATRICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "CIR. GENERAL-COLOPROCTOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "CIR. MANO/MUÑE-NERVIO PERI/BRA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "CIRUGIA CARDIACA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "CIRUGIA DE CABEZA Y CUELLO": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "CIRUGIA DE COLUMNA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "CIRUGIA DE HOMBRO Y CODO": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "CIRUGIA GENERAL": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "CIRUGIA ONCOLOGICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "CIRUGIA PEDIATRICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "CIRUGIA PLASTICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "CIRUGIA TORACICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "CIRUGIA VASCULAR": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "COLOPROCTOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "DERMATOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "DIABETOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "DIETOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "ENDOCRINO PEDIATRA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "ENDOCRINOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "FISIATRIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "GASTROENTEROLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "GASTROENTEROLOGIA PEDIATR": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "GINECOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "GINECOLOGIA  MATERNO FETAL": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "GINECOLOGIA  OBS.- GINEC.": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "GINECOLOGIA  ONCOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "GINECOLOGIA  REPRODUCCION": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "GINECOLOGIA  INFANTO JUVENIL": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "HEMATOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "HEMATOONCOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "INFECTOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "INTERCONSULTO": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "MEDICINA FAM./MÉDICO GEN": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "MEDICINA INTERNA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "MEDICINA INTERNA INTENSIVO": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "MEDICINA MATERNO FETAL": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "NEFROLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "NEFROLOGIA PEDIATRICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "NEONATOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "NEUMOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "NEUROCIRUGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "NEUROLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "NEUROLOGIA PEDIATRICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "NEUROFISIOLOGIA CLINICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "NUTRICIONISTA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "OFTALMOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "ONCOLOGIA CLINICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "ORTOPEDIA Y TRAUMATOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "OTORRINOLARINGOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "PEDIATRIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "PEDIATRIA  NEFROLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "PEDIATRIA  NUTRICION": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "PEDIATRIA  ONCOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "PEDIATRIA  PSICOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "PEDIATRIA  UROLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "PEDIATRIA  GASTROENTEROLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "PEDIATRIA  NEUMOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "PEDIATRIA  CARDIOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "PEDIATRIA  INFECTOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "PEDIATRIA  ENDOCRINOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "PEDIATRIA  HEMATOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "PEDIATRIA  PSIQIATRIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "PEDIATRIA  FISIATRIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "PEDIATRIA  DERMATOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "PSICOLOGIA CLINICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "PSIQUIATRIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "REHABILITACION": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "REUMATOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "RESIDENTE/INTERNO": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "SERVICIOS DE APOYO": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "TERAPIA FISICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "TERAPIA RESPIRATORIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
+  "UROLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "ODONTOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "ODONTOPEDIATRIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "ENDODONCIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "ODONT. ORTODONCIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "ODONT. PROTESIS": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "ODONT. CIRUGIA MAXILOFACIAL": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "ODONT. REHABILITACION ORAL": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "ODONT. PERIODONCIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "ODONT. IMPLANTOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "ODONT. ESTETICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"]
 };
 
-// helper para crear módulo con un quiz de ejemplo
+// === Videos por tipo de módulo (EDITA AQUÍ con tus IDs reales) ===
+// Coloca arrays con 1–5 IDs de YouTube (solo el ID, no la URL).
+const VIDEO_DEFAULTS = {
+  "GENERALIDADES": ["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0"],
+  "HOSPITALIZACIÓN-HDD": ["eY52Zsg-KVI","fJ9rUzIMcZQ","L_jWHffIx5E"],
+  "CONSULTA EXTERNA": ["kXYiU_JCYtU","hTWKbfoikeg","QH2-TGUlwu4"],
+  "CENTRO QUIRÚRGICO": ["3JZ_D3ELwOQ","04854XqcfCY","ktvTqknDobU"],
+  "ANESTESIOLOGÍA": ["60ItHLz5WEA","CevxZvSJLk8","ktvTqknDobU"]
+};
+// Fallback si aparece un módulo no listado:
+const DEFAULT_VIDEOS = ["dQw4w9WgXcQ"];
+
+/* Estructurador de módulos */
 function mkModule(id,titulo,ytIds){
-  const vids = ytIds.slice(0,5).map((v,i)=>({yt:v,dur:'08:00',n:i+1}));
+  const vids = (ytIds && ytIds.length ? ytIds : DEFAULT_VIDEOS).slice(0,5).map((v,i)=>({yt:v,dur:'08:00',n:i+1}));
+  // Quiz de muestra (puedes personalizar preguntas por módulo si gustas)
   const quiz = [
     { id:`${id}-q1`, text:'Pregunta 1 del módulo', options:[
       {key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}], correct:'A'
@@ -317,7 +479,7 @@ let unsubProfile = null;
 let savingProfile = false;
 
 // YouTube players
-const players = {}; // key: videoId string => YT.Player
+const players = {}; // key: elemId => YT.Player
 
 /* ========= 4) UI: Tabs + ojitos ========= */
 function setTab(which){
@@ -344,7 +506,7 @@ document.querySelectorAll('.eye').forEach(btn=>{
   const wrap = $('#spec-combo');
   const input = $('#pf-spec');
   const panel = $('#spec-panel');
-  let filtered = ESPECIALIDADES.slice().sort();
+  let filtered = ESPECIALIDADES.slice(); // ya viene ordenado .sort()
   let open=false;
 
   function render(list){
@@ -366,7 +528,7 @@ document.querySelectorAll('.eye').forEach(btn=>{
   input.addEventListener('focus', ()=>{ render(filtered); show(); });
   input.addEventListener('input', ()=>{
     const q=input.value.trim().toLowerCase();
-    filtered = ESPECIALIDADES.filter(e=>e.toLowerCase().includes(q)).sort();
+    filtered = ESPECIALIDADES.filter(e=>e.toLowerCase().includes(q));
     render(filtered);
     show();
   });
@@ -558,7 +720,6 @@ function showLogin(){
   $('#profile').style.display='none';
   $('#progress').style.display='none';
   $('#modules').style.display='none';
-  $('#eval').style.display='none';
 }
 function profileComplete(){
   const p = state.profile || {};
@@ -589,7 +750,6 @@ function startProfileRealtime(){
   unsubProfile = ref.onSnapshot((snap)=>{
     if(!snap.exists) return;
     const cloud = snap.data() || {};
-    // merge inteligente: si estamos en edición no sobreescribas inputs
     state.profile = { ...state.profile, ...cloud };
     saveState(CURRENT_UID, state);
 
@@ -655,7 +815,6 @@ async function saveProfile(){
     const payload = { ...state.profile, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
     const write = ref.set(payload,{merge:true});
 
-    // cierre rápido cuando Firestore responda
     write.then(()=>{
       if (!savingProfile) return;
       savingProfile = false;
@@ -673,7 +832,6 @@ async function saveProfile(){
       setProfileReadonly(false);
     });
 
-    // no bloquear la UI (timeout suave)
     await Promise.race([write, new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),6000))]);
 
   }catch(e){
@@ -689,43 +847,55 @@ async function saveProfile(){
 }
 document.getElementById('btn-save-profile').addEventListener('click', saveProfile);
 
-/* ========= 12) Render dinámico por especialidad ========= */
+/* ========= 12) Render dinámico por especialidad (quiz dentro de cada módulo) ========= */
+let ytApiReady=false;
+window.onYouTubeIframeAPIReady = function(){ ytApiReady=true; ensureYTPlayersForCurrent(); };
+
 function pickModulesFor(spec){
-  const list = ESPEC_MAP[spec] || ESPEC_MAP.DEFAULT;
-  // clonar profundo para no mutar definición
+  const wanted = ESPEC_MODS[spec] || [];
+  const list = (wanted.length? wanted : ["GENERALIDADES"]).map((titulo,idx)=>{
+    const ids = VIDEO_DEFAULTS[titulo] || DEFAULT_VIDEOS;
+    return mkModule(`${titulo.toLowerCase().replace(/\s+/g,'-')}-${idx+1}`, titulo, ids);
+  });
   return JSON.parse(JSON.stringify(list));
 }
 
 function renderAllBySpecialty(spec){
-  const modulesDef = pickModulesFor(spec || 'DEFAULT');
+  const modulesDef = pickModulesFor(spec || 'MEDICINA INTERNA');
   // persistir config actual
-  state.course = { spec: spec || 'DEFAULT', modules: modulesDef };
+  state.course = { spec: spec || 'MEDICINA INTERNA', modules: modulesDef };
   saveState(CURRENT_UID, state);
 
-  // Progreso + tarjetas de módulos con videos
+  // Progreso + tarjetas de módulos con videos y su quiz al final
   $('#progress').style.display='block';
   $('#modules').style.display='grid';
-  $('#eval').style.display='block';
 
   renderModules(modulesDef);
-  renderAllQuizzes(modulesDef);
   updateGlobalProgress();
+  ensureYTPlayersForCurrent();
 }
 
-/* ===== Módulos (YouTube) ===== */
 function renderModules(modulesDef){
   const wrap=$('#modules'); wrap.innerHTML='';
   modulesDef.forEach((m,idx)=>{
     const doneVideos = (state.videosDone?.[m.id]||{}); // {yt:true}
-    const allDone = m.videos.every(v=>doneVideos[v.yt]);
 
-    const card=document.createElement('article'); card.className='card module';
-    let videosHtml = m.videos.map(v=>`
+    const videosHtml = m.videos.map(v=>`
       <div class="yt-wrap" style="margin-top:8px">
         <div id="player-${m.id}-${v.yt}"></div>
       </div>
     `).join('');
 
+    // Bloque de evaluación embebido
+    const canStart = m.videos.every(v=>doneVideos[v.yt]);
+    const passed   = state.quizzes?.[m.id]?.passed;
+
+    const quizBtnLabel = passed?'Aprobado ✓':'Comenzar evaluación';
+    const quizBtnClass = passed?'btn-success':'btn-primary';
+    const quizDisabled = canStart?'':'disabled';
+    const quizHint     = canStart?'Listo para evaluar':'Completa los videos para habilitar';
+
+    const card=document.createElement('article'); card.className='card module';
     card.innerHTML=`
       <div class="num">${idx+1}</div>
       <div class="meta">
@@ -735,22 +905,35 @@ function renderModules(modulesDef){
         </div>
         <p class="muted" style="margin:6px 0 10px">Debes ver cada video completo para habilitar la evaluación del módulo.</p>
         ${videosHtml}
-      </div>`;
-    wrap.appendChild(card);
-  });
 
-  // Crear players (si API ya cargó)
-  ensureYTPlayers(modulesDef);
+        <div class="quiz-wrap">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+            <div class="quiz-hint muted" id="hint-${m.id}">${quizHint}</div>
+            <button class="btn ${quizBtnClass}" id="btn-${m.id}" ${quizDisabled}>${quizBtnLabel}</button>
+          </div>
+          <div id="quiz-${m.id}" style="display:none;margin-top:12px"></div>
+          <div class="muted" id="res-${m.id}" style="display:none;margin-top:8px"></div>
+        </div>
+      </div>`;
+
+    wrap.appendChild(card);
+
+    // listeners del botón de quiz
+    document.getElementById(`btn-${m.id}`).addEventListener('click',()=>{
+      if(state.quizzes?.[m.id]?.passed) return;
+      renderQuizForModule(m);
+    });
+  });
 }
 
-let ytApiReady=false;
-window.onYouTubeIframeAPIReady = function(){ ytApiReady=true; const spec=getSpecialty(); ensureYTPlayers(pickModulesFor(spec)); };
-function ensureYTPlayers(modulesDef){
+function ensureYTPlayersForCurrent(){
   if(!ytApiReady) return;
+  const spec=getSpecialty() || 'MEDICINA INTERNA';
+  const modulesDef = pickModulesFor(spec);
   modulesDef.forEach(m=>{
     m.videos.forEach(v=>{
       const pid=`player-${m.id}-${v.yt}`;
-      if(players[pid]) return; // ya creado
+      if(players[pid]) return;
       const el=document.getElementById(pid);
       if(!el) return;
       players[pid] = new YT.Player(pid,{
@@ -759,13 +942,11 @@ function ensureYTPlayers(modulesDef){
         events:{
           onStateChange:(ev)=>{
             if(ev.data===YT.PlayerState.ENDED){
-              // marcar video visto
               state.videosDone = state.videosDone || {};
               state.videosDone[m.id] = state.videosDone[m.id] || {};
               state.videosDone[m.id][v.yt] = true;
               saveState(CURRENT_UID,state);
               updateGlobalProgress();
-              // habilitar quiz si todos listos
               maybeEnableQuiz(m);
             }
           }
@@ -775,51 +956,17 @@ function ensureYTPlayers(modulesDef){
   });
 }
 
-/* ===== Evaluaciones por módulo ===== */
-function renderAllQuizzes(modulesDef){
-  const wrap=$('#eval-wrap'); wrap.innerHTML='';
-  modulesDef.forEach((m,idx)=>{
-    const qId=`quiz-${m.id}`;
-    const card=document.createElement('div'); card.className='card'; card.style.marginBottom='12px';
-    const canStart = m.videos.every(v=> (state.videosDone?.[m.id]||{})[v.yt]);
-    const passed   = state.quizzes?.[m.id]?.passed;
-
-    card.innerHTML=`
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-        <div>
-          <strong>${idx+1}. ${m.titulo}</strong>
-          <div class="muted" id="${qId}-hint">${canStart?'Listo para evaluar':'Completa los videos para habilitar'}</div>
-        </div>
-        <div>
-          <button class="btn ${passed?'btn-success':'btn-primary'}" id="${qId}-btn" ${canStart?'':'disabled'}>${passed?'Aprobado ✓':'Comenzar evaluación'}</button>
-        </div>
-      </div>
-      <div id="${qId}" style="display:none;margin-top:12px"></div>
-      <div class="muted" id="${qId}-res" style="display:none;margin-top:8px"></div>
-    `;
-    wrap.appendChild(card);
-
-    // listeners
-    document.getElementById(`${qId}-btn`).addEventListener('click',()=>{
-      if(passed) return;
-      renderQuizForModule(m,qId);
-    });
-  });
-
-  // botón de certificado global
-  updateCertificateButton();
-}
+/* ===== Quiz dentro del módulo ===== */
 function maybeEnableQuiz(m){
   const canStart = m.videos.every(v=> (state.videosDone?.[m.id]||{})[v.yt]);
-  const btn=$(`#quiz-${m.id}-btn`), hint=$(`#quiz-${m.id}-hint`);
+  const btn=$(`#btn-${m.id}`), hint=$(`#hint-${m.id}`);
   if(btn && hint){
     btn.disabled=!canStart;
     hint.textContent = canStart ? 'Listo para evaluar' : 'Completa los videos para habilitar';
   }
-  updateCertificateButton();
 }
-function renderQuizForModule(m,qWrapId){
-  const wrap=$('#'+qWrapId); wrap.innerHTML='';
+function renderQuizForModule(m){
+  const wrap=$('#quiz-'+m.id); wrap.innerHTML='';
   m.quiz.forEach((q,idx)=>{
     const card=document.createElement('div'); card.className='card'; card.style.marginBottom='8px';
     const opts=q.options.map(o=>`
@@ -831,11 +978,11 @@ function renderQuizForModule(m,qWrapId){
     wrap.appendChild(card);
   });
   const submit=document.createElement('button'); submit.className='btn btn-primary'; submit.textContent='Enviar evaluación';
-  submit.addEventListener('click', ()=>gradeQuizModule(m,qWrapId));
+  submit.addEventListener('click', ()=>gradeQuizModule(m));
   wrap.appendChild(submit);
   wrap.style.display='block';
 }
-function gradeQuizModule(m,qWrapId){
+function gradeQuizModule(m){
   let correct=0;
   m.quiz.forEach(q=>{
     const c=document.querySelector(`input[name="${q.id}"]:checked`);
@@ -847,19 +994,18 @@ function gradeQuizModule(m,qWrapId){
   state.quizzes[m.id]={correct,total:m.quiz.length,scorePct,passed:scorePct>=PASS_PCT};
   saveState(CURRENT_UID,state);
 
-  const res=$(`#${qWrapId}-res`); res.style.display='block';
+  const res=$(`#res-${m.id}`); res.style.display='block';
   res.textContent = `Resultado: ${correct}/${m.quiz.length} (${scorePct}%). ${state.quizzes[m.id].passed?'✅ Aprobado':'❌ No aprobado'}.`;
 
   if(state.quizzes[m.id].passed){
-    const btn=$(`#${qWrapId}-btn`); if(btn){ btn.textContent='Aprobado ✓'; btn.classList.remove('btn-primary'); btn.classList.add('btn-success'); }
-    updateCertificateButton();
+    const btn=$(`#btn-${m.id}`); if(btn){ btn.textContent='Aprobado ✓'; btn.classList.remove('btn-primary'); btn.classList.add('btn-success'); }
     setTimeout(syncToCloud,300);
   }
 }
 
 /* ===== Progreso global + certificado ===== */
 function updateGlobalProgress(){
-  const spec = getSpecialty() || 'DEFAULT';
+  const spec = getSpecialty() || 'MEDICINA INTERNA';
   const modulesDef = pickModulesFor(spec);
   const totalVideos = modulesDef.reduce((a,m)=>a+m.videos.length,0);
   const doneVideos  = modulesDef.reduce((a,m)=>a + m.videos.filter(v=> (state.videosDone?.[m.id]||{})[v.yt]).length,0);
@@ -867,26 +1013,25 @@ function updateGlobalProgress(){
 
   $('#progress').style.display='block';
   $('#modules').style.display='grid';
-  $('#eval').style.display='block';
 
   $('#bar').style.width=pct+'%';
   const evalsPassed = modulesDef.filter(m=> state.quizzes?.[m.id]?.passed).length;
-  $('#progress-label').textContent=`${pct}% completado — Videos ${doneVideos}/${totalVideos} • Evaluaciones ${evalsPassed}/${modulesDef.length}`;
-}
-function updateCertificateButton(){
-  const spec = getSpecialty() || 'DEFAULT';
-  const modulesDef = pickModulesFor(spec);
+
+  // Habilitar certificado cuando todos los módulos de la especialidad estén aprobados
   const allPassed = modulesDef.every(m=> state.quizzes?.[m.id]?.passed);
-  $('#btn-cert').disabled = !allPassed;
-  $('#cert-hint').textContent = allPassed ? 'Listo para emitir.' : 'Se habilita cuando apruebes todas las evaluaciones de tu especialidad.';
+  const labelExtra = `• Evaluaciones ${evalsPassed}/${modulesDef.length}${allPassed?' • ✅ Listo para certificar':''}`;
+  $('#progress-label').textContent=`${pct}% completado — Videos ${doneVideos}/${totalVideos} ${labelExtra}`;
+
+  // Botón de certificado on demand (mantenemos Ctrl+P en sección de certificado)
+  if(allPassed){
+    // mostrar modal de impresión directa
+    const preferName = state.profile?.name || auth.currentUser?.displayName || '';
+    document.getElementById('cert-nombre').textContent = preferName;
+    const f=new Date(); const fecha=f.toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'});
+    document.getElementById('cert-fecha').textContent=`Fecha: ${fecha}`;
+    document.getElementById('certificado').classList.add('show');
+  }
 }
-document.getElementById('btn-cert')?.addEventListener('click', ()=>{
-  const preferName = state.profile?.name || auth.currentUser?.displayName || '';
-  document.getElementById('cert-nombre').textContent = preferName;
-  const f=new Date(); const fecha=f.toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'});
-  document.getElementById('cert-fecha').textContent=`Fecha: ${fecha}`;
-  document.getElementById('certificado').classList.add('show'); setTimeout(()=>window.print(),400);
-});
 
 /* ========= 13) Cloud sync (progreso + perfil) ========= */
 async function userDoc(){
@@ -899,7 +1044,6 @@ async function syncFromCloud(user){
     const snap=await ref.get();
     if(snap.exists){
       const cloud=snap.data()||{};
-      // merge progreso
       state.videosDone = { ...(state.videosDone||{}), ...(cloud.videosDone||{}) };
       state.quizzes    = { ...(state.quizzes||{}),    ...(cloud.quizzes||{})    };
       saveState(CURRENT_UID,state);
