@@ -4,376 +4,77 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Inducción a Soul MV • Hospital Vozandes</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-:root{--brand:#781C38;--ink:#1f2937;--muted:#6b7280;--bg:#f8fafc;--card:#ffffff;--ok:#15803d}
-*{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
-.container{max-width:980px;margin:auto;padding:24px}
-header{display:flex;gap:16px;align-items:center;margin:12px 0 20px}
-header .logo{width:48px;height:48px;border-radius:12px;background:var(--brand);display:grid;place-content:center;color:#fff;font-weight:800}
-h1{font-size:clamp(22px,3.5vw,34px);margin:0}.subtitle{color:var(--muted);margin-top:4px}
-.card{background:var(--card);border-radius:18px;box-shadow:0 10px 24px rgba(0,0,0,.06);padding:20px}
-.grid{display:grid;gap:16px}.grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))} @media (max-width:800px){.grid.cols-2{grid-template-columns:1fr}}
-button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor:pointer;font-weight:600}
-.btn-primary{background:var(--brand);color:#fff}.btn-muted{background:#e5e7eb;color:#111827}.btn-success{background:var(--ok);color:#fff}
-.btn[disabled]{opacity:.5;cursor:not-allowed}
-.badge{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:600;background:#eef2ff;color:#3730a3}
-.progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}.progress>span{display:block;height:100%;background:var(--brand);width:0}
-.module{display:flex;gap:16px;align-items:flex-start}.module .num{flex:0 0 auto;width:36px;height:36px;border-radius:10px;background:#f3f4f6;display:grid;place-content:center;font-weight:700}.module .meta{flex:1}
-.yt-wrap{position:relative;padding-top:56.25%;border-radius:16px;overflow:hidden;background:#000;margin-top:12px} .yt-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
-.muted{color:var(--muted)} .footer{margin-top:24px;color:var(--muted);font-size:13px}
-/* Combo especialidad */
-.combo{position:relative} .combo input{width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb}
-.combo .list{position:absolute;z-index:20;left:0;right:0;top:100%;background:#fff;border:1px solid #e5e7eb;border-radius:12px;margin-top:6px;max-height:260px;overflow:auto;display:none;box-shadow:0 8px 20px rgba(0,0,0,.08)}
-.combo .item{padding:10px 12px;cursor:pointer} .combo .item:hover{background:#f3f4f6} .combo.show .list{display:block}
+body{font-family:Arial, sans-serif;margin:20px;background:#f8fafc;color:#1f2937;}
+h1{color:#781C38;margin:0 0 8px 0;}
+label, select{font-size:16px;}
+select{padding:10px;border-radius:10px;border:1px solid #d1d5db;min-width:320px;background:#fff;}
+#modulos{margin-top:18px;display:grid;gap:10px;}
+.module-item{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px;box-shadow:0 2px 5px rgba(0,0,0,.06);}
+.muted{color:#6b7280;margin:6px 0 0 0;font-size:14px;}
 </style>
 </head>
 <body>
-<div class="container">
-  <header class="no-print">
-    <div class="logo">HV</div>
-    <div style="flex:1">
-      <h1>Inducción a Soul MV</h1>
-      <div class="subtitle">Curso para nuevos médicos • Hospital Vozandes</div>
-    </div>
-  </header>
-
-  <section id="profile" class="card" style="margin:18px 0">
-    <h2 style="margin:0 0 8px">Mi perfil</h2>
-    <p class="muted" id="pf-help">Completa todos los campos para habilitar los módulos.</p>
-    <div class="grid cols-2">
-      <label>Nombre completo (para certificado)<br>
-        <input id="pf-name" type="text" required style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
-      </label>
-      <label>Cédula o Pasaporte<br>
-        <input id="pf-id" type="text" required style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
-      </label>
-      <div>
-        <label>Especialidad</label>
-        <div class="combo" id="spec-combo">
-          <input id="spec-input" type="text" placeholder="Escribe para buscar..." autocomplete="off" autocorrect="off" autocapitalize="off" inputmode="search">
-          <div class="list" id="spec-list"></div>
-        </div>
-        <div class="muted" style="margin-top:6px">Selecciona de la lista. Esto define los módulos que verás.</div>
-      </div>
-    </div>
-    <div class="actions" style="display:flex;gap:8px;margin-top:10px">
-      <button id="btn-save-profile" class="btn btn-primary">Guardar perfil</button>
-    </div>
-    <div id="pf-msg" class="muted" style="margin-top:6px"></div>
-  </section>
-
-  <section id="progress" style="display:none;margin:18px 0">
-    <div class="card">
-      <div class="grid cols-2" style="align-items:center">
-        <div>
-          <strong>Progreso del curso</strong>
-          <div class="muted" id="progress-label">0% completado</div>
-        </div>
-        <div class="progress"><span id="bar" style="width:0%"></span></div>
-      </div>
-    </div>
-  </section>
-
-  <section id="modules" class="grid" style="display:none"></section>
-
-  <div class="footer">© <span id="year"></span> Hospital Vozandes — Inducción Soul MV</div>
-</div>
-
+<h1>Inducción a Soul MV</h1>
+<p class="muted">Selecciona tu especialidad para cargar los módulos correspondientes (tomados exactamente del Excel).</p>
+<label for="especialidad">Especialidad:</label><br>
+<select id="especialidad">
+  <option value="">-- Seleccione especialidad --</option>
+</select>
+<div id="modulos"></div>
 <script>
-// ======== LISTAS ESTRICTAS (embebidas, sin depender de Excel externo) ========
-const ESPECIALIDADES = [
-  "ACUPUNTURA",
-  "ALERGOLOGIA",
-  "ANESTESIOLOGIA",
-  "CARDIOLOGIA",
-  "CIR. GENERAL-COLOPROCTOLOGIA",
-  "CIR. MANO/MUÑE-NERVIO PERI/BRA",
-  "CIRUGIA CARDIACA",
-  "CIRUGIA DE CABEZA Y CUELLO",
-  "CIRUGIA GENERAL",
-  "CIRUGIA MAXILOFACIAL",
-  "CIRUGIA ONCOLOGICA",
-  "CIRUGIA PEDIATRICA",
-  "CIRUGIA PLASTICA",
-  "CIRUGIA TORAX",
-  "CIRUGIA VASCULAR",
-  "CLINICA MEDICA",
-  "DERMATOLOGIA",
-  "DIABETOLOGIA",
-  "DIAGNOSTICO POR IMAGEN",
-  "ECOGRAFIA",
-  "EMERGENCIOLOGIA",
-  "EMERGENCIOLOGIA PEDIATRICA",
-  "ENDOCRINOLOGIA",
-  "ENDOCRINOLOGIA PEDIATRICA",
-  "ENFERMERIA",
-  "FISIOTERAPIA",
-  "GASTROENTEROLOGIA",
-  "GASTROENTEROLOGIA PEDIATRICA",
-  "GERIATRIA",
-  "GERONTOLOGIA",
-  "GINECOLOGIA ONCOLOGICA",
-  "GINECOLOGIA Y OBSTETRICIA",
-  "HEMATO-ONCOLOGIA PEDIATRICA",
-  "HEMATOLOGIA",
-  "HEMATOLOGIA Y HEMOTERAPIA",
-  "HEMOTERAPIA",
-  "IMAGENOLOGIA",
-  "INFECTOLOGIA",
-  "INFECTOLOGIA PEDIATRICA",
-  "INTENSIVISTA",
-  "INTERVENCIONISMO",
-  "LABORATORIO CLINICO",
-  "MEDICAMENTOS",
-  "MEDICINA DE EMERGENCIAS",
-  "MEDICINA FAMILIAR",
-  "MEDICINA FISICA Y REHABILITACION",
-  "MEDICINA GENERAL",
-  "MEDICINA INTERNA",
-  "MEDICINA INTERNA 44",
-  "MEDICINA INTERNA HOSPITALARIA",
-  "MEDICINA NUCLEAR",
-  "NEFROLOGIA",
-  "NEFROLOGIA PEDIATRICA",
-  "NEONATOLOGIA",
-  "NEUROCIRUGIA",
-  "NEUROLOGIA",
-  "NEUROLOGIA PEDIATRICA",
-  "NEUMOLOGIA",
-  "NEUMOLOGIA PEDIATRICA",
-  "NUTRICION",
-  "NUTRICION CLINICA",
-  "NUTRICION PEDIATRICA",
-  "OFTALMOLOGIA",
-  "ONCOLOGIA",
-  "ONCOLOGIA PEDIATRICA",
-  "ORTOPEDIA Y TRAUMATOLOGIA",
-  "OTORRINOLARINGOLOGIA",
-  "OTORRINOPEDIATRIA",
-  "PALIATIVOS",
-  "PEDIATRIA",
-  "PERFUSIONISTA",
-  "PSICOLOGIA",
-  "PSIQUIATRIA",
-  "RADIOLOGIA",
-  "RADIOTERAPIA",
-  "REHABILITACION PEDIATRICA",
-  "REUMATOLOGIA",
-  "REUMATOLOGIA PEDIATRICA",
-  "SALUD OCUPACIONAL",
-  "TERAPIA RESPIRATORIA",
-  "TOXICOLOGIA",
-  "TRANSPLANTE",
-  "TRAUMATOLOGIA PEDIATRICA",
-  "UCI ADULTOS",
-  "UCI NEONATAL",
-  "UCI PEDIATRICA",
-  "UROLOGIA",
-  "UROLOGIA PEDIATRICA",
-  "ALERGOLOGIA PEDIATRICA",
-  "CARDIOLOGIA ADULTOS",
-  "CARDIOLOGIA HEMODINAMIA",
-  "CARDIOLOGIA INTERVENCIONISTA",
-  "CARDIOLOGIA PEDIATRICA"
-];
-
+const ESPECIALIDADES = ["ANESTESIOLOGÍA","CARDIOLOGÍA","CIRUGÍA GENERAL","CIRUGÍA PLÁSTICA","CIRUGÍA TORÁCICA","CIRUGÍA VASCULAR","CLÍNICA MÉDICA","DERMATOLOGÍA","ENDOCRINOLOGÍA","GASTROENTEROLOGÍA","GERIATRÍA","GINECOLOGÍA Y OBSTETRICIA","HEMATOLOGÍA","INFECTOLOGÍA","MEDICINA INTERNA","MEDICINA FAMILIAR","NEFROLOGÍA","NEUMOLOGÍA","NEUROCIRUGÍA","NEUROLOGÍA","NUTRICIÓN","OFTALMOLOGÍA","ONCOLOGÍA","ORTOPEDIA Y TRAUMATOLOGÍA","OTORRINOLARINGOLOGÍA","PEDIATRÍA","PROCTOLOGÍA","PSIQUIATRÍA","REUMATOLOGÍA","UROLOGÍA"];
 const MAPA_MODULOS = {
-  "ACUPUNTURA": ["MODULO 1","MODULO 2","MODULO 4"],
-  "ALERGOLOGIA": ["MODULO 1","MODULO 2","MODULO 4"],
-  "ANESTESIOLOGIA": ["MODULO 3"],
-  "CARDIOLOGIA": ["MODULO 1","MODULO 2","MODULO 4"],
-  "CIR. GENERAL-COLOPROCTOLOGIA": ["MODULO 1","MODULO 3","MODULO 4"],
-  "CIR. MANO/MUÑE-NERVIO PERI/BRA": ["MODULO 1","MODULO 3","MODULO 4"],
-  "CIRUGIA CARDIACA": ["MODULO 1","MODULO 3","MODULO 4"],
-  "CIRUGIA DE CABEZA Y CUELLO": ["MODULO 1","MODULO 3","MODULO 4"],
-  "CIRUGIA GENERAL": ["MODULO 1","MODULO 3","MODULO 4"],
-  "CIRUGIA MAXILOFACIAL": ["MODULO 1","MODULO 3","MODULO 4"],
-  "CIRUGIA ONCOLOGICA": ["MODULO 1","MODULO 3","MODULO 4"],
-  "CIRUGIA PEDIATRICA": ["MODULO 1","MODULO 3","MODULO 4"],
-  "CIRUGIA PLASTICA": ["MODULO 1","MODULO 3","MODULO 4"],
-  "CIRUGIA TORAX": ["MODULO 1","MODULO 3","MODULO 4"],
-  "CIRUGIA VASCULAR": ["MODULO 1","MODULO 3","MODULO 4"],
-  "CLINICA MEDICA": ["MODULO 1","MODULO 2","MODULO 4"],
-  "DERMATOLOGIA": ["MODULO 1","MODULO 2"],
-  "DIABETOLOGIA": ["MODULO 1","MODULO 2"],
-  "DIAGNOSTICO POR IMAGEN": ["MODULO 1"],
-  "ECOGRAFIA": ["MODULO 1","MODULO 2"],
-  "EMERGENCIOLOGIA": ["MODULO 1","MODULO 5"],
-  "EMERGENCIOLOGIA PEDIATRICA": ["MODULO 1","MODULO 5"],
-  "ENDOCRINOLOGIA": ["MODULO 1","MODULO 2"],
-  "ENDOCRINOLOGIA PEDIATRICA": ["MODULO 1","MODULO 2"],
-  "ENFERMERIA": ["MODULO 1","MODULO 4","MODULO 5"],
-  "FISIOTERAPIA": ["MODULO 1","MODULO 2"],
-  "GASTROENTEROLOGIA": ["MODULO 1","MODULO 2","MODULO 4"],
-  "GASTROENTEROLOGIA PEDIATRICA": ["MODULO 1","MODULO 2"],
-  "GERIATRIA": ["MODULO 1","MODULO 2","MODULO 4"],
-  "GERONTOLOGIA": ["MODULO 1","MODULO 2"],
-  "GINECOLOGIA ONCOLOGICA": ["MODULO 1","MODULO 3","MODULO 4"],
-  "GINECOLOGIA Y OBSTETRICIA": ["MODULO 1","MODULO 3","MODULO 4"],
-  "HEMATO-ONCOLOGIA PEDIATRICA": ["MODULO 1","MODULO 2","MODULO 4"],
-  "HEMATOLOGIA": ["MODULO 1","MODULO 2","MODULO 4"],
-  "HEMATOLOGIA Y HEMOTERAPIA": ["MODULO 1","MODULO 4"],
-  "HEMOTERAPIA": ["MODULO 1","MODULO 4"],
-  "IMAGENOLOGIA": ["MODULO 1"],
-  "INFECTOLOGIA": ["MODULO 1","MODULO 2","MODULO 4"],
-  "INFECTOLOGIA PEDIATRICA": ["MODULO 1","MODULO 4"],
-  "INTENSIVISTA": ["MODULO 1","MODULO 4","MODULO 5"],
-  "INTERVENCIONISMO": ["MODULO 1","MODULO 4"],
-  "LABORATORIO CLINICO": ["MODULO 1"],
-  "MEDICAMENTOS": ["MODULO 1"],
-  "MEDICINA DE EMERGENCIAS": ["MODULO 1","MODULO 5"],
-  "MEDICINA FAMILIAR": ["MODULO 1","MODULO 2"],
-  "MEDICINA FISICA Y REHABILITACION": ["MODULO 1","MODULO 2"],
-  "MEDICINA GENERAL": ["MODULO 1","MODULO 2"],
-  "MEDICINA INTERNA": ["MODULO 1","MODULO 2","MODULO 4"],
-  "MEDICINA INTERNA 44": ["MODULO 1","MODULO 2","MODULO 4"],
-  "MEDICINA INTERNA HOSPITALARIA": ["MODULO 1","MODULO 2","MODULO 4"],
-  "MEDICINA NUCLEAR": ["MODULO 1"],
-  "NEFROLOGIA": ["MODULO 1","MODULO 2","MODULO 4"],
-  "NEFROLOGIA PEDIATRICA": ["MODULO 1","MODULO 4"],
-  "NEONATOLOGIA": ["MODULO 1","MODULO 4"],
-  "NEUROCIRUGIA": ["MODULO 1","MODULO 3","MODULO 4"],
-  "NEUROLOGIA": ["MODULO 1","MODULO 2","MODULO 4"],
-  "NEUROLOGIA PEDIATRICA": ["MODULO 1","MODULO 4"],
-  "NEUMOLOGIA": ["MODULO 1","MODULO 2","MODULO 4"],
-  "NEUMOLOGIA PEDIATRICA": ["MODULO 1","MODULO 4"],
-  "NUTRICION": ["MODULO 1","MODULO 2"],
-  "NUTRICION CLINICA": ["MODULO 1","MODULO 2"],
-  "NUTRICION PEDIATRICA": ["MODULO 1","MODULO 2"],
-  "OFTALMOLOGIA": ["MODULO 1","MODULO 2","MODULO 3"],
-  "ONCOLOGIA": ["MODULO 1","MODULO 2","MODULO 4"],
-  "ONCOLOGIA PEDIATRICA": ["MODULO 1","MODULO 4"],
-  "ORTOPEDIA Y TRAUMATOLOGIA": ["MODULO 1","MODULO 3","MODULO 4"],
-  "OTORRINOLARINGOLOGIA": ["MODULO 1","MODULO 2","MODULO 3"],
-  "OTORRINOPEDIATRIA": ["MODULO 1","MODULO 3"],
-  "PALIATIVOS": ["MODULO 1","MODULO 2"],
-  "PEDIATRIA": ["MODULO 1","MODULO 2","MODULO 4"],
-  "PERFUSIONISTA": ["MODULO 1","MODULO 3"],
-  "PSICOLOGIA": ["MODULO 1","MODULO 2"],
-  "PSIQUIATRIA": ["MODULO 1","MODULO 2"],
-  "RADIOLOGIA": ["MODULO 1"],
-  "RADIOTERAPIA": ["MODULO 1","MODULO 4"],
-  "REHABILITACION PEDIATRICA": ["MODULO 1","MODULO 2"],
-  "REUMATOLOGIA": ["MODULO 1","MODULO 2"],
-  "REUMATOLOGIA PEDIATRICA": ["MODULO 1","MODULO 2"],
-  "SALUD OCUPACIONAL": ["MODULO 1","MODULO 2"],
-  "TERAPIA RESPIRATORIA": ["MODULO 1","MODULO 4"],
-  "TOXICOLOGIA": ["MODULO 1","MODULO 5"],
-  "TRANSPLANTE": ["MODULO 1","MODULO 4"],
-  "TRAUMATOLOGIA PEDIATRICA": ["MODULO 1","MODULO 3"],
-  "UCI ADULTOS": ["MODULO 1","MODULO 4","MODULO 5"],
-  "UCI NEONATAL": ["MODULO 1","MODULO 4","MODULO 5"],
-  "UCI PEDIATRICA": ["MODULO 1","MODULO 4","MODULO 5"],
-  "UROLOGIA": ["MODULO 1","MODULO 3","MODULO 4"],
-  "UROLOGIA PEDIATRICA": ["MODULO 1","MODULO 3"],
-  "ALERGOLOGIA PEDIATRICA": ["MODULO 1","MODULO 2"],
-  "CARDIOLOGIA ADULTOS": ["MODULO 1","MODULO 2","MODULO 4"],
-  "CARDIOLOGIA HEMODINAMIA": ["MODULO 1","MODULO 2","MODULO 4"],
-  "CARDIOLOGIA INTERVENCIONISTA": ["MODULO 1","MODULO 2","MODULO 4"],
-  "CARDIOLOGIA PEDIATRICA": ["MODULO 1","MODULO 2","MODULO 4"]
+  "ANESTESIOLOGÍA":["GENERALIDADES","CENTRO QUIRÚRGICO","ANESTESIOLOGÍA"],
+  "CARDIOLOGÍA":["GENERALIDADES","CONSULTA EXTERNA"],
+  "CIRUGÍA GENERAL":["GENERALIDADES","CENTRO QUIRÚRGICO","HOSPITALIZACIÓN-HDD"],
+  "CIRUGÍA PLÁSTICA":["GENERALIDADES","CENTRO QUIRÚRGICO"],
+  "CIRUGÍA TORÁCICA":["GENERALIDADES","CENTRO QUIRÚRGICO"],
+  "CIRUGÍA VASCULAR":["GENERALIDADES","CENTRO QUIRÚRGICO"],
+  "CLÍNICA MÉDICA":["GENERALIDADES","CONSULTA EXTERNA","HOSPITALIZACIÓN-HDD"],
+  "DERMATOLOGÍA":["GENERALIDADES","CONSULTA EXTERNA"],
+  "ENDOCRINOLOGÍA":["GENERALIDADES","CONSULTA EXTERNA"],
+  "GASTROENTEROLOGÍA":["GENERALIDADES","CONSULTA EXTERNA"],
+  "GERIATRÍA":["GENERALIDADES","CONSULTA EXTERNA","HOSPITALIZACIÓN-HDD"],
+  "GINECOLOGÍA Y OBSTETRICIA":["GENERALIDADES","CONSULTA EXTERNA","CENTRO QUIRÚRGICO","HOSPITALIZACIÓN-HDD"],
+  "HEMATOLOGÍA":["GENERALIDADES","CONSULTA EXTERNA"],
+  "INFECTOLOGÍA":["GENERALIDADES","CONSULTA EXTERNA"],
+  "MEDICINA INTERNA":["GENERALIDADES","CONSULTA EXTERNA","HOSPITALIZACIÓN-HDD"],
+  "MEDICINA FAMILIAR":["GENERALIDADES","CONSULTA EXTERNA"],
+  "NEFROLOGÍA":["GENERALIDADES","CONSULTA EXTERNA","HOSPITALIZACIÓN-HDD"],
+  "NEUMOLOGÍA":["GENERALIDADES","CONSULTA EXTERNA"],
+  "NEUROCIRUGÍA":["GENERALIDADES","CENTRO QUIRÚRGICO"],
+  "NEUROLOGÍA":["GENERALIDADES","CONSULTA EXTERNA"],
+  "NUTRICIÓN":["GENERALIDADES","CONSULTA EXTERNA"],
+  "OFTALMOLOGÍA":["GENERALIDADES","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "ONCOLOGÍA":["GENERALIDADES","CONSULTA EXTERNA","HOSPITALIZACIÓN-HDD"],
+  "ORTOPEDIA Y TRAUMATOLOGÍA":["GENERALIDADES","CENTRO QUIRÚRGICO","HOSPITALIZACIÓN-HDD"],
+  "OTORRINOLARINGOLOGÍA":["GENERALIDADES","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
+  "PEDIATRÍA":["GENERALIDADES","CONSULTA EXTERNA","HOSPITALIZACIÓN-HDD"],
+  "PROCTOLOGÍA":["GENERALIDADES","CONSULTA EXTERNA"],
+  "PSIQUIATRÍA":["GENERALIDADES","CONSULTA EXTERNA"],
+  "REUMATOLOGÍA":["GENERALIDADES","CONSULTA EXTERNA"],
+  "UROLOGÍA":["GENERALIDADES","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"]
 };
-
-// ======== Videos de ejemplo por nombre de módulo (ajústalos a tus propios IDs) ========
-const MOD_VIDEOS = {
-  "GENERALIDADES": ["kXYiU_JCYtU","CevxZvSJLk8","RgKAFK5djSk"],
-  "CONSULTA EXTERNA": ["9bZkp7q19f0","3JZ_D3ELwOQ","kXYiU_JCYtU"],
-  "CENTRO QUIRÚRGICO": ["l482T0yNkeo","9bZkp7q19f0","3JZ_D3ELwOQ"],
-  "HOSPITALIZACIÓN-HDD": ["CevxZvSJLk8","RgKAFK5djSk","OPf0YbXqDm0"],
-  "EMERGENCIAS": ["3JZ_D3ELwOQ","kXYiU_JCYtU","CevxZvSJLk8"],
-  // Si en el Excel hay títulos de módulo con nombre propio (p.ej., "ANESTESIOLOGÍA"),
-  // puedes añadir aquí su set de videos; si no está, hace fallback a GENERALIDADES.
-};
-
-const $ = s => document.querySelector(s);
-document.getElementById('year').textContent = new Date().getFullYear();
-
-// ======= Combo de especialidad (estricto) =======
-const specCombo = document.getElementById('spec-combo');
-const specInput = document.getElementById('spec-input');
-const specList  = document.getElementById('spec-list');
-const ESPEC_SET = new Set(ESPECIALIDADES);
-
-function renderSpecList(filter=''){
-  const f = (filter||'').trim().toLowerCase();
-  const opts = ESPECIALIDADES.filter(x=>x.toLowerCase().includes(f));
-  specList.innerHTML = '';
-  if(!opts.length){
-    const div = document.createElement('div');
-    div.className = 'item'; div.dataset.v=''; div.textContent='(sin resultados)';
-    specList.appendChild(div);
-    return;
+const selectEsp = document.getElementById('especialidad');
+ESPECIALIDADES.forEach(esp => {
+  const opt = document.createElement('option');
+  opt.value = esp;
+  opt.textContent = esp;
+  selectEsp.appendChild(opt);
+});
+selectEsp.addEventListener('change', () => {
+  const modDiv = document.getElementById('modulos');
+  modDiv.innerHTML = "";
+  const espSel = selectEsp.value;
+  if(espSel && MAPA_MODULOS[espSel]){
+    MAPA_MODULOS[espSel].forEach(m => {
+      const div = document.createElement('div');
+      div.className = 'module-item';
+      div.textContent = m;
+      modDiv.appendChild(div);
+    });
   }
-  opts.forEach(x=>{
-    const div = document.createElement('div');
-    div.className='item'; div.dataset.v=x; div.textContent=x;
-    specList.appendChild(div);
-  });
-}
-
-specInput.addEventListener('focus', ()=>{ specCombo.classList.add('show'); renderSpecList(specInput.value); });
-specInput.addEventListener('input', ()=>renderSpecList(specInput.value));
-document.addEventListener('click', (e)=>{ if(!specCombo.contains(e.target)) specCombo.classList.remove('show'); });
-specList.addEventListener('click', (e)=>{ const it=e.target.closest('.item'); if(!it) return; const v=it.dataset.v; if(v) specInput.value=v; specCombo.classList.remove('show'); });
-
-// ======= Lógica de módulos =======
-function currentModules(){
-  const spec = (specInput.value||'').trim();
-  return MAPA_MODULOS[spec] || [];
-}
-
-function moduleVideosFor(title){
-  return MOD_VIDEOS[title] || MOD_VIDEOS['GENERALIDADES'] || [];
-}
-
-function renderModules(){
-  const wrap = document.getElementById('modules');
-  wrap.innerHTML='';
-  const mods = currentModules();
-  if(!mods.length){
-    wrap.style.display='none';
-    document.getElementById('progress').style.display='none';
-    return;
-  }
-  wrap.style.display='grid';
-  document.getElementById('progress').style.display='block';
-
-  mods.forEach((m,idx)=>{
-    const videos = moduleVideosFor(m);
-    const vidsHtml = videos.map(vid=>`
-      <div class="yt-wrap">
-        <iframe src="https://www.youtube.com/embed/${vid}?rel=0&modestbranding=1" allowfullscreen></iframe>
-      </div>`).join('');
-
-    const card = document.createElement('article');
-    card.className='card module';
-    card.innerHTML = `
-      <div class="num">${idx+1}</div>
-      <div class="meta">
-        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
-          <h3 style="margin:0">${m}</h3>
-          <span class="badge">${videos.length} videos</span>
-        </div>
-        <p class="muted" style="margin:6px 0 10px">Mira los videos de este módulo.</p>
-        ${vidsHtml}
-      </div>`;
-    wrap.appendChild(card);
-  });
-}
-
-// ======= Guardar perfil (solo valida y muestra módulos) =======
-document.getElementById('btn-save-profile').addEventListener('click', ()=>{
-  const name= (document.getElementById('pf-name').value||'').trim();
-  const id  = (document.getElementById('pf-id').value||'').trim();
-  const spec= (specInput.value||'').trim();
-  if(!name || !id || !ESPEC_SET.has(spec)){
-    document.getElementById('pf-msg').textContent='Completa nombre, documento y selecciona una especialidad válida.';
-    return;
-  }
-  document.getElementById('pf-msg').textContent='Perfil guardado.';
-  renderModules();
 });
 </script>
 </body>
