@@ -77,7 +77,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     <div class="grid cols-2" style="align-items:start">
       <div>
         <h2 style="margin:0 0 6px">Acceso</h2>
-        <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña. Te pediremos verificar el correo <strong>solo al registrarte</strong> (hasta confirmarlo no podrás entrar al curso). Tu progreso queda guardado en la nube.</p>
+        <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña. Te pediremos verificar el correo <strong>solo al registrarte</strong>. Tu progreso queda guardado en la nube.</p>
 
         <div class="grid" id="auth-forms">
           <div style="display:flex; gap:8px; margin-bottom:8px">
@@ -140,8 +140,8 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
         <div class="badge"><span>ℹ️</span> Requisitos</div>
         <ul>
           <li>Tener acceso a Internet</li>
-          <li>Completar todos los videos de cada módulo para habilitar su evaluación</li>
-          <li>Correo válido (cualquier dominio) y verificado</li>
+          <li>Completar todos los videos para habilitar la evaluación</li>
+          <li>Correo válido y verificado</li>
         </ul>
       </div>
     </div>
@@ -187,7 +187,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     </div>
   </section>
 
-  <!-- Módulos (cada tarjeta incluye su evaluación al final) -->
+  <!-- Módulos -->
   <section id="modules" class="grid no-print" style="display:none"></section>
 
   <!-- Certificado imprimible -->
@@ -215,12 +215,13 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
-/* ========= 1) LISTA EXACTA DEL EXCEL =========
-   ESPECIALIDADES (array) y ESPEC_MODS (módulos por especialidad)
-   👉 Los videos por tipo de módulo se configuran en VIDEO_DEFAULTS.
-*/
+/* ================================================================
+   1) LISTA EXACTA DEL EXCEL (mismo orden, sin .sort())
+   2) ESPEC_MODS: módulos por especialidad (editables si tu Excel difiere)
+   3) VIDEO_DEFAULTS: IDs de YouTube por tipo de módulo
+   ================================================================ */
 
-// === ESPECIALIDADES (del Excel) ===
+// === 1) ESPECIALIDADES (exactamente como enviaste, mismo orden) ===
 const ESPECIALIDADES = [
   "ACUPUNTURA",
   "ALERGOLOGIA",
@@ -242,172 +243,191 @@ const ESPECIALIDADES = [
   "CIRUGIA TORACICA",
   "CIRUGIA VASCULAR",
   "COLOPROCTOLOGIA",
+  "CUIDADOS PALIATIVOS",
   "DERMATOLOGIA",
   "DIABETOLOGIA",
-  "DIETOLOGIA",
+  "EMERGENCIAS Y DESASTRES",
   "ENDOCRINO PEDIATRA",
   "ENDOCRINOLOGIA",
+  "ENFERMEDADES AUTOINMUNES",
   "FISIATRIA",
+  "FONOAUDIOLOGIA",
   "GASTROENTEROLOGIA",
-  "GASTROENTEROLOGIA PEDIATR",
-  "GINECOLOGIA",
-  "GINECOLOGIA  MATERNO FETAL",
-  "GINECOLOGIA  OBS.- GINEC.",
-  "GINECOLOGIA  ONCOLOGIA",
-  "GINECOLOGIA  REPRODUCCION",
+  "GASTROENTEROLOGIA PEDIATRICA",
+  "GENETICA MEDICA",
+  "GERIATRIA",
   "GINECOLOGIA  INFANTO JUVENIL",
+  "GINECOLOGIA ONCOLOGICA",
+  "GINECOLOGIA Y OBSTETRICIA",
   "HEMATOLOGIA",
-  "HEMATOONCOLOGIA",
+  "HEMATOLOGO ONCOLOGO PEDIATRA",
+  "HEPATOLOGIA",
   "INFECTOLOGIA",
-  "INTERCONSULTO",
-  "MEDICINA FAM./MÉDICO GEN",
+  "INFECTOLOGIA PEDIATRICA",
+  "INTERVENCIONISMO",
+  "MASTOLOGIA",
+  "MAXILO FACIAL",
+  "MEDICINA CRITICA",
+  "MEDICINA CRITICA PEDIATRICA",
+  "MEDICINA DEL DEPORTE",
+  "MEDICINA FAMILIAR",
+  "MEDICINA FAMILIAR EMERGENCIA",
+  "MEDICINA GENERAL",
   "MEDICINA INTERNA",
-  "MEDICINA INTERNA INTENSIVO",
   "MEDICINA MATERNO FETAL",
+  "MEDICINA PALIATIVA",
+  "MICROBIOLOGIA",
   "NEFROLOGIA",
   "NEFROLOGIA PEDIATRICA",
   "NEONATOLOGIA",
   "NEUMOLOGIA",
+  "NEUMOLOGIA PEDIATRICA",
   "NEUROCIRUGIA",
+  "NEUROFISIOLOGIA CLINICA",
   "NEUROLOGIA",
   "NEUROLOGIA PEDIATRICA",
-  "NEUROFISIOLOGIA CLINICA",
-  "NUTRICIONISTA",
-  "OFTALMOLOGIA",
-  "ONCOLOGIA CLINICA",
-  "ORTOPEDIA Y TRAUMATOLOGIA",
-  "OTORRINOLARINGOLOGIA",
-  "PEDIATRIA",
-  "PEDIATRIA  NEFROLOGIA",
-  "PEDIATRIA  NUTRICION",
-  "PEDIATRIA  ONCOLOGIA",
-  "PEDIATRIA  PSICOLOGIA",
-  "PEDIATRIA  UROLOGIA",
-  "PEDIATRIA  GASTROENTEROLOGIA",
-  "PEDIATRIA  NEUMOLOGIA",
-  "PEDIATRIA  CARDIOLOGIA",
-  "PEDIATRIA  INFECTOLOGIA",
-  "PEDIATRIA  ENDOCRINOLOGIA",
-  "PEDIATRIA  HEMATOLOGIA",
-  "PEDIATRIA  PSIQUIATRIA",
-  "PEDIATRIA  FISIATRIA",
-  "PEDIATRIA  DERMATOLOGIA",
-  "PSICOLOGIA CLINICA",
-  "PSIQUIATRIA",
-  "REHABILITACION",
-  "REUMATOLOGIA",
-  "RESIDENTE/INTERNO",
-  "SERVICIOS DE APOYO",
-  "TERAPIA FISICA",
-  "TERAPIA RESPIRATORIA",
-  "UROLOGIA",
+  "NEUROPSICOLOGIA",
+  "NEURORADIOL INTERVENCIONISTA",
+  "NEURORADIOLOGIA",
+  "NUTRICION",
   "ODONTOLOGIA",
   "ODONTOPEDIATRIA",
-  "ENDODONCIA",
-  "ODONT. ORTODONCIA",
-  "ODONT. PROTESIS",
-  "ODONT. CIRUGIA MAXILOFACIAL",
-  "ODONT. REHABILITACION ORAL",
-  "ODONT. PERIODONCIA",
-  "ODONT. IMPLANTOLOGIA",
-  "ODONT. ESTETICA"
-].sort();
+  "OFTALMOLOGIA",
+  "OFTALMOLOGIA PEDIATRICA",
+  "ONCOLOGIA CLINICA",
+  "OTORRINOLARINGOLOGIA",
+  "PATOLOGIA",
+  "PEDIATRIA",
+  "PSICOLOGIA",
+  "PSIQUIATRIA",
+  "RADIOLOGIA",
+  "RADIOLOGIA INTERVENCIONISTA",
+  "RADIOTERAPIA",
+  "RESIDENTE/INTERNO",
+  "REUMATOLOGIA",
+  "REUMATOLOGIA PEDIATRICA",
+  "SEXOLOGIA",
+  "TRATAMIENTO DEL DOLOR",
+  "TRAUMATO PEDIATRICA DE COLUMNA",
+  "TRAUMATOLOGIA DEL COLUMNA",
+  "TRAUMATOLOGIA ONCOLOGICA",
+  "TRAUMATOLOGIA PEDIATRICA",
+  "TRAUMATOLOGIA Y ORTOPEDIA",
+  "UROLOGIA",
+  "UROLOGIA PEDIATRICA"
+];
 
-// === MÓDULOS POR ESPECIALIDAD (del Excel) ===
+// === 2) MÓDULOS POR ESPECIALIDAD ===
+// Si el Excel tiene combinaciones específicas distintas a estas,
+// reemplaza el arreglo de cada especialidad por los valores exactos.
+const M = {
+  CE: "CONSULTA EXTERNA",
+  H: "HOSPITALIZACIÓN-HDD",
+  CQ: "CENTRO QUIRÚRGICO",
+  G: "GENERALIDADES",
+  AN: "ANESTESIOLOGÍA"
+};
+const BASE_MEDICA = [M.G, M.H, M.CE];
+const BASE_QUIR = [M.G, M.H, M.CE, M.CQ];
+const SOLO_GH = [M.G, M.H];
+
+// Mapeo razonado (ajústalo si tu Excel difiere en alguno):
 const ESPEC_MODS = {
-  "ACUPUNTURA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "ALERGOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "ANESTESIOLOGIA": ["GENERALIDADES","ANESTESIOLOGÍA"],
-  "CARDIOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "CARDIOLOGIA HEMODINAMIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "CARDIOLOGIA INTERVENCIONISTA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "CARDIOLOGIA PEDIATRICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "CIR. GENERAL-COLOPROCTOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "CIR. MANO/MUÑE-NERVIO PERI/BRA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "CIRUGIA CARDIACA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "CIRUGIA DE CABEZA Y CUELLO": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "CIRUGIA DE COLUMNA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "CIRUGIA DE HOMBRO Y CODO": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "CIRUGIA GENERAL": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "CIRUGIA ONCOLOGICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "CIRUGIA PEDIATRICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "CIRUGIA PLASTICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "CIRUGIA TORACICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "CIRUGIA VASCULAR": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "COLOPROCTOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "DERMATOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "DIABETOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "DIETOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "ENDOCRINO PEDIATRA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "ENDOCRINOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "FISIATRIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "GASTROENTEROLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "GASTROENTEROLOGIA PEDIATR": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "GINECOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "GINECOLOGIA  MATERNO FETAL": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "GINECOLOGIA  OBS.- GINEC.": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "GINECOLOGIA  ONCOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "GINECOLOGIA  REPRODUCCION": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "GINECOLOGIA  INFANTO JUVENIL": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "HEMATOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "HEMATOONCOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "INFECTOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "INTERCONSULTO": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "MEDICINA FAM./MÉDICO GEN": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "MEDICINA INTERNA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "MEDICINA INTERNA INTENSIVO": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "MEDICINA MATERNO FETAL": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "NEFROLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "NEFROLOGIA PEDIATRICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "NEONATOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "NEUMOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "NEUROCIRUGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "NEUROLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "NEUROLOGIA PEDIATRICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "NEUROFISIOLOGIA CLINICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "NUTRICIONISTA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "OFTALMOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "ONCOLOGIA CLINICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "ORTOPEDIA Y TRAUMATOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "OTORRINOLARINGOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "PEDIATRIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "PEDIATRIA  NEFROLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "PEDIATRIA  NUTRICION": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "PEDIATRIA  ONCOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "PEDIATRIA  PSICOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "PEDIATRIA  UROLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "PEDIATRIA  GASTROENTEROLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "PEDIATRIA  NEUMOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "PEDIATRIA  CARDIOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "PEDIATRIA  INFECTOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "PEDIATRIA  ENDOCRINOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "PEDIATRIA  HEMATOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "PEDIATRIA  PSIQIATRIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "PEDIATRIA  FISIATRIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "PEDIATRIA  DERMATOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "PSICOLOGIA CLINICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "PSIQUIATRIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "REHABILITACION": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "REUMATOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "RESIDENTE/INTERNO": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "SERVICIOS DE APOYO": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "TERAPIA FISICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "TERAPIA RESPIRATORIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA"],
-  "UROLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "ODONTOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "ODONTOPEDIATRIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "ENDODONCIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "ODONT. ORTODONCIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "ODONT. PROTESIS": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "ODONT. CIRUGIA MAXILOFACIAL": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "ODONT. REHABILITACION ORAL": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "ODONT. PERIODONCIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "ODONT. IMPLANTOLOGIA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"],
-  "ODONT. ESTETICA": ["GENERALIDADES","HOSPITALIZACIÓN-HDD","CONSULTA EXTERNA","CENTRO QUIRÚRGICO"]
+  "ACUPUNTURA": BASE_MEDICA,
+  "ALERGOLOGIA": BASE_MEDICA,
+  "ANESTESIOLOGIA": [M.G, M.AN],
+  "CARDIOLOGIA": BASE_MEDICA,
+  "CARDIOLOGIA HEMODINAMIA": BASE_MEDICA,
+  "CARDIOLOGIA INTERVENCIONISTA": BASE_MEDICA,
+  "CARDIOLOGIA PEDIATRICA": BASE_MEDICA,
+  "CIR. GENERAL-COLOPROCTOLOGIA": BASE_QUIR,
+  "CIR. MANO/MUÑE-NERVIO PERI/BRA": BASE_QUIR,
+  "CIRUGIA CARDIACA": BASE_QUIR,
+  "CIRUGIA DE CABEZA Y CUELLO": BASE_QUIR,
+  "CIRUGIA DE COLUMNA": BASE_QUIR,
+  "CIRUGIA DE HOMBRO Y CODO": BASE_QUIR,
+  "CIRUGIA GENERAL": BASE_QUIR,
+  "CIRUGIA ONCOLOGICA": BASE_QUIR,
+  "CIRUGIA PEDIATRICA": BASE_QUIR,
+  "CIRUGIA PLASTICA": BASE_QUIR,
+  "CIRUGIA TORACICA": BASE_QUIR,
+  "CIRUGIA VASCULAR": BASE_QUIR,
+  "COLOPROCTOLOGIA": BASE_QUIR,
+  "CUIDADOS PALIATIVOS": BASE_MEDICA,
+  "DERMATOLOGIA": BASE_MEDICA,
+  "DIABETOLOGIA": BASE_MEDICA,
+  "EMERGENCIAS Y DESASTRES": [M.G, M.H, M.CE],
+  "ENDOCRINO PEDIATRA": BASE_MEDICA,
+  "ENDOCRINOLOGIA": BASE_MEDICA,
+  "ENFERMEDADES AUTOINMUNES": BASE_MEDICA,
+  "FISIATRIA": BASE_MEDICA,
+  "FONOAUDIOLOGIA": BASE_MEDICA,
+  "GASTROENTEROLOGIA": BASE_MEDICA,
+  "GASTROENTEROLOGIA PEDIATRICA": BASE_MEDICA,
+  "GENETICA MEDICA": BASE_MEDICA,
+  "GERIATRIA": BASE_MEDICA,
+  "GINECOLOGIA  INFANTO JUVENIL": BASE_QUIR,
+  "GINECOLOGIA ONCOLOGICA": BASE_QUIR,
+  "GINECOLOGIA Y OBSTETRICIA": BASE_QUIR,
+  "HEMATOLOGIA": BASE_MEDICA,
+  "HEMATOLOGO ONCOLOGO PEDIATRA": BASE_MEDICA,
+  "HEPATOLOGIA": BASE_MEDICA,
+  "INFECTOLOGIA": BASE_MEDICA,
+  "INFECTOLOGIA PEDIATRICA": BASE_MEDICA,
+  "INTERVENCIONISMO": BASE_QUIR,
+  "MASTOLOGIA": BASE_QUIR,
+  "MAXILO FACIAL": BASE_QUIR,
+  "MEDICINA CRITICA": SOLO_GH,
+  "MEDICINA CRITICA PEDIATRICA": SOLO_GH,
+  "MEDICINA DEL DEPORTE": BASE_MEDICA,
+  "MEDICINA FAMILIAR": BASE_MEDICA,
+  "MEDICINA FAMILIAR EMERGENCIA": BASE_MEDICA,
+  "MEDICINA GENERAL": BASE_MEDICA,
+  "MEDICINA INTERNA": BASE_MEDICA,
+  "MEDICINA MATERNO FETAL": BASE_QUIR,
+  "MEDICINA PALIATIVA": BASE_MEDICA,
+  "MICROBIOLOGIA": SOLO_GH,
+  "NEFROLOGIA": BASE_MEDICA,
+  "NEFROLOGIA PEDIATRICA": BASE_MEDICA,
+  "NEONATOLOGIA": SOLO_GH,
+  "NEUMOLOGIA": BASE_MEDICA,
+  "NEUMOLOGIA PEDIATRICA": BASE_MEDICA,
+  "NEUROCIRUGIA": BASE_QUIR,
+  "NEUROFISIOLOGIA CLINICA": BASE_MEDICA,
+  "NEUROLOGIA": BASE_MEDICA,
+  "NEUROLOGIA PEDIATRICA": BASE_MEDICA,
+  "NEUROPSICOLOGIA": BASE_MEDICA,
+  "NEURORADIOL INTERVENCIONISTA": BASE_QUIR,
+  "NEURORADIOLOGIA": BASE_MEDICA,
+  "NUTRICION": BASE_MEDICA,
+  "ODONTOLOGIA": BASE_QUIR,
+  "ODONTOPEDIATRIA": BASE_QUIR,
+  "OFTALMOLOGIA": BASE_QUIR,
+  "OFTALMOLOGIA PEDIATRICA": BASE_QUIR,
+  "ONCOLOGIA CLINICA": BASE_MEDICA,
+  "OTORRINOLARINGOLOGIA": BASE_QUIR,
+  "PATOLOGIA": SOLO_GH,
+  "PEDIATRIA": BASE_MEDICA,
+  "PSICOLOGIA": BASE_MEDICA,
+  "PSIQUIATRIA": BASE_MEDICA,
+  "RADIOLOGIA": SOLO_GH,
+  "RADIOLOGIA INTERVENCIONISTA": BASE_QUIR,
+  "RADIOTERAPIA": SOLO_GH,
+  "RESIDENTE/INTERNO": BASE_QUIR,
+  "REUMATOLOGIA": BASE_MEDICA,
+  "REUMATOLOGIA PEDIATRICA": BASE_MEDICA,
+  "SEXOLOGIA": BASE_MEDICA,
+  "TRATAMIENTO DEL DOLOR": BASE_MEDICA,
+  "TRAUMATO PEDIATRICA DE COLUMNA": BASE_QUIR,
+  "TRAUMATOLOGIA DEL COLUMNA": BASE_QUIR,
+  "TRAUMATOLOGIA ONCOLOGICA": BASE_QUIR,
+  "TRAUMATOLOGIA PEDIATRICA": BASE_QUIR,
+  "TRAUMATOLOGIA Y ORTOPEDIA": BASE_QUIR,
+  "UROLOGIA": BASE_QUIR,
+  "UROLOGIA PEDIATRICA": BASE_QUIR
 };
 
-// === Videos por tipo de módulo (EDITA AQUÍ con tus IDs reales) ===
-// Coloca arrays con 1–5 IDs de YouTube (solo el ID, no la URL).
+// === 3) Videos por tipo de módulo (IDs de ejemplo; reemplaza por los reales) ===
 const VIDEO_DEFAULTS = {
   "GENERALIDADES": ["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0"],
   "HOSPITALIZACIÓN-HDD": ["eY52Zsg-KVI","fJ9rUzIMcZQ","L_jWHffIx5E"],
@@ -415,13 +435,11 @@ const VIDEO_DEFAULTS = {
   "CENTRO QUIRÚRGICO": ["3JZ_D3ELwOQ","04854XqcfCY","ktvTqknDobU"],
   "ANESTESIOLOGÍA": ["60ItHLz5WEA","CevxZvSJLk8","ktvTqknDobU"]
 };
-// Fallback si aparece un módulo no listado:
 const DEFAULT_VIDEOS = ["dQw4w9WgXcQ"];
 
-/* Estructurador de módulos */
+/* ===== Constructor de módulo ===== */
 function mkModule(id,titulo,ytIds){
   const vids = (ytIds && ytIds.length ? ytIds : DEFAULT_VIDEOS).slice(0,5).map((v,i)=>({yt:v,dur:'08:00',n:i+1}));
-  // Quiz de muestra (puedes personalizar preguntas por módulo si gustas)
   const quiz = [
     { id:`${id}-q1`, text:'Pregunta 1 del módulo', options:[
       {key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}], correct:'A'
@@ -436,7 +454,7 @@ function mkModule(id,titulo,ytIds){
   return { id, titulo, videos:vids, quiz };
 }
 
-/* ========= 2) Firebase ========= */
+/* ========= Firebase ========= */
 const firebaseConfig = {
   apiKey: "AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",
   authDomain: "induccion-pep-hvq.firebaseapp.com",
@@ -450,7 +468,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-/* ========= 3) Estado local / helpers ========= */
+/* ========= Estado local / helpers ========= */
 const $ = s => document.querySelector(s);
 $('#year').textContent = new Date().getFullYear();
 const MSGS = {
@@ -472,16 +490,12 @@ let CURRENT_UID = null;
 function keyFor(uid){ return `soulmv_${uid||'anon'}`; }
 function loadState(uid){ try{ return JSON.parse(localStorage.getItem(keyFor(uid))||'{}'); }catch{ return {}; } }
 function saveState(uid, st){ localStorage.setItem(keyFor(uid), JSON.stringify(st)); }
-let state = {}; // por usuario
-
-// flags
+let state = {};
 let unsubProfile = null;
 let savingProfile = false;
+const players = {};
 
-// YouTube players
-const players = {}; // key: elemId => YT.Player
-
-/* ========= 4) UI: Tabs + ojitos ========= */
+/* ========= UI: Tabs + ojitos ========= */
 function setTab(which){
   const onLogin = which==='login';
   $('#form-login').style.display = onLogin ? 'block' : 'none';
@@ -501,12 +515,12 @@ document.querySelectorAll('.eye').forEach(btn=>{
   });
 });
 
-/* ========= 5) Combo Especialidad (buscable y restringido) ========= */
+/* ========= Combo Especialidad (buscable y restringido) ========= */
 (function setupSpecCombo(){
   const wrap = $('#spec-combo');
   const input = $('#pf-spec');
   const panel = $('#spec-panel');
-  let filtered = ESPECIALIDADES.slice(); // ya viene ordenado .sort()
+  let filtered = ESPECIALIDADES.slice();
   let open=false;
 
   function render(list){
@@ -535,7 +549,7 @@ document.querySelectorAll('.eye').forEach(btn=>{
   document.addEventListener('click',(e)=>{ if(!wrap.contains(e.target)) hide(); });
   wrap.addEventListener('click',()=>{ if(!open) show(); });
 
-  // Validación: solo permitir valores de la lista
+  // Validación: solo permitir valores de la lista exacta
   input.addEventListener('blur', ()=>{
     const v=input.value.trim();
     if(!v) return;
@@ -545,7 +559,7 @@ document.querySelectorAll('.eye').forEach(btn=>{
   });
 })();
 
-/* ========= 6) Auth listener (con gating de verificación) ========= */
+/* ========= Auth listener (con gating de verificación) ========= */
 auth.onAuthStateChanged(async (user)=>{
   if(!user){
     CURRENT_UID=null; state={}; $('#auth-user').textContent='';
@@ -560,7 +574,6 @@ auth.onAuthStateChanged(async (user)=>{
   state = loadState(CURRENT_UID);
   $('#auth-user').textContent = user.email || '';
 
-  // Si no está verificado, bloqueo curso
   await user.reload().catch(()=>{});
   if(!user.emailVerified){
     showLogin();
@@ -570,11 +583,11 @@ auth.onAuthStateChanged(async (user)=>{
     $('#verify-box').style.display='none';
   }
 
-  showCourse();                  // UI rápida (con localStorage)
+  showCourse();
   syncFromCloud(user).catch(()=>{});
 });
 
-/* ========= 7) Registro ========= */
+/* ========= Registro ========= */
 document.getElementById('btn-register-2').addEventListener('click', async ()=>{
   const email= ($('#reg-email').value||'').trim().toLowerCase();
   const pass  = ($('#reg-pass').value||'').trim();
@@ -594,10 +607,8 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
     const { user } = await auth.createUserWithEmailAndPassword(email, pass);
     if (auth.currentUser?.uid !== user.uid) await auth.updateCurrentUser(user);
 
-    // Base en Firestore (no bloquea)
     db.collection('users').doc(user.uid).collection('courses').doc('soulmv').set({}, { merge:true }).catch(()=>{});
 
-    // Enviar verificación (con 3 reintentos cortos)
     const actionCodeSettings = { url: location.href.split('?')[0]+'?verified=1', handleCodeInApp:false };
     let sent=false;
     for(let i=0;i<3 && !sent;i++){
@@ -632,7 +643,7 @@ document.getElementById('btn-resend-verify').addEventListener('click', async ()=
   }catch(e){ msg(MSGS[e.code] || 'No se pudo enviar.'); }
 });
 
-/* ========= 8) Login robusto ========= */
+/* ========= Login robusto ========= */
 document.getElementById('btn-login').addEventListener('click', async ()=>{
   const email=($('#login-email').value||'').trim().toLowerCase();
   const pass =($('#login-pass').value||'').trim();
@@ -669,7 +680,7 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
   }finally{ btn.disabled=false; }
 });
 
-/* ========= 9) Reset contraseña / Logout ========= */
+/* ========= Reset / Logout ========= */
 document.getElementById('btn-reset').addEventListener('click', async ()=>{
   const email=($('#login-email').value||'').trim().toLowerCase();
   if(!email) return msg('Escribe tu correo para enviarte el enlace.');
@@ -685,7 +696,7 @@ document.getElementById('btn-logout').addEventListener('click', async ()=>{
   await auth.signOut(); msg('Sesión cerrada.');
 });
 
-/* ========= 10) Vistas / flujo ========= */
+/* ========= Vistas / flujo ========= */
 function showCourse(){
   if(!auth.currentUser) return;
   if(!auth.currentUser.emailVerified){ showLogin(); $('#verify-box').style.display='block'; return; }
@@ -702,19 +713,16 @@ function showCourse(){
     $('#pf-help').textContent = 'Completa todos los campos para habilitar los módulos.';
   }
 
-  // Render inmediato con local
   renderAllBySpecialty(getSpecialty());
   updateGlobalProgress();
   startProfileRealtime();
 
-  // Sincroniza nube → revalida
   loadProfile().then(()=>{
     renderAllBySpecialty(getSpecialty());
     updateGlobalProgress();
     if(profileComplete()){ setProfileReadonly(true); $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.'; }
   }).catch(()=>{});
 }
-
 function showLogin(){
   $('#step-welcome').style.display='block';
   $('#profile').style.display='none';
@@ -728,7 +736,7 @@ function profileComplete(){
 function setProfileReadonly(ro){
   ['pf-name','pf-id','pf-spec'].forEach(id=>{
     const el=document.getElementById(id);
-    el.readOnly = (id==='pf-spec') ? false : ro; // siempre permitir abrir el combo, validamos al guardar
+    el.readOnly = (id==='pf-spec') ? false : ro;
     el.style.background=ro?'#eef2ff':'#fff';
   });
   $('#btn-edit-profile').style.display = ro ? 'inline-flex' : 'none';
@@ -739,7 +747,7 @@ document.getElementById('btn-edit-profile').addEventListener('click', ()=>{
   $('#pf-help').textContent='Edita tus datos y guarda los cambios.';
 });
 
-/* ========= 11) Perfil: realtime + guardado rápido ========= */
+/* ========= Perfil: realtime + guardado ========= */
 function getSpecialty(){ return (state.profile?.spec || '').trim(); }
 
 function startProfileRealtime(){
@@ -771,7 +779,6 @@ function startProfileRealtime(){
 }
 
 async function loadProfile(){
-  // Rápido: local
   $('#pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
   $('#pf-id').value   = state.profile?.iddoc || '';
   $('#pf-spec').value = state.profile?.spec  || '';
@@ -802,7 +809,6 @@ async function saveProfile(){
     pfMsg.textContent='Selecciona una especialidad válida de la lista.'; return;
   }
 
-  // UI optimista
   state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
   pfMsg.classList.add('saving'); pfMsg.textContent='Guardando…';
   btn.disabled=true;
@@ -822,7 +828,6 @@ async function saveProfile(){
       pfMsg.textContent='✅ Perfil guardado.';
       setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; }, 3000);
       setProfileReadonly(true);
-      // re-render por especialidad
       renderAllBySpecialty(spec);
       updateGlobalProgress();
     }).catch(()=>{
@@ -847,13 +852,13 @@ async function saveProfile(){
 }
 document.getElementById('btn-save-profile').addEventListener('click', saveProfile);
 
-/* ========= 12) Render dinámico por especialidad (quiz dentro de cada módulo) ========= */
+/* ========= Render por especialidad ========= */
 let ytApiReady=false;
 window.onYouTubeIframeAPIReady = function(){ ytApiReady=true; ensureYTPlayersForCurrent(); };
 
 function pickModulesFor(spec){
-  const wanted = ESPEC_MODS[spec] || [];
-  const list = (wanted.length? wanted : ["GENERALIDADES"]).map((titulo,idx)=>{
+  const wanted = ESPEC_MODS[spec] || [M.G];
+  const list = wanted.map((titulo,idx)=>{
     const ids = VIDEO_DEFAULTS[titulo] || DEFAULT_VIDEOS;
     return mkModule(`${titulo.toLowerCase().replace(/\s+/g,'-')}-${idx+1}`, titulo, ids);
   });
@@ -861,12 +866,12 @@ function pickModulesFor(spec){
 }
 
 function renderAllBySpecialty(spec){
-  const modulesDef = pickModulesFor(spec || 'MEDICINA INTERNA');
-  // persistir config actual
-  state.course = { spec: spec || 'MEDICINA INTERNA', modules: modulesDef };
+  const useSpec = spec || 'MEDICINA INTERNA';
+  const modulesDef = pickModulesFor(useSpec);
+
+  state.course = { spec: useSpec, modules: modulesDef };
   saveState(CURRENT_UID, state);
 
-  // Progreso + tarjetas de módulos con videos y su quiz al final
   $('#progress').style.display='block';
   $('#modules').style.display='grid';
 
@@ -878,7 +883,7 @@ function renderAllBySpecialty(spec){
 function renderModules(modulesDef){
   const wrap=$('#modules'); wrap.innerHTML='';
   modulesDef.forEach((m,idx)=>{
-    const doneVideos = (state.videosDone?.[m.id]||{}); // {yt:true}
+    const doneVideos = (state.videosDone?.[m.id]||{});
 
     const videosHtml = m.videos.map(v=>`
       <div class="yt-wrap" style="margin-top:8px">
@@ -886,7 +891,6 @@ function renderModules(modulesDef){
       </div>
     `).join('');
 
-    // Bloque de evaluación embebido
     const canStart = m.videos.every(v=>doneVideos[v.yt]);
     const passed   = state.quizzes?.[m.id]?.passed;
 
@@ -917,8 +921,6 @@ function renderModules(modulesDef){
       </div>`;
 
     wrap.appendChild(card);
-
-    // listeners del botón de quiz
     document.getElementById(`btn-${m.id}`).addEventListener('click',()=>{
       if(state.quizzes?.[m.id]?.passed) return;
       renderQuizForModule(m);
@@ -956,7 +958,7 @@ function ensureYTPlayersForCurrent(){
   });
 }
 
-/* ===== Quiz dentro del módulo ===== */
+/* ===== Quiz por módulo ===== */
 function maybeEnableQuiz(m){
   const canStart = m.videos.every(v=> (state.videosDone?.[m.id]||{})[v.yt]);
   const btn=$(`#btn-${m.id}`), hint=$(`#hint-${m.id}`);
@@ -1016,15 +1018,11 @@ function updateGlobalProgress(){
 
   $('#bar').style.width=pct+'%';
   const evalsPassed = modulesDef.filter(m=> state.quizzes?.[m.id]?.passed).length;
-
-  // Habilitar certificado cuando todos los módulos de la especialidad estén aprobados
   const allPassed = modulesDef.every(m=> state.quizzes?.[m.id]?.passed);
   const labelExtra = `• Evaluaciones ${evalsPassed}/${modulesDef.length}${allPassed?' • ✅ Listo para certificar':''}`;
   $('#progress-label').textContent=`${pct}% completado — Videos ${doneVideos}/${totalVideos} ${labelExtra}`;
 
-  // Botón de certificado on demand (mantenemos Ctrl+P en sección de certificado)
   if(allPassed){
-    // mostrar modal de impresión directa
     const preferName = state.profile?.name || auth.currentUser?.displayName || '';
     document.getElementById('cert-nombre').textContent = preferName;
     const f=new Date(); const fecha=f.toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'});
@@ -1033,7 +1031,7 @@ function updateGlobalProgress(){
   }
 }
 
-/* ========= 13) Cloud sync (progreso + perfil) ========= */
+/* ========= Cloud sync ========= */
 async function userDoc(){
   const uid=auth.currentUser?.uid; if(!uid) return null;
   return db.collection('users').doc(uid).collection('courses').doc('soulmv');
