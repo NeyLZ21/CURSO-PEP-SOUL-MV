@@ -3,258 +3,378 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Acceso • HV Inducción</title>
+<title>Inducción a Soul MV • Hospital Vozandes</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="preconnect" href="https://www.googleapis.com">
-<link rel="preconnect" href="https://identitytoolkit.googleapis.com">
-<link rel="preconnect" href="https://securetoken.googleapis.com">
 <style>
-:root{--brand:#781C38;--ink:#111827;--muted:#6b7280;--bg:#f8fafc;--card:#fff}
+:root{--brand:#781C38;--ink:#1f2937;--muted:#6b7280;--bg:#f8fafc;--card:#ffffff;--ok:#15803d}
 *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
-.container{max-width:760px;margin:auto;padding:24px}
-h1{margin:0 0 10px}.card{background:var(--card);border-radius:16px;box-shadow:0 10px 22px rgba(0,0,0,.06);padding:20px}
-.grid{display:grid;gap:16px}.row{display:flex;gap:10px;flex-wrap:wrap}
-.btn{border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
-.btn-primary{background:var(--brand);color:#fff}.btn-muted{background:#e5e7eb;color:#111827}
-.input{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:12px}
-.small{font-size:12px;color:var(--muted)}
-.tabs .btn{padding:8px 12px}
-.input-wrap{position:relative}.eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:0;cursor:pointer}
-.hidden{display:none !important}
+.container{max-width:980px;margin:auto;padding:24px}
+header{display:flex;gap:16px;align-items:center;margin:12px 0 20px}
+header .logo{width:48px;height:48px;border-radius:12px;background:var(--brand);display:grid;place-content:center;color:#fff;font-weight:800}
+h1{font-size:clamp(22px,3.5vw,34px);margin:0}.subtitle{color:var(--muted);margin-top:4px}
+.card{background:var(--card);border-radius:18px;box-shadow:0 10px 24px rgba(0,0,0,.06);padding:20px}
+.grid{display:grid;gap:16px}.grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))} @media (max-width:800px){.grid.cols-2{grid-template-columns:1fr}}
+button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor:pointer;font-weight:600}
+.btn-primary{background:var(--brand);color:#fff}.btn-muted{background:#e5e7eb;color:#111827}.btn-success{background:var(--ok);color:#fff}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.badge{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:600;background:#eef2ff;color:#3730a3}
+.progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}.progress>span{display:block;height:100%;background:var(--brand);width:0}
+.module{display:flex;gap:16px;align-items:flex-start}.module .num{flex:0 0 auto;width:36px;height:36px;border-radius:10px;background:#f3f4f6;display:grid;place-content:center;font-weight:700}.module .meta{flex:1}
+.yt-wrap{position:relative;padding-top:56.25%;border-radius:16px;overflow:hidden;background:#000;margin-top:12px} .yt-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.muted{color:var(--muted)} .footer{margin-top:24px;color:var(--muted);font-size:13px}
+/* Combo especialidad */
+.combo{position:relative} .combo input{width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb}
+.combo .list{position:absolute;z-index:20;left:0;right:0;top:100%;background:#fff;border:1px solid #e5e7eb;border-radius:12px;margin-top:6px;max-height:260px;overflow:auto;display:none;box-shadow:0 8px 20px rgba(0,0,0,.08)}
+.combo .item{padding:10px 12px;cursor:pointer} .combo .item:hover{background:#f3f4f6} .combo.show .list{display:block}
 </style>
 </head>
 <body>
 <div class="container">
-  <h1>Acceso</h1>
-  <p class="small">Validamos el correo; si existe, probamos la contraseña.</p>
-
-  <div class="card">
-    <div class="row tabs" style="margin-bottom:8px">
-      <button id="tab-login" class="btn btn-primary" type="button">Iniciar sesión</button>
-      <button id="tab-register" class="btn btn-muted" type="button">Registrarme</button>
+  <header class="no-print">
+    <div class="logo">HV</div>
+    <div style="flex:1">
+      <h1>Inducción a Soul MV</h1>
+      <div class="subtitle">Curso para nuevos médicos • Hospital Vozandes</div>
     </div>
+  </header>
 
-    <!-- LOGIN -->
-    <section id="view-login" class="grid">
-      <label>Correo electrónico
-        <input id="login-email" type="email" class="input" placeholder="usuario@dominio.com" autocomplete="username email">
+  <section id="profile" class="card" style="margin:18px 0">
+    <h2 style="margin:0 0 8px">Mi perfil</h2>
+    <p class="muted" id="pf-help">Completa todos los campos para habilitar los módulos.</p>
+    <div class="grid cols-2">
+      <label>Nombre completo (para certificado)<br>
+        <input id="pf-name" type="text" required style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
       </label>
-      <label>Contraseña
-        <div class="input-wrap">
-          <input id="login-pass" type="password" class="input" placeholder="••••••••" autocomplete="current-password">
-          <button class="eye" type="button" data-eye="#login-pass">👁️</button>
+      <label>Cédula o Pasaporte<br>
+        <input id="pf-id" type="text" required style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb">
+      </label>
+      <div>
+        <label>Especialidad</label>
+        <div class="combo" id="spec-combo">
+          <input id="spec-input" type="text" placeholder="Escribe para buscar..." autocomplete="off" autocorrect="off" autocapitalize="off" inputmode="search">
+          <div class="list" id="spec-list"></div>
         </div>
-      </label>
-      <div class="row">
-        <button id="btn-login" class="btn btn-primary" type="button">Confirmar</button>
-        <button id="btn-reset" class="btn btn-muted" type="button">Restablecer contraseña</button>
+        <div class="muted" style="margin-top:6px">Selecciona de la lista. Esto define los módulos que verás.</div>
       </div>
-      <div id="login-msg" class="small" style="min-height:18px"></div>
-    </section>
+    </div>
+    <div class="actions" style="display:flex;gap:8px;margin-top:10px">
+      <button id="btn-save-profile" class="btn btn-primary">Guardar perfil</button>
+    </div>
+    <div id="pf-msg" class="muted" style="margin-top:6px"></div>
+  </section>
 
-    <!-- REGISTRO -->
-    <section id="view-register" class="grid hidden">
-      <label>Correo electrónico
-        <input id="reg-email" type="email" class="input" placeholder="usuario@dominio.com" autocomplete="email">
-      </label>
-      <label>Contraseña
-        <div class="input-wrap">
-          <input id="reg-pass" type="password" class="input" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
-          <button class="eye" type="button" data-eye="#reg-pass">👁️</button>
+  <section id="progress" style="display:none;margin:18px 0">
+    <div class="card">
+      <div class="grid cols-2" style="align-items:center">
+        <div>
+          <strong>Progreso del curso</strong>
+          <div class="muted" id="progress-label">0% completado</div>
         </div>
-      </label>
-      <label>Confirmar contraseña
-        <div class="input-wrap">
-          <input id="reg-pass2" type="password" class="input" placeholder="Repite la contraseña" autocomplete="new-password">
-          <button class="eye" type="button" data-eye="#reg-pass2">👁️</button>
-        </div>
-      </label>
-      <div class="row">
-        <button id="btn-register" class="btn btn-primary" type="button">Crear cuenta</button>
+        <div class="progress"><span id="bar" style="width:0%"></span></div>
       </div>
-      <div id="reg-msg" class="small" style="min-height:18px"></div>
+    </div>
+  </section>
 
-      <div id="verify-box" class="hidden" style="margin-top:10px">
-        <p class="small">Te enviamos un email para verificar tu cuenta. Revisa Spam.</p>
-        <div class="row">
-          <button id="btn-check-verify" class="btn btn-primary" type="button">Ya verifiqué</button>
-          <button id="btn-resend-verify" class="btn btn-muted" type="button">Reenviar verificación</button>
-        </div>
-        <div id="verify-msg" class="small" style="min-height:18px"></div>
-      </div>
-    </section>
-  </div>
+  <section id="modules" class="grid" style="display:none"></section>
 
-  <div class="row" style="margin-top:12px">
-    <span id="whoami" class="small"></span>
-    <button id="btn-logout" class="btn btn-muted hidden" type="button">Cerrar sesión</button>
-  </div>
+  <div class="footer">© <span id="year"></span> Hospital Vozandes — Inducción Soul MV</div>
 </div>
 
-<!-- Firebase compat -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-
 <script>
-/* === Firebase === */
-const firebaseConfig = {
-  apiKey: "AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",
-  authDomain: "induccion-pep-hvq.firebaseapp.com",
-  projectId: "induccion-pep-hvq",
-  storageBucket: "induccion-pep-hvq.firebasestorage.app",
-  messagingSenderId: "651724182766",
-  appId: "1:651724182766:web:4eec9be43e9e8e60dc0fff",
-  measurementId: "G-Z62L1CCYP1"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
+// ======== LISTAS ESTRICTAS (embebidas, sin depender de Excel externo) ========
+const ESPECIALIDADES = [
+  "ACUPUNTURA",
+  "ALERGOLOGIA",
+  "ANESTESIOLOGIA",
+  "CARDIOLOGIA",
+  "CIR. GENERAL-COLOPROCTOLOGIA",
+  "CIR. MANO/MUÑE-NERVIO PERI/BRA",
+  "CIRUGIA CARDIACA",
+  "CIRUGIA DE CABEZA Y CUELLO",
+  "CIRUGIA GENERAL",
+  "CIRUGIA MAXILOFACIAL",
+  "CIRUGIA ONCOLOGICA",
+  "CIRUGIA PEDIATRICA",
+  "CIRUGIA PLASTICA",
+  "CIRUGIA TORAX",
+  "CIRUGIA VASCULAR",
+  "CLINICA MEDICA",
+  "DERMATOLOGIA",
+  "DIABETOLOGIA",
+  "DIAGNOSTICO POR IMAGEN",
+  "ECOGRAFIA",
+  "EMERGENCIOLOGIA",
+  "EMERGENCIOLOGIA PEDIATRICA",
+  "ENDOCRINOLOGIA",
+  "ENDOCRINOLOGIA PEDIATRICA",
+  "ENFERMERIA",
+  "FISIOTERAPIA",
+  "GASTROENTEROLOGIA",
+  "GASTROENTEROLOGIA PEDIATRICA",
+  "GERIATRIA",
+  "GERONTOLOGIA",
+  "GINECOLOGIA ONCOLOGICA",
+  "GINECOLOGIA Y OBSTETRICIA",
+  "HEMATO-ONCOLOGIA PEDIATRICA",
+  "HEMATOLOGIA",
+  "HEMATOLOGIA Y HEMOTERAPIA",
+  "HEMOTERAPIA",
+  "IMAGENOLOGIA",
+  "INFECTOLOGIA",
+  "INFECTOLOGIA PEDIATRICA",
+  "INTENSIVISTA",
+  "INTERVENCIONISMO",
+  "LABORATORIO CLINICO",
+  "MEDICAMENTOS",
+  "MEDICINA DE EMERGENCIAS",
+  "MEDICINA FAMILIAR",
+  "MEDICINA FISICA Y REHABILITACION",
+  "MEDICINA GENERAL",
+  "MEDICINA INTERNA",
+  "MEDICINA INTERNA 44",
+  "MEDICINA INTERNA HOSPITALARIA",
+  "MEDICINA NUCLEAR",
+  "NEFROLOGIA",
+  "NEFROLOGIA PEDIATRICA",
+  "NEONATOLOGIA",
+  "NEUROCIRUGIA",
+  "NEUROLOGIA",
+  "NEUROLOGIA PEDIATRICA",
+  "NEUMOLOGIA",
+  "NEUMOLOGIA PEDIATRICA",
+  "NUTRICION",
+  "NUTRICION CLINICA",
+  "NUTRICION PEDIATRICA",
+  "OFTALMOLOGIA",
+  "ONCOLOGIA",
+  "ONCOLOGIA PEDIATRICA",
+  "ORTOPEDIA Y TRAUMATOLOGIA",
+  "OTORRINOLARINGOLOGIA",
+  "OTORRINOPEDIATRIA",
+  "PALIATIVOS",
+  "PEDIATRIA",
+  "PERFUSIONISTA",
+  "PSICOLOGIA",
+  "PSIQUIATRIA",
+  "RADIOLOGIA",
+  "RADIOTERAPIA",
+  "REHABILITACION PEDIATRICA",
+  "REUMATOLOGIA",
+  "REUMATOLOGIA PEDIATRICA",
+  "SALUD OCUPACIONAL",
+  "TERAPIA RESPIRATORIA",
+  "TOXICOLOGIA",
+  "TRANSPLANTE",
+  "TRAUMATOLOGIA PEDIATRICA",
+  "UCI ADULTOS",
+  "UCI NEONATAL",
+  "UCI PEDIATRICA",
+  "UROLOGIA",
+  "UROLOGIA PEDIATRICA",
+  "ALERGOLOGIA PEDIATRICA",
+  "CARDIOLOGIA ADULTOS",
+  "CARDIOLOGIA HEMODINAMIA",
+  "CARDIOLOGIA INTERVENCIONISTA",
+  "CARDIOLOGIA PEDIATRICA"
+];
 
-/* === Utils === */
+const MAPA_MODULOS = {
+  "ACUPUNTURA": ["MODULO 1","MODULO 2","MODULO 4"],
+  "ALERGOLOGIA": ["MODULO 1","MODULO 2","MODULO 4"],
+  "ANESTESIOLOGIA": ["MODULO 3"],
+  "CARDIOLOGIA": ["MODULO 1","MODULO 2","MODULO 4"],
+  "CIR. GENERAL-COLOPROCTOLOGIA": ["MODULO 1","MODULO 3","MODULO 4"],
+  "CIR. MANO/MUÑE-NERVIO PERI/BRA": ["MODULO 1","MODULO 3","MODULO 4"],
+  "CIRUGIA CARDIACA": ["MODULO 1","MODULO 3","MODULO 4"],
+  "CIRUGIA DE CABEZA Y CUELLO": ["MODULO 1","MODULO 3","MODULO 4"],
+  "CIRUGIA GENERAL": ["MODULO 1","MODULO 3","MODULO 4"],
+  "CIRUGIA MAXILOFACIAL": ["MODULO 1","MODULO 3","MODULO 4"],
+  "CIRUGIA ONCOLOGICA": ["MODULO 1","MODULO 3","MODULO 4"],
+  "CIRUGIA PEDIATRICA": ["MODULO 1","MODULO 3","MODULO 4"],
+  "CIRUGIA PLASTICA": ["MODULO 1","MODULO 3","MODULO 4"],
+  "CIRUGIA TORAX": ["MODULO 1","MODULO 3","MODULO 4"],
+  "CIRUGIA VASCULAR": ["MODULO 1","MODULO 3","MODULO 4"],
+  "CLINICA MEDICA": ["MODULO 1","MODULO 2","MODULO 4"],
+  "DERMATOLOGIA": ["MODULO 1","MODULO 2"],
+  "DIABETOLOGIA": ["MODULO 1","MODULO 2"],
+  "DIAGNOSTICO POR IMAGEN": ["MODULO 1"],
+  "ECOGRAFIA": ["MODULO 1","MODULO 2"],
+  "EMERGENCIOLOGIA": ["MODULO 1","MODULO 5"],
+  "EMERGENCIOLOGIA PEDIATRICA": ["MODULO 1","MODULO 5"],
+  "ENDOCRINOLOGIA": ["MODULO 1","MODULO 2"],
+  "ENDOCRINOLOGIA PEDIATRICA": ["MODULO 1","MODULO 2"],
+  "ENFERMERIA": ["MODULO 1","MODULO 4","MODULO 5"],
+  "FISIOTERAPIA": ["MODULO 1","MODULO 2"],
+  "GASTROENTEROLOGIA": ["MODULO 1","MODULO 2","MODULO 4"],
+  "GASTROENTEROLOGIA PEDIATRICA": ["MODULO 1","MODULO 2"],
+  "GERIATRIA": ["MODULO 1","MODULO 2","MODULO 4"],
+  "GERONTOLOGIA": ["MODULO 1","MODULO 2"],
+  "GINECOLOGIA ONCOLOGICA": ["MODULO 1","MODULO 3","MODULO 4"],
+  "GINECOLOGIA Y OBSTETRICIA": ["MODULO 1","MODULO 3","MODULO 4"],
+  "HEMATO-ONCOLOGIA PEDIATRICA": ["MODULO 1","MODULO 2","MODULO 4"],
+  "HEMATOLOGIA": ["MODULO 1","MODULO 2","MODULO 4"],
+  "HEMATOLOGIA Y HEMOTERAPIA": ["MODULO 1","MODULO 4"],
+  "HEMOTERAPIA": ["MODULO 1","MODULO 4"],
+  "IMAGENOLOGIA": ["MODULO 1"],
+  "INFECTOLOGIA": ["MODULO 1","MODULO 2","MODULO 4"],
+  "INFECTOLOGIA PEDIATRICA": ["MODULO 1","MODULO 4"],
+  "INTENSIVISTA": ["MODULO 1","MODULO 4","MODULO 5"],
+  "INTERVENCIONISMO": ["MODULO 1","MODULO 4"],
+  "LABORATORIO CLINICO": ["MODULO 1"],
+  "MEDICAMENTOS": ["MODULO 1"],
+  "MEDICINA DE EMERGENCIAS": ["MODULO 1","MODULO 5"],
+  "MEDICINA FAMILIAR": ["MODULO 1","MODULO 2"],
+  "MEDICINA FISICA Y REHABILITACION": ["MODULO 1","MODULO 2"],
+  "MEDICINA GENERAL": ["MODULO 1","MODULO 2"],
+  "MEDICINA INTERNA": ["MODULO 1","MODULO 2","MODULO 4"],
+  "MEDICINA INTERNA 44": ["MODULO 1","MODULO 2","MODULO 4"],
+  "MEDICINA INTERNA HOSPITALARIA": ["MODULO 1","MODULO 2","MODULO 4"],
+  "MEDICINA NUCLEAR": ["MODULO 1"],
+  "NEFROLOGIA": ["MODULO 1","MODULO 2","MODULO 4"],
+  "NEFROLOGIA PEDIATRICA": ["MODULO 1","MODULO 4"],
+  "NEONATOLOGIA": ["MODULO 1","MODULO 4"],
+  "NEUROCIRUGIA": ["MODULO 1","MODULO 3","MODULO 4"],
+  "NEUROLOGIA": ["MODULO 1","MODULO 2","MODULO 4"],
+  "NEUROLOGIA PEDIATRICA": ["MODULO 1","MODULO 4"],
+  "NEUMOLOGIA": ["MODULO 1","MODULO 2","MODULO 4"],
+  "NEUMOLOGIA PEDIATRICA": ["MODULO 1","MODULO 4"],
+  "NUTRICION": ["MODULO 1","MODULO 2"],
+  "NUTRICION CLINICA": ["MODULO 1","MODULO 2"],
+  "NUTRICION PEDIATRICA": ["MODULO 1","MODULO 2"],
+  "OFTALMOLOGIA": ["MODULO 1","MODULO 2","MODULO 3"],
+  "ONCOLOGIA": ["MODULO 1","MODULO 2","MODULO 4"],
+  "ONCOLOGIA PEDIATRICA": ["MODULO 1","MODULO 4"],
+  "ORTOPEDIA Y TRAUMATOLOGIA": ["MODULO 1","MODULO 3","MODULO 4"],
+  "OTORRINOLARINGOLOGIA": ["MODULO 1","MODULO 2","MODULO 3"],
+  "OTORRINOPEDIATRIA": ["MODULO 1","MODULO 3"],
+  "PALIATIVOS": ["MODULO 1","MODULO 2"],
+  "PEDIATRIA": ["MODULO 1","MODULO 2","MODULO 4"],
+  "PERFUSIONISTA": ["MODULO 1","MODULO 3"],
+  "PSICOLOGIA": ["MODULO 1","MODULO 2"],
+  "PSIQUIATRIA": ["MODULO 1","MODULO 2"],
+  "RADIOLOGIA": ["MODULO 1"],
+  "RADIOTERAPIA": ["MODULO 1","MODULO 4"],
+  "REHABILITACION PEDIATRICA": ["MODULO 1","MODULO 2"],
+  "REUMATOLOGIA": ["MODULO 1","MODULO 2"],
+  "REUMATOLOGIA PEDIATRICA": ["MODULO 1","MODULO 2"],
+  "SALUD OCUPACIONAL": ["MODULO 1","MODULO 2"],
+  "TERAPIA RESPIRATORIA": ["MODULO 1","MODULO 4"],
+  "TOXICOLOGIA": ["MODULO 1","MODULO 5"],
+  "TRANSPLANTE": ["MODULO 1","MODULO 4"],
+  "TRAUMATOLOGIA PEDIATRICA": ["MODULO 1","MODULO 3"],
+  "UCI ADULTOS": ["MODULO 1","MODULO 4","MODULO 5"],
+  "UCI NEONATAL": ["MODULO 1","MODULO 4","MODULO 5"],
+  "UCI PEDIATRICA": ["MODULO 1","MODULO 4","MODULO 5"],
+  "UROLOGIA": ["MODULO 1","MODULO 3","MODULO 4"],
+  "UROLOGIA PEDIATRICA": ["MODULO 1","MODULO 3"],
+  "ALERGOLOGIA PEDIATRICA": ["MODULO 1","MODULO 2"],
+  "CARDIOLOGIA ADULTOS": ["MODULO 1","MODULO 2","MODULO 4"],
+  "CARDIOLOGIA HEMODINAMIA": ["MODULO 1","MODULO 2","MODULO 4"],
+  "CARDIOLOGIA INTERVENCIONISTA": ["MODULO 1","MODULO 2","MODULO 4"],
+  "CARDIOLOGIA PEDIATRICA": ["MODULO 1","MODULO 2","MODULO 4"]
+};
+
+// ======== Videos de ejemplo por nombre de módulo (ajústalos a tus propios IDs) ========
+const MOD_VIDEOS = {
+  "GENERALIDADES": ["kXYiU_JCYtU","CevxZvSJLk8","RgKAFK5djSk"],
+  "CONSULTA EXTERNA": ["9bZkp7q19f0","3JZ_D3ELwOQ","kXYiU_JCYtU"],
+  "CENTRO QUIRÚRGICO": ["l482T0yNkeo","9bZkp7q19f0","3JZ_D3ELwOQ"],
+  "HOSPITALIZACIÓN-HDD": ["CevxZvSJLk8","RgKAFK5djSk","OPf0YbXqDm0"],
+  "EMERGENCIAS": ["3JZ_D3ELwOQ","kXYiU_JCYtU","CevxZvSJLk8"],
+  // Si en el Excel hay títulos de módulo con nombre propio (p.ej., "ANESTESIOLOGÍA"),
+  // puedes añadir aquí su set de videos; si no está, hace fallback a GENERALIDADES.
+};
+
 const $ = s => document.querySelector(s);
-const emailOk = e => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((e||'').trim().toLowerCase());
-const setMsg = (el, t) => { el.textContent = t || ''; };
-const provName = p => ({'password':'correo y contraseña','google.com':'Google','apple.com':'Apple','facebook.com':'Facebook','microsoft.com':'Microsoft'}[p]||p);
+document.getElementById('year').textContent = new Date().getFullYear();
 
-/* === Tabs & ojitos === */
-function show(tab){
-  $('#view-login').classList.toggle('hidden', tab!=='login');
-  $('#view-register').classList.toggle('hidden', tab!=='register');
-  $('#tab-login').classList.toggle('btn-primary', tab==='login');
-  $('#tab-login').classList.toggle('btn-muted',   tab!=='login');
-  $('#tab-register').classList.toggle('btn-primary', tab==='register');
-  $('#tab-register').classList.toggle('btn-muted',   tab!=='register');
+// ======= Combo de especialidad (estricto) =======
+const specCombo = document.getElementById('spec-combo');
+const specInput = document.getElementById('spec-input');
+const specList  = document.getElementById('spec-list');
+const ESPEC_SET = new Set(ESPECIALIDADES);
+
+function renderSpecList(filter=''){
+  const f = (filter||'').trim().toLowerCase();
+  const opts = ESPECIALIDADES.filter(x=>x.toLowerCase().includes(f));
+  specList.innerHTML = '';
+  if(!opts.length){
+    const div = document.createElement('div');
+    div.className = 'item'; div.dataset.v=''; div.textContent='(sin resultados)';
+    specList.appendChild(div);
+    return;
+  }
+  opts.forEach(x=>{
+    const div = document.createElement('div');
+    div.className='item'; div.dataset.v=x; div.textContent=x;
+    specList.appendChild(div);
+  });
 }
-$('#tab-login').onclick=()=>show('login');
-$('#tab-register').onclick=()=>show('register');
-show('login');
-document.querySelectorAll('.eye').forEach(b=>b.addEventListener('click',()=>{
-  const i=document.querySelector(b.dataset.eye); if(i) i.type = i.type==='password' ? 'text':'password';
-}));
 
-/* === Estado de sesión (solo UI) === */
-auth.onAuthStateChanged(user=>{
-  if(user){
-    $('#whoami').textContent = `Sesión: ${user.email} ${user.emailVerified ? '(verificado)':'(sin verificar)'}`;
-    $('#btn-logout').classList.remove('hidden');
-  }else{
-    $('#whoami').textContent = '';
-    $('#btn-logout').classList.add('hidden');
+specInput.addEventListener('focus', ()=>{ specCombo.classList.add('show'); renderSpecList(specInput.value); });
+specInput.addEventListener('input', ()=>renderSpecList(specInput.value));
+document.addEventListener('click', (e)=>{ if(!specCombo.contains(e.target)) specCombo.classList.remove('show'); });
+specList.addEventListener('click', (e)=>{ const it=e.target.closest('.item'); if(!it) return; const v=it.dataset.v; if(v) specInput.value=v; specCombo.classList.remove('show'); });
+
+// ======= Lógica de módulos =======
+function currentModules(){
+  const spec = (specInput.value||'').trim();
+  return MAPA_MODULOS[spec] || [];
+}
+
+function moduleVideosFor(title){
+  return MOD_VIDEOS[title] || MOD_VIDEOS['GENERALIDADES'] || [];
+}
+
+function renderModules(){
+  const wrap = document.getElementById('modules');
+  wrap.innerHTML='';
+  const mods = currentModules();
+  if(!mods.length){
+    wrap.style.display='none';
+    document.getElementById('progress').style.display='none';
+    return;
   }
-});
+  wrap.style.display='grid';
+  document.getElementById('progress').style.display='block';
 
-/* === LOGIN: SOLO confiamos en fetchSignInMethods === */
-$('#btn-login').addEventListener('click', async ()=>{
-  const email = ($('#login-email').value||'').trim().toLowerCase();
-  const pass  = ($('#login-pass').value||'').trim();
-  const msgEl = $('#login-msg');
+  mods.forEach((m,idx)=>{
+    const videos = moduleVideosFor(m);
+    const vidsHtml = videos.map(vid=>`
+      <div class="yt-wrap">
+        <iframe src="https://www.youtube.com/embed/${vid}?rel=0&modestbranding=1" allowfullscreen></iframe>
+      </div>`).join('');
 
-  if(!emailOk(email)) return setMsg(msgEl,'El formato del correo no es válido.');
-  if(!pass)          return setMsg(msgEl,'Ingresa tu contraseña.');
+    const card = document.createElement('article');
+    card.className='card module';
+    card.innerHTML = `
+      <div class="num">${idx+1}</div>
+      <div class="meta">
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+          <h3 style="margin:0">${m}</h3>
+          <span class="badge">${videos.length} videos</span>
+        </div>
+        <p class="muted" style="margin:6px 0 10px">Mira los videos de este módulo.</p>
+        ${vidsHtml}
+      </div>`;
+    wrap.appendChild(card);
+  });
+}
 
-  $('#btn-login').disabled = true; setMsg(msgEl,'Verificando correo…');
-  try{
-    const methods = await auth.fetchSignInMethodsForEmail(email);
-
-    // 1) No hay cuenta
-    if(!methods || methods.length===0){
-      setMsg(msgEl,'Correo no registrado.');
-      return;
-    }
-
-    // 2) Cuenta con otro proveedor
-    if(!methods.includes('password')){
-      setMsg(msgEl, `Este correo está registrado con: ${methods.map(provName).join(', ')}.`);
-      return;
-    }
-
-    // 3) Cuenta con password → validar contraseña
-    setMsg(msgEl,'Validando contraseña…');
-    try{
-      await auth.signInWithEmailAndPassword(email, pass);
-      setMsg(msgEl,'Sesión iniciada.');
-    }catch(e){
-      if (['auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials'].includes(e.code))
-        return setMsg(msgEl,'Contraseña incorrecta.');
-      if (e.code==='auth/too-many-requests')  return setMsg(msgEl,'Demasiados intentos. Intenta más tarde.');
-      if (e.code==='auth/network-request-failed') return setMsg(msgEl,'Error de red. Revisa tu conexión.');
-      setMsg(msgEl,'Error: '+(e.message||''));
-    }
-  }catch(e){
-    // Si fetchSignInMethods falla
-    if (e.code==='auth/network-request-failed') setMsg(msgEl,'Error de red. Revisa tu conexión.');
-    else setMsg(msgEl,'No se pudo verificar el correo.');
-  }finally{
-    $('#btn-login').disabled = false;
+// ======= Guardar perfil (solo valida y muestra módulos) =======
+document.getElementById('btn-save-profile').addEventListener('click', ()=>{
+  const name= (document.getElementById('pf-name').value||'').trim();
+  const id  = (document.getElementById('pf-id').value||'').trim();
+  const spec= (specInput.value||'').trim();
+  if(!name || !id || !ESPEC_SET.has(spec)){
+    document.getElementById('pf-msg').textContent='Completa nombre, documento y selecciona una especialidad válida.';
+    return;
   }
+  document.getElementById('pf-msg').textContent='Perfil guardado.';
+  renderModules();
 });
-
-/* === RESET === */
-$('#btn-reset').addEventListener('click', async ()=>{
-  const email = ($('#login-email').value||'').trim().toLowerCase();
-  const msgEl = $('#login-msg');
-  if(!emailOk(email)) return setMsg(msgEl,'Escribe un correo válido.');
-
-  try{
-    const methods = await auth.fetchSignInMethodsForEmail(email);
-    if(!methods || methods.length===0) return setMsg(msgEl,'Correo no registrado.');
-    await auth.sendPasswordResetEmail(email);
-    setMsg(msgEl,'Te enviamos un correo para restablecer la contraseña.');
-  }catch(e){
-    setMsg(msgEl,'No se pudo enviar: ' + (e.message||''));
-  }
-});
-
-/* === REGISTRO === */
-$('#btn-register').addEventListener('click', async ()=>{
-  const email = ($('#reg-email').value||'').trim().toLowerCase();
-  const pass  = ($('#reg-pass').value||'').trim();
-  const pass2 = ($('#reg-pass2').value||'').trim();
-  const msgEl = $('#reg-msg');
-
-  if(!emailOk(email)) return setMsg(msgEl,'El formato del correo no es válido.');
-  if(pass.length<6)   return setMsg(msgEl,'La contraseña es muy corta (mínimo 6).');
-  if(pass!==pass2)    return setMsg(msgEl,'Las contraseñas no coinciden.');
-
-  $('#btn-register').disabled = true; setMsg(msgEl,'Creando cuenta…');
-  try{
-    const methods = await auth.fetchSignInMethodsForEmail(email);
-    if (methods && methods.length) return setMsg(msgEl,'Ese correo ya tiene cuenta. Usa Iniciar sesión.');
-
-    const cred = await auth.createUserWithEmailAndPassword(email, pass);
-    try{
-      await cred.user.sendEmailVerification({
-        url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1',
-        handleCodeInApp:false
-      });
-      setMsg(msgEl,'Cuenta creada. Te enviamos el correo de verificación.');
-    }catch(_){
-      setMsg(msgEl,'Cuenta creada. No se pudo enviar el correo automáticamente. Usa “Reenviar verificación”.');
-    }
-    $('#verify-box').classList.remove('hidden');
-  }catch(e){
-    if (e.code==='auth/email-already-in-use') return setMsg(msgEl,'Ese correo ya tiene cuenta. Usa Iniciar sesión.');
-    if (e.code==='auth/weak-password')        return setMsg(msgEl,'La contraseña es muy corta (mínimo 6).');
-    setMsg(msgEl,'No se pudo registrar: ' + (e.message||''));
-  } finally {
-    $('#btn-register').disabled = false;
-  }
-});
-
-/* === Verificación & Logout === */
-$('#btn-check-verify').onclick = async ()=>{
-  const m=$('#verify-msg');
-  try{ await auth.currentUser?.reload(); setMsg(m, auth.currentUser?.emailVerified ? '✅ Verificado.' : 'Aún sin verificar.'); }
-  catch(e){ setMsg(m,'Error: '+(e.message||'')); }
-};
-$('#btn-resend-verify').onclick = async ()=>{
-  const m=$('#verify-msg');
-  try{ await auth.currentUser?.sendEmailVerification({url:'https://neylz21.github.io/CURSO-PEP-SOUL-MV/?verified=1',handleCodeInApp:false}); setMsg(m,'Enlace reenviado.'); }
-  catch(e){ setMsg(m,'No se pudo reenviar: '+(e.message||'')); }
-};
-$('#btn-logout').onclick = ()=>auth.signOut().catch(()=>{});
 </script>
 </body>
 </html>
