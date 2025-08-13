@@ -38,8 +38,12 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .alert{border-radius:12px;padding:12px 14px;font-size:14px}
 .alert-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
 /* Spinner “Guardando…” */
-.saving::after{content:''; display:inline-block; width:14px; height:14px; margin-left:8px;border:2px solid #9ca3af; border-top-color:transparent; border-radius:999px; animation:spin .8s linear infinite;}
+.saving::after{
+  content:''; display:inline-block; width:14px; height:14px; margin-left:8px;
+  border:2px solid #9ca3af; border-top-color:transparent; border-radius:999px; animation:spin .8s linear infinite;
+}
 @keyframes spin{to{transform:rotate(360deg)}}
+
 /* Combo de especialidad */
 .combo{position:relative}
 .combo input{padding-right:36px}
@@ -48,6 +52,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .combo .opt{padding:10px 12px;cursor:pointer}
 .combo .opt:hover{background:#1f2937}
 .combo.show .panel{display:block}
+
 /* Bloques de quiz dentro de cada módulo */
 .quiz-wrap{margin-top:12px;border-top:1px solid #e5e7eb;padding-top:12px}
 .quiz-hint{font-size:13px}
@@ -211,20 +216,19 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 
 <script>
 /* ================================================================
-   ESPECIALIDADES + módulos (exactos del Excel)
-   Videos (placeholders)
-   Mejoras:
-   - Render inmediato de módulos al guardar perfil (hecho antes)
-   - Combo Especialidad: tras seleccionar se oculta y queda readOnly;
-     solo clic lo habilita de nuevo; se mantiene el buscador
-   ================================================================ */
+   1) ESPECIALIDADES + módulos (exactos)
+   2) Videos (placeholders)
+   3) Arreglos UX:
+      - Render inmediato de módulos al guardar perfil
+      - Combo: cerrar lista al seleccionar (stopPropagation fix)
+ ================================================================= */
 
-// === ESPECIALIDADES ===
+// === 1) ESPECIALIDADES ===
 const ESPECIALIDADES = [
-  "ACUPUNTURA","ALERGOLOGIA","ANESTESIOLOGIA","CARDIOLOGIA","CARDIOLOGIA HEMODINAMIA","CARDIOLOGIA INTERVENCIONISTA","CARDIOLOGIA PEDIATRICA","CIR. GENERAL-COLOPROCTOLOGIA","CIR. MANO/MUÑE-NERVIO PERI/BRA","CIRUGIA CARDIACA","CIRUGIA DE CABEZA Y CUELLO","CIRUGIA DE COLUMNA","CIRUGIA DE HOMBRO Y CODO","CIRUGIA GENERAL","CIRUGIA ONCOLOGICA","CIRUGIA PEDIATRICA","CIRUGIA PLASTICA","CIRUGIA TORACICA","CIRUGIA VASCULAR","COLOPROCTOLOGIA","CUIDADOS PALIATIVOS","DERMATOLOGIA","DIABETOLOGIA","EMERGENCIAS Y DESASTRES","ENDOCRINO PEDIATRA","ENDOCRINOLOGIA","ENFERMEDADES AUTOINMUNES","FISIATRIA","FONOAUDIOLOGIA","GASTROENTEROLOGIA","GASTROENTEROLOGIA PEDIATRICA","GENETICA MEDICA","GERIATRIA","GINECOLOGIA  INFANTO JUVENIL","GINECOLOGIA ONCOLOGICA","GINECOLOGIA Y OBSTETRICIA","HEMATOLOGIA","HEMATOLOGO ONCOLOGO PEDIATRIA","HEPATOLOGIA","INFECTOLOGIA","INFECTOLOGIA PEDIATRICA","INTERVENCIONISMO","MASTOLOGIA","MAXILO FACIAL","MEDICINA CRITICA","MEDICINA CRITICA PEDIATRICA","MEDICINA DEL DEPORTE","MEDICINA FAMILIAR","MEDICINA FAMILIAR EMERGENCIA","MEDICINA GENERAL","MEDICINA INTERNA","MEDICINA MATERNO FETAL","MEDICINA PALIATIVA","MICROBIOLOGIA","NEFROLOGIA","NEFROLOGIA PEDIATRICA","NEONATOLOGIA","NEUMOLOGIA","NEUMOLOGIA PEDIATRICA","NEUROCIRUGIA","NEUROFISIOLOGIA CLINICA","NEUROLOGIA","NEUROLOGIA PEDIATRICA","NEUROPSICOLOGIA","NEURORADIOL INTERVENCIONISTA","NEURORADIOLOGIA","NUTRICION","ODONTOLOGIA","ODONTOPEDIATRIA","OFTALMOLOGIA","OFTALMOLOGIA PEDIATRICA","ONCOLOGIA CLINICA","OTORRINOLARINGOLOGIA","PATOLOGIA","PEDIATRIA","PSICOLOGIA","PSIQUIATRIA","RADIOLOGIA","RADIOLOGIA INTERVENCIONISTA","RADIOTERAPIA","RESIDENTE/INTERNO","REUMATOLOGIA","REUMATOLOGIA PEDIATRICA","SEXOLOGIA","TRATAMIENTO DEL DOLOR","TRAUMATO PEDIATRICA DE COLUMNA","TRAUMATOLOGIA DEL COLUMNA","TRAUMATOLOGIA ONCOLOGICA","TRAUMATOLOGIA PEDIATRICA","TRAUMATOLOGIA Y ORTOPEDIA","UROLOGIA","UROLOGIA PEDIATRICA"
+  "ACUPUNTURA","ALERGOLOGIA","ANESTESIOLOGIA","CARDIOLOGIA","CARDIOLOGIA HEMODINAMIA","CARDIOLOGIA INTERVENCIONISTA","CARDIOLOGIA PEDIATRICA","CIR. GENERAL-COLOPROCTOLOGIA","CIR. MANO/MUÑE-NERVIO PERI/BRA","CIRUGIA CARDIACA","CIRUGIA DE CABEZA Y CUELLO","CIRUGIA DE COLUMNA","CIRUGIA DE HOMBRO Y CODO","CIRUGIA GENERAL","CIRUGIA ONCOLOGICA","CIRUGIA PEDIATRICA","CIRUGIA PLASTICA","CIRUGIA TORACICA","CIRUGIA VASCULAR","COLOPROCTOLOGIA","CUIDADOS PALIATIVOS","DERMATOLOGIA","DIABETOLOGIA","EMERGENCIAS Y DESASTRES","ENDOCRINO PEDIATRA","ENDOCRINOLOGIA","ENFERMEDADES AUTOINMUNES","FISIATRIA","FONOAUDIOLOGIA","GASTROENTEROLOGIA","GASTROENTEROLOGIA PEDIATRICA","GENETICA MEDICA","GERIATRIA","GINECOLOGIA  INFANTO JUVENIL","GINECOLOGIA ONCOLOGICA","GINECOLOGIA Y OBSTETRICIA","HEMATOLOGIA","HEMATOLOGO ONCOLOGO PEDIATRA","HEPATOLOGIA","INFECTOLOGIA","INFECTOLOGIA PEDIATRICA","INTERVENCIONISMO","MASTOLOGIA","MAXILO FACIAL","MEDICINA CRITICA","MEDICINA CRITICA PEDIATRICA","MEDICINA DEL DEPORTE","MEDICINA FAMILIAR","MEDICINA FAMILIAR EMERGENCIA","MEDICINA GENERAL","MEDICINA INTERNA","MEDICINA MATERNO FETAL","MEDICINA PALIATIVA","MICROBIOLOGIA","NEFROLOGIA","NEFROLOGIA PEDIATRICA","NEONATOLOGIA","NEUMOLOGIA","NEUMOLOGIA PEDIATRICA","NEUROCIRUGIA","NEUROFISIOLOGIA CLINICA","NEUROLOGIA","NEUROLOGIA PEDIATRICA","NEUROPSICOLOGIA","NEURORADIOL INTERVENCIONISTA","NEURORADIOLOGIA","NUTRICION","ODONTOLOGIA","ODONTOPEDIATRIA","OFTALMOLOGIA","OFTALMOLOGIA PEDIATRICA","ONCOLOGIA CLINICA","OTORRINOLARINGOLOGIA","PATOLOGIA","PEDIATRIA","PSICOLOGIA","PSIQUIATRIA","RADIOLOGIA","RADIOLOGIA INTERVENCIONISTA","RADIOTERAPIA","RESIDENTE/INTERNO","REUMATOLOGIA","REUMATOLOGIA PEDIATRICA","SEXOLOGIA","TRATAMIENTO DEL DOLOR","TRAUMATO PEDIATRICA DE COLUMNA","TRAUMATOLOGIA DEL COLUMNA","TRAUMATOLOGIA ONCOLOGICA","TRAUMATOLOGIA PEDIATRICA","TRAUMATOLOGIA Y ORTOPEDIA","UROLOGIA","UROLOGIA PEDIATRICA"
 ];
 
-// === MÓDULOS POR ESPECIALIDAD ===
+// === 2) MÓDULOS POR ESPECIALIDAD ===
 const M = { CE:"CONSULTA EXTERNA", H:"HOSPITALIZACIÓN-HDD", CQ:"CENTRO QUIRÚRGICO", G:"GENERALIDADES", AN:"ANESTESIOLOGÍA", EM:"EMERGENCIAS" };
 const BASE_MEDICA=[M.G,M.H,M.CE], BASE_QUIR=[M.G,M.H,M.CE,M.CQ];
 
@@ -241,7 +245,7 @@ const ESPEC_MODS = {
   "GASTROENTEROLOGIA": BASE_QUIR, "GASTROENTEROLOGIA PEDIATRICA": BASE_QUIR,
   "GENETICA MEDICA": BASE_MEDICA, "GERIATRIA": BASE_MEDICA,
   "GINECOLOGIA  INFANTO JUVENIL": BASE_QUIR, "GINECOLOGIA ONCOLOGICA": BASE_QUIR, "GINECOLOGIA Y OBSTETRICIA": BASE_QUIR,
-  "HEMATOLOGIA": BASE_QUIR, "HEMATOLOGO ONCOLOGO PEDIATRIA": BASE_QUIR,
+  "HEMATOLOGIA": BASE_QUIR, "HEMATOLOGO ONCOLOGO PEDIATRA": BASE_QUIR,
   "HEPATOLOGIA": BASE_MEDICA, "INFECTOLOGIA": BASE_MEDICA, "INFECTOLOGIA PEDIATRICA": BASE_MEDICA,
   "INTERVENCIONISMO": BASE_QUIR, "MASTOLOGIA": BASE_QUIR, "MAXILO FACIAL": BASE_QUIR,
   "MEDICINA CRITICA": BASE_MEDICA, "MEDICINA CRITICA PEDIATRICA": BASE_MEDICA, "MEDICINA DEL DEPORTE": BASE_MEDICA,
@@ -267,7 +271,7 @@ const ESPEC_MODS = {
   "UROLOGIA": BASE_QUIR, "UROLOGIA PEDIATRICA": BASE_QUIR
 };
 
-// === Videos (placeholders) ===
+// === 3) Videos (IDs de ejemplo) ===
 const VIDEO_DEFAULTS = {
   "GENERALIDADES": ["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0"],
   "HOSPITALIZACIÓN-HDD": ["eY52Zsg-KVI","fJ9rUzIMcZQ","L_jWHffIx5E"],
@@ -351,7 +355,7 @@ document.querySelectorAll('.eye').forEach(btn=>{
   });
 });
 
-/* ========= Combo Especialidad (con bloqueo tras seleccionar, y buscador al hacer clic) ========= */
+/* ========= Combo Especialidad (buscador; cierra al seleccionar) ========= */
 (function setupSpecCombo(){
   const wrap = $('#spec-combo');
   const input = $('#pf-spec');
@@ -359,7 +363,7 @@ document.querySelectorAll('.eye').forEach(btn=>{
   let filtered = ESPECIALIDADES.slice();
   let open=false;
 
-  // Al inicio, el campo queda de solo lectura.
+  // Arranca bloqueado; solo clic lo habilita
   input.readOnly = true;
 
   function render(list){
@@ -368,63 +372,60 @@ document.querySelectorAll('.eye').forEach(btn=>{
       const div=document.createElement('div');
       div.className='opt';
       div.textContent=name;
-      div.addEventListener('click',()=>{
+      div.addEventListener('click',(e)=>{
+        // FIX: evitar que el clic burbujee y vuelva a abrir el panel.
+        e.stopPropagation();
         input.value=name;
-        hide();            // oculta lista
-        input.readOnly=true; // bloquea nuevamente
+        hide();
+        input.readOnly=true; // bloquear de nuevo
       });
       panel.appendChild(div);
     });
   }
   function show(){ wrap.classList.add('show'); open=true; }
   function hide(){ wrap.classList.remove('show'); open=false; }
-
   render(filtered);
 
-  // Mantener buscador, pero solo cuando el campo esté habilitado (no readOnly)
-  input.addEventListener('input', ()=>{
-    if(input.readOnly) return;
-    const q=input.value.trim().toLowerCase();
-    filtered = ESPECIALIDADES.filter(e=>e.toLowerCase().includes(q));
-    render(filtered);
-    show();
-  });
-
-  // Abrir y habilitar SOLO con clic en el cuadro
+  // Habilitar al hacer clic en el cuadro (manteniendo el buscador)
   wrap.addEventListener('click', ()=>{
     if(!open){
-      input.readOnly = false;         // habilita escritura
+      input.readOnly=false;
       input.focus();
-      // Si ya hay valor, lo respetamos; si quieres limpiar al abrir, descomenta:
-      // input.select();
-      filtered = ESPECIALIDADES.slice();
+      // Si deseas limpiar al abrir: input.select();
+      filtered=ESPECIALIDADES.slice();
       render(filtered);
       show();
     }
   });
 
-  // Clic fuera: cerrar y volver a readOnly
+  // Búsqueda (solo si está habilitado)
+  input.addEventListener('input', ()=>{
+    if(input.readOnly) return;
+    const q=input.value.trim().toLowerCase();
+    filtered=ESPECIALIDADES.filter(e=>e.toLowerCase().includes(q));
+    render(filtered);
+    show();
+  });
+
+  // Cerrar si haces clic fuera
   document.addEventListener('click',(e)=>{
     if(!wrap.contains(e.target)){
       hide();
-      input.readOnly = true;
+      input.readOnly=true;
     }
   });
 
-  // Si el usuario navega con teclado y hace blur, no reabre solo; queda readOnly.
-  input.addEventListener('blur', ()=>{
-    if(!open){
-      input.readOnly = true;
-    }
-  });
-
-  // Validación: solo permitir valores de la lista exacta
+  // Validación del valor
   input.addEventListener('change', ()=>{
     const v=input.value.trim();
-    if(!v) return;
-    if(!ESPECIALIDADES.includes(v)){
+    if(v && !ESPECIALIDADES.includes(v)){
       input.value='';
     }
+  });
+
+  // Tecla ESC para cerrar
+  input.addEventListener('keydown',(e)=>{
+    if(e.key==='Escape'){ hide(); input.readOnly=true; input.blur(); }
   });
 })();
 
@@ -531,7 +532,7 @@ function profileComplete(){ const p=state.profile||{}; return !!(p.name&&p.iddoc
 function setProfileReadonly(ro){
   ['pf-name','pf-id','pf-spec'].forEach(id=>{
     const el=document.getElementById(id);
-    el.readOnly=(id==='pf-spec')?false:ro; // pf-spec se controla por el combo (se forzará readOnly dinámicamente)
+    el.readOnly=(id==='pf-spec')?false:ro; // pf-spec lo gestiona el combo
     el.style.background=ro&&id!=='pf-spec'?'#eef2ff':'#fff';
   });
   $('#btn-edit-profile').style.display=ro?'inline-flex':'none';
