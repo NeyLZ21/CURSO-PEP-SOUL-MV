@@ -336,7 +336,6 @@ function clickToLoad(pid){
   if(isLocked(cfg)){ showWarn(pid, lockReason(cfg)); return; }
   if(players[pid]) return; // ya creado
   actuallyCreatePlayer(cfg);
-  // Quitar póster cuando el player esté listo
   const poster = document.querySelector(`.poster[data-load="${pid}"]`);
   if(poster) poster.remove();
 }
@@ -379,7 +378,6 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
           if(ifr) ifr.setAttribute('allow','autoplay; fullscreen; encrypted-media; picture-in-picture');
           ev.target.unMute(); ev.target.setVolume(100);
         }catch(_){}
-        // reanudar desde última posición permitida (sin autoplay)
         const startAt=Math.min(store.t||0,store.allow||0);
         if(startAt>1){ try{ev.target.seekTo(startAt,true);}catch(_){} }
       },
@@ -387,28 +385,22 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
         const p=ev.target, st=ev.data;
         if(st===YT.PlayerState.PLAYING){
           lastPlayingPid=pid;
-
-          // Chequeos de lock al tiempo de reproducción
           if(isLocked(meta)){
             showWarn(pid, lockReason(meta));
             try{ p.pauseVideo(); }catch(_){}
             return;
           }
-
           startTick();
         }else if(st===YT.PlayerState.PAUSED){
           persist();
         }else if(st===YT.PlayerState.ENDED){
           stopTick();
-          // marcar visto
           state.videosDone=state.videosDone||{};
           state.videosDone[moduleId]=state.videosDone[moduleId]||{};
           state.videosDone[moduleId][videoId]=true;
-          // liberar seek
           store.allow=store.dur||store.allow; store.t=store.allow;
           persist();
 
-          // desbloquear siguiente visualmente (si existe)
           const m = (state.course?.modules||[]).find(mm=>mm.id===moduleId);
           const nextPid = `player-${moduleId}-${index+1}`;
           const nextLock = document.getElementById(`lock-${nextPid}`);
@@ -443,7 +435,6 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
       try{ cur=p.getCurrentTime?.()||0; dur=p.getDuration?.()||0; st=p.getPlayerState?.(); }catch(_){}
       if(dur && (!store.dur || Math.abs(store.dur-dur)>0.5)){ store.dur=dur; persist(); }
 
-      // Anti-seek: no permitir ir más allá de lo permitido
       if(cur > (store.allow+1.0)){
         try{ p.seekTo(store.allow,true); }catch(_){}
         return;
@@ -476,7 +467,7 @@ window.addEventListener('beforeunload', persist);
 
 window.onYouTubeIframeAPIReady=()=>{ ytApiReady=true; };
 
-/* ======================== Auth + UI (igual a tu versión) ======================== */
+/* ======================== Auth + UI ======================== */
 document.querySelectorAll('.eye').forEach(btn=>{
   btn.addEventListener('click',()=>{ const inp=document.querySelector(btn.dataset.eye); if(!inp) return; inp.type=inp.type==='password'?'text':'password'; });
 });
@@ -570,6 +561,59 @@ document.getElementById('btn-reset').addEventListener('click', async ()=>{
 });
 document.getElementById('btn-logout').addEventListener('click', async ()=>{ await auth.signOut(); msg('Sesión cerrada.'); });
 
+/* ======================== Combo de Especialidad (NUEVO) ======================== */
+const comboEl = document.getElementById('spec-combo');
+const inputSpec = document.getElementById('pf-spec');
+const panelSpec = document.getElementById('spec-panel');
+
+function renderSpecOptions(filterText=''){
+  const f = (filterText||'').trim().toLowerCase();
+  const list = ESPECIALIDADES
+    .filter(e => !f || e.toLowerCase().includes(f))
+    .map(e => `<div class="opt" data-val="${e.replace(/"/g,'&quot;')}">${e}</div>`)
+    .join('') || `<div class="opt" style="opacity:.7;cursor:default">No hay resultados</div>`;
+  panelSpec.innerHTML = list;
+
+  // handlers de cada opción
+  panelSpec.querySelectorAll('.opt').forEach(opt=>{
+    const val = opt.getAttribute('data-val');
+    if(!val) return; // "No hay resultados"
+    opt.addEventListener('click', ()=>{
+      inputSpec.value = val;
+      // No guardamos aún en nube; el guardado ocurre con el botón "Guardar perfil"
+      state.profile = state.profile || {};
+      state.profile.spec = val;
+      persist();
+      closeSpecPanel();
+    });
+  });
+}
+function openSpecPanel(){
+  if (inputSpec.readOnly) return; // respetar modo solo lectura
+  comboEl.classList.add('show');
+  renderSpecOptions(inputSpec.value);
+}
+function closeSpecPanel(){
+  comboEl.classList.remove('show');
+}
+function toggleSpecPanel(){
+  if (comboEl.classList.contains('show')) closeSpecPanel(); else openSpecPanel();
+}
+
+// Abrir/cerrar al click
+inputSpec.addEventListener('click', (e)=>{ e.stopPropagation(); toggleSpecPanel(); });
+// Filtrar al tipear (sólo si no está readonly)
+inputSpec.addEventListener('input', ()=>{ if(!inputSpec.readOnly) renderSpecOptions(inputSpec.value); });
+// Cerrar al hacer click fuera
+document.addEventListener('click', (e)=>{
+  if(!comboEl.contains(e.target)) closeSpecPanel();
+});
+// Acceso rápido con teclado
+inputSpec.addEventListener('keydown', (e)=>{
+  if (e.key==='Escape'){ closeSpecPanel(); }
+  if (e.key==='ArrowDown'){ openSpecPanel(); const first=panelSpec.querySelector('.opt'); first?.focus?.(); }
+});
+
 /* ======================== Vistas / Perfil ======================== */
 function showCourse(){
   if(!auth.currentUser) return;
@@ -591,10 +635,20 @@ function showCourse(){
   $('#pf-id').value=state.profile?.iddoc||'';
   $('#pf-spec').value=state.profile?.spec||'';
 
+  // Asegurar que el panel tenga las opciones desde el inicio
+  renderSpecOptions('');
+
   renderAllBySpecialty(getSpecialty());
   updateGlobalProgress();
   startProfileRealtime();
-  loadProfile().then(()=>{ renderAllBySpecialty(getSpecialty()); updateGlobalProgress(); if(profileComplete()) setProfileReadonly(true); }).catch(()=>{});
+  loadProfile().then(()=>{
+    $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
+    $('#pf-id').value=state.profile?.iddoc||'';
+    $('#pf-spec').value=state.profile?.spec||'';
+    renderAllBySpecialty(getSpecialty());
+    updateGlobalProgress();
+    if(profileComplete()) setProfileReadonly(true);
+  }).catch(()=>{});
 }
 function showLogin(){ $('#step-welcome').style.display='block'; $('#profile').style.display='none'; $('#progress').style.display='none'; $('#modules').style.display='none'; }
 function profileComplete(){ const p=state.profile||{}; return !!(p.name&&p.iddoc&&p.spec&&ESPECIALIDADES.includes(p.spec)); }
@@ -604,6 +658,7 @@ function setProfileReadonly(ro){
     if(id==='pf-spec'){ el.readOnly = ro ? true : false; el.style.background = ro ? '#eef2ff' : '#fff'; }
     else{ el.readOnly = ro; el.style.background = ro ? '#eef2ff' : '#fff'; }
   });
+  if(ro) closeSpecPanel();
   $('#btn-edit-profile').style.display=ro?'inline-flex':'none';
   $('#btn-save-profile').style.display=ro?'none':'inline-flex';
 }
@@ -698,7 +753,6 @@ function renderAllBySpecialty(spec){
 }
 
 function renderModules(modulesDef){
-  // destruir players previos
   Object.keys(players).forEach(k=>{
     try{ players[k]?.player?.stopVideo?.(); players[k]?.player?.destroy?.(); }catch(_){}
     delete players[k];
@@ -714,7 +768,6 @@ function renderModules(modulesDef){
       const pid = `player-${m.id}-${i}`;
       const locked = (i===0) ? !!firstLockedMsg : !doneVideos[m.videos[i-1].yt];
       const lockedMsg = locked ? ((i===0 && firstLockedMsg)?firstLockedMsg:'Termina el video anterior') : null;
-      // guardar config para carga bajo demanda
       cfgByPid.set(pid,{pid,videoId:v.yt,moduleId:m.id,index:i});
       return makePoster(pid, v.yt, lockedMsg);
     }).join('');
@@ -748,7 +801,6 @@ function renderModules(modulesDef){
       </div>`;
     wrap.appendChild(card);
 
-    // Click-to-load en cada póster
     m.videos.forEach((v,i)=>{
       const pid = `player-${m.id}-${i}`;
       const poster = card.querySelector(`[data-load="${pid}"]`);
