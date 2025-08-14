@@ -40,7 +40,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .cert-name{font-size:26px;font-weight:800;margin:8px 0}
 .cert-meta{color:#374151;margin-top:10px}
 
-/* Inputs con ojito */
+/* Inputs */
 .input-wrap{position:relative}
 .input-wrap input, .input-wrap select, input, select{width:100%;padding:12px 40px 12px 12px;border-radius:12px;border:1px solid #e5e7eb}
 .eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;border:0;background:transparent;font-size:16px}
@@ -53,20 +53,20 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .saving::after{content:'';display:inline-block;width:14px;height:14px;margin-left:8px;border:2px solid #9ca3af;border-top-color:transparent;border-radius:999px;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* Combo de especialidad */
+/* Combo de especialidad (versión libre, sin readonly forzado) */
 .combo{position:relative}
 .combo input{padding-right:36px}
 .combo .arrow{position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none}
 .combo .panel{position:absolute;z-index:20;left:0;right:0;max-height:280px;overflow:auto;background:#111827;color:#f9fafb;border-radius:12px;padding:6px 0;box-shadow:0 10px 24px rgba(0,0,0,.18);display:none}
 .combo .opt{padding:10px 12px;cursor:pointer}
-.combo .opt:hover{background:#1f2937}
+.combo .opt:hover,.combo .opt.active{background:#1f2937}
 .combo.show .panel{display:block}
 
 /* Quiz */
 .quiz-wrap{margin-top:12px;border-top:1px solid #e5e7eb;padding-top:12px}
 .quiz-hint{font-size:13px}
 
-/* Póster/lazy */
+/* Poster/lazy */
 .poster{position:absolute;inset:0;background:#000;display:grid;place-items:center;cursor:pointer}
 .poster img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.8)}
 .poster button{position:relative;z-index:2;padding:10px 14px;border-radius:999px;background:#ffffffd9;font-weight:800;border:0}
@@ -93,6 +93,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
       <div>
         <h2 style="margin:0 0 6px">Acceso</h2>
         <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña. Tu progreso queda guardado en la nube.</p>
+
         <div class="grid" id="auth-forms">
           <div style="display:flex; gap:8px; margin-bottom:8px">
             <button id="tab-login" class="btn btn-primary">Iniciar sesión</button>
@@ -137,7 +138,6 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
               <button class="btn btn-muted" id="btn-register-2">Crear cuenta</button>
             </div>
           </div>
-
           <div id="auth-msg" class="muted" style="min-height:18px"></div>
         </div>
 
@@ -164,10 +164,12 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
   <!-- Perfil -->
   <section id="profile" class="card no-print" style="display:none;margin:18px 0">
     <h2 style="margin:0 0 8px">Mi perfil</h2>
-    <p class="muted" id="pf-help">Edita tus datos y guarda los cambios.</p>
+    <p class="muted" id="pf-help">Completa todos los campos para habilitar los módulos.</p>
+
     <div class="grid cols-2">
       <label>Nombre completo (para certificado)<br><input id="pf-name" type="text" required></label>
       <label>Cédula o Pasaporte<br><input id="pf-id" type="text" required></label>
+
       <label style="grid-column:1/-1">Especialidad<br>
         <div class="combo" id="spec-combo">
           <input id="pf-spec" type="text" placeholder="Escribe para buscar…" autocomplete="off">
@@ -177,6 +179,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
         <small class="muted">Selecciona de la lista. Esto define los módulos que verás.</small>
       </label>
     </div>
+
     <div class="actions" style="display:flex;gap:8px;margin-top:10px">
       <button id="btn-edit-profile" class="btn btn-muted" style="display:none">Modificar</button>
       <button id="btn-save-profile" class="btn btn-primary">Guardar perfil</button>
@@ -223,7 +226,8 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 
 <script>
 /* ======================== ESPECIALIDADES / MÓDULOS / VIDEOS ======================== */
-const ESPECIALIDADES=[ "ACUPUNTURA","ALERGOLOGIA","ANESTESIOLOGIA","CARDIOLOGIA","CARDIOLOGIA HEMODINAMIA","CARDIOLOGIA INTERVENCIONISTA","CARDIOLOGIA PEDIATRICA","CIR. GENERAL-COLOPROCTOLOGIA","CIR. MANO/MUÑE-NERVIO PERI/BRA","CIRUGIA CARDIACA","CIRUGIA DE CABEZA Y CUELLO","CIRUGIA DE COLUMNA","CIRUGIA DE HOMBRO Y CODO","CIRUGIA GENERAL","CIRUGIA ONCOCOLOGICA","CIRUGIA PEDIATRICA","CIRUGIA PLASTICA","CIRUGIA TORACICA","CIRUGIA VASCULAR","COLOPROCTOLOGIA","CUIDADOS PALIATIVOS","DERMATOLOGIA","DIABETOLOGIA","EMERGENCIAS Y DESASTRES","ENDOCRINO PEDIATRA","ENDOCRINOLOGIA","ENFERMEDADES AUTOINMUNES","FISIATRIA","FONOAUDIOLOGIA","GASTROENTEROLOGIA","GASTROENTEROLOGIA PEDIATRICA","GENETICA MEDICA","GERIATRIA","GINECOLOGIA INFANTO JUVENIL","GINECOLOGIA ONCOCOLOGICA","GINECOLOGIA Y OBSTETRICIA","HEMATOLOGIA","HEMATOLOGO ONCOLOGO PEDIATRIA","HEPATOLOGIA","INFECTOLOGIA","INFECTOLOGIA PEDIATRICA","INTERVENCIONISMO","MASTOLOGIA","MAXILO FACIAL","MEDICINA CRITICA","MEDICINA CRITICA PEDIATRICA","MEDICINA DEL DEPORTE","MEDICINA FAMILIAR","MEDICINA FAMILIAR EMERGENCIA","MEDICINA GENERAL","MEDICINA INTERNA","MEDICINA MATERNO FETAL","MEDICINA PALIATIVA","MICROBIOLOGIA","NEFROLOGIA","NEFROLOGIA PEDIATRICA","NEONATOLOGIA","NEUMOLOGIA","NEUMOLOGIA PEDIATRICA","NEUROCIRUGIA","NEUROFISIOLOGIA CLINICA","NEUROLOGIA","NEUROLOGIA PEDIATRICA","NEUROPSICOLOGIA","NEURORADIOL INTERVENCIONISTA","NEURORADIOLOGIA","NUTRICION","ODONTOLOGIA","ODONTOPEDIATRIA","OFTALMOLOGIA","OFTALMOLOGIA PEDIATRICA","ONCOLOGIA CLINICA","OTORRINOLARINGOLOGIA","PATOLOGIA","PEDIATRIA","PSICOLOGIA","PSIQUIATRIA","RADIOLOGIA","RADIOLOGIA INTERVENCIONISTA","RADIOTERAPIA","RESIDENTE/INTERNO","REUMATOLOGIA","REUMATOLOGIA PEDIATRICA","SEXOLOGIA","TRATAMIENTO DEL DOLOR","TRAUMATO PEDIATRICA DE COLUMNA","TRAUMATOLOGIA DEL COLUMNA","TRAUMATOLOGIA ONCOLOGICA","TRAUMATOLOGIA PEDIATRICA","TRAUMATOLOGIA Y ORTOPEDIA","UROLOGIA","UROLOGIA PEDIATRICA" ];
+const ESPECIALIDADES=[ "ACUPUNTURA","ALERGOLOGIA","ANESTESIOLOGIA","CARDIOLOGIA","CARDIOLOGIA HEMODINAMIA","CARDIOLOGIA INTERVENCIONISTA","CARDIOLOGIA PEDIATRICA","CIR. GENERAL-COLOPROCTOLOGIA","CIR. MANO/MUÑE-NERVIO PERI/BRA","CIRUGIA CARDIACA","CIRUGIA DE CABEZA Y CUELLO","CIRUGIA DE COLUMNA","CIRUGIA DE HOMBRO Y CODO","CIRUGIA GENERAL","CIRUGIA ONCOCOLOGICA","CIRUGIA PEDIATRICA","CIRUGIA PLASTICA","CIRUGIA TORACICA","CIRUGIA VASCULAR","COLOPROCTOLOGIA","CUIDADOS PALIATIVOS","DERMATOLOGIA","DIABETOLOGIA","EMERGENCIAS Y DESASTRES","ENDOCRINO PEDIATRA","ENDOCRINOLOGIA","ENFERMEDADES AUTOINMUNES","FISIATRIA","FONOAUDIOLOGIA","GASTROENTEROLOGIA","GASTROENTEROLOGIA PEDIATRICA","GENETICA MEDICA","GERIATRIA","GINECOLOGIA INFANTO JUVENIL","GINECOLOGIA ONCOLOGICA","GINECOLOGIA Y OBSTETRICIA","HEMATOLOGIA","HEMATOLOGO ONCOLOGO PEDIATRIA","HEPATOLOGIA","INFECTOLOGIA","INFECTOLOGIA PEDIATRICA","INTERVENCIONISMO","MASTOLOGIA","MAXILO FACIAL","MEDICINA CRITICA","MEDICINA CRITICA PEDIATRICA","MEDICINA DEL DEPORTE","MEDICINA FAMILIAR","MEDICINA FAMILIAR EMERGENCIA","MEDICINA GENERAL","MEDICINA INTERNA","MEDICINA MATERNO FETAL","MEDICINA PALIATIVA","MICROBIOLOGIA","NEFROLOGIA","NEFROLOGIA PEDIATRICA","NEONATOLOGIA","NEUMOLOGIA","NEUMOLOGIA PEDIATRICA","NEUROCIRUGIA","NEUROFISIOLOGIA CLINICA","NEUROLOGIA","NEUROLOGIA PEDIATRICA","NEUROPSICOLOGIA","NEURORADIOL INTERVENCIONISTA","NEURORADIOLOGIA","NUTRICION","ODONTOLOGIA","ODONTOPEDIATRIA","OFTALMOLOGIA","OFTALMOLOGIA PEDIATRICA","ONCOLOGIA CLINICA","OTORRINOLARINGOLOGIA","PATOLOGIA","PEDIATRIA","PSICOLOGIA","PSIQUIATRIA","RADIOLOGIA","RADIOLOGIA INTERVENCIONISTA","RADIOTERAPIA","RESIDENTE/INTERNO","REUMATOLOGIA","REUMATOLOGIA PEDIATRICA","SEXOLOGIA","TRATAMIENTO DEL DOLOR","TRAUMATO PEDIATRICA DE COLUMNA","TRAUMATOLOGIA DEL COLUMNA","TRAUMATOLOGIA ONCOLOGICA","TRAUMATOLOGIA PEDIATRICA","TRAUMATOLOGIA Y ORTOPEDIA","UROLOGIA","UROLOGIA PEDIATRICA" ];
+
 const M={ CE:"CONSULTA EXTERNA", H:"HOSPITALIZACIÓN-HDD", CQ:"CENTRO QUIRÚRGICO", G:"GENERALIDADES", AN:"ANESTESIOLOGÍA", EM:"EMERGENCIAS" };
 const BASE_MEDICA=[M.G,M.H,M.CE], BASE_QUIR=[M.G,M.H,M.CE,M.CQ];
 const ESPEC_MODS={
@@ -235,7 +239,7 @@ const ESPEC_MODS={
   "ENFERMEDADES AUTOINMUNES":BASE_MEDICA,"FISIATRIA":BASE_MEDICA,"FONOAUDIOLOGIA":BASE_MEDICA,
   "GASTROENTEROLOGIA":BASE_QUIR,"GASTROENTEROLOGIA PEDIATRICA":BASE_QUIR,"GENETICA MEDICA":BASE_MEDICA,"GERIATRIA":BASE_MEDICA,
   "GINECOLOGIA INFANTO JUVENIL":BASE_QUIR,"GINECOLOGIA ONCOLOGICA":BASE_QUIR,"GINECOLOGIA Y OBSTETRICIA":BASE_QUIR,
-  "HEMATOLOGIA":BASE_QUIR,"HEMATOLOGO ONCOCOLOGO PEDIATRIA":BASE_QUIR,"HEPATOLOGIA":BASE_MEDICA,
+  "HEMATOLOGIA":BASE_QUIR,"HEMATOLOGO ONCOLOGO PEDIATRIA":BASE_QUIR,"HEPATOLOGIA":BASE_MEDICA,
   "INFECTOLOGIA":BASE_MEDICA,"INFECTOLOGIA PEDIATRICA":BASE_MEDICA,"INTERVENCIONISMO":BASE_QUIR,"MASTOLOGIA":BASE_QUIR,"MAXILO FACIAL":BASE_QUIR,
   "MEDICINA CRITICA":BASE_MEDICA,"MEDICINA CRITICA PEDIATRICA":BASE_MEDICA,"MEDICINA DEL DEPORTE":BASE_MEDICA,"MEDICINA FAMILIAR":[M.G,M.CE],"MEDICINA FAMILIAR EMERGENCIA":[M.G,M.EM],
   "MEDICINA GENERAL":BASE_MEDICA,"MEDICINA INTERNA":BASE_MEDICA,"MEDICINA MATERNO FETAL":BASE_MEDICA,"MEDICINA PALIATIVA":BASE_MEDICA,"MICROBIOLOGIA":BASE_MEDICA,
@@ -264,8 +268,9 @@ const DEFAULT_VIDEOS=["dQw4w9WgXcQ"];
 const firebaseConfig={apiKey:"AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",authDomain:"induccion-pep-hvq.firebaseapp.com",projectId:"induccion-pep-hvq",storageBucket:"induccion-pep-hvq.firebasestorage.app",messagingSenderId:"651724182766",appId:"1:651724182766:web:4eec9be43e9e8e60dc0fff",measurementId:"G-Z62L1CCYP1"};
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
-
-try{ firebase.firestore().enablePersistence({synchronizeTabs:true}).catch(()=>{}); }catch(_){}
+try{
+  firebase.firestore().enablePersistence({synchronizeTabs:true}).catch(err=>{ console.warn('Firestore persistence no habilitada:', err && err.code); });
+}catch(e){ console.warn('Persistence error', e); }
 const db=firebase.firestore();
 
 /* ======================== Estado / helpers ======================== */
@@ -294,25 +299,21 @@ let state=loadState(null);
 let unsubProfile=null;
 let savingProfile=false;
 
-/* ======================== YouTube (igual) ======================== */
-let ytApiReady=false;
-const players={};
-const cfgByPid=new Map();
-let lastPlayingPid=null;
-
+/* ======================== YouTube control (resumido; sin cambios funcionales) ======================== */
+let ytApiReady=false; const players={}; const cfgByPid=new Map(); let lastPlayingPid=null;
 function ytThumb(id){ return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`; }
 function makePoster(pid, videoId, lockedMsg){
   const lockLayer = lockedMsg ? `<div class="lock" id="lock-${pid}">🔒 ${lockedMsg}</div>` : '';
   return `
-    <div class="yt-wrap" style="margin-top:8px">
-      <div id="${pid}"></div>
-      <div class="poster" data-load="${pid}">
-        <img src="${ytThumb(videoId)}" alt="">
-        <button type="button">Ver video ▶</button>
-      </div>
-      ${lockLayer}
-      <div class="warnmsg" id="warn-${pid}"></div>
-    </div>`;
+  <div class="yt-wrap" style="margin-top:8px">
+    <div id="${pid}"></div>
+    <div class="poster" data-load="${pid}">
+      <img src="${ytThumb(videoId)}" alt="">
+      <button type="button">Ver video ▶</button>
+    </div>
+    ${lockLayer}
+    <div class="warnmsg" id="warn-${pid}"></div>
+  </div>`;
 }
 function prevModuleConcluded(moduleId){
   const mods = state.course?.modules || [];
@@ -330,13 +331,15 @@ function ensureStoreFor(mid,vid){
   return state.play[mid][vid];
 }
 function persist(){ saveStateLocal(CURRENT_UID,state); }
+
 function clickToLoad(pid){
-  const cfg=cfgByPid.get(pid); if(!cfg) return;
+  const cfg=cfgByPid.get(pid);
+  if(!cfg) return;
   if(isLocked(cfg)){ showWarn(pid, lockReason(cfg)); return; }
   if(players[pid]) return;
   actuallyCreatePlayer(cfg);
   const poster=document.querySelector(`.poster[data-load="${pid}"]`);
-  if(poster) poster.remove();
+  poster?.remove();
 }
 function isLocked({moduleId,index}){
   if(index===0 && !prevModuleConcluded(moduleId)) return true;
@@ -362,16 +365,13 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
   const store=ensureStoreFor(moduleId,videoId);
   const meta={pid,videoId,moduleId,index,tick:null,retries:0};
   players[pid]={player:null,meta};
-  const holder=document.getElementById(pid);
-  if(!holder) return;
-
+  const holder=document.getElementById(pid); if(!holder) return;
   players[pid].player=new YT.Player(pid,{
     height:'360',width:'640',videoId,
     playerVars:{rel:0,modestbranding:1,controls:1,disablekb:1,playsinline:1},
     events:{
       onReady:(ev)=>{
-        try{
-          const ifr=holder.querySelector('iframe');
+        try{ const ifr=holder.querySelector('iframe');
           if(ifr) ifr.setAttribute('allow','autoplay; fullscreen; encrypted-media; picture-in-picture');
           ev.target.unMute(); ev.target.setVolume(100);
         }catch(_){}
@@ -384,8 +384,7 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
           lastPlayingPid=pid;
           if(isLocked(meta)){ showWarn(pid, lockReason(meta)); try{p.pauseVideo();}catch(_){ } return; }
           startTick();
-        }else if(st===YT.PlayerState.PAUSED){
-          persist();
+        }else if(st===YT.PlayerState.PAUSED){ persist();
         }else if(st===YT.PlayerState.ENDED){
           stopTick();
           state.videosDone=state.videosDone||{};
@@ -401,15 +400,25 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
           maybeEnableQuiz({id:moduleId, videos:m?.videos||[]});
         }
       },
-      onError:()=>{}
+      onError:()=>{
+        if(meta.retries<3){
+          meta.retries++;
+          setTimeout(()=>{
+            try{players[pid]?.player?.destroy?.();}catch(_){}
+            delete players[pid];
+            actuallyCreatePlayer({pid,videoId,moduleId,index});
+          },600*meta.retries);
+        }else{
+          const w=document.getElementById(`warn-${pid}`);
+          if(w){ w.textContent='No se pudo cargar el video. Recarga la página.'; w.style.display='block'; }
+        }
+      }
     }
   });
-
   function startTick(){
     stopTick();
     meta.tick=setInterval(()=>{
-      const inst=players[pid]; if(!inst) return;
-      const p=inst.player;
+      const inst=players[pid]; if(!inst) return; const p=inst.player;
       let cur=0,dur=0,st;
       try{ cur=p.getCurrentTime?.()||0; dur=p.getDuration?.()||0; st=p.getPlayerState?.(); }catch(_){}
       if(dur && (!store.dur || Math.abs(store.dur-dur)>0.5)){ store.dur=dur; persist(); }
@@ -421,7 +430,7 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
 }
 document.addEventListener('visibilitychange', ()=>{
   if(document.hidden){ Object.values(players).forEach(({player})=>{ try{player.pauseVideo();}catch(_){ } }); persist(); }
-  else if(lastPlayingPid && players[lastPlayingPid]?.player){ try{ players[lastPlayingPid].player.playVideo(); }catch(_){} }
+  else{ if(lastPlayingPid && players[lastPlayingPid]?.player){ try{ players[lastPlayingPid].player.playVideo(); }catch(_){} } }
 });
 window.addEventListener('pagehide', persist);
 window.addEventListener('beforeunload', persist);
@@ -446,11 +455,14 @@ setTab('login');
 
 auth.onAuthStateChanged(async (user)=>{
   if(!user){
-    CURRENT_UID=null; state={}; $('#auth-user').textContent=''; $('#btn-logout').style.display='none'; $('#verify-box').style.display='none'; setTab('login'); showLogin();
+    CURRENT_UID=null; state={};
+    $('#auth-user').textContent=''; $('#btn-logout').style.display='none'; $('#verify-box').style.display='none';
+    setTab('login'); showLogin();
     if (unsubProfile) { try{unsubProfile();}catch(_){ } unsubProfile=null; }
     return;
   }
-  CURRENT_UID=user.uid; state=loadState(CURRENT_UID)||{}; $('#auth-user').textContent=user.email||'';
+  CURRENT_UID=user.uid; state=loadState(CURRENT_UID)||{};
+  $('#auth-user').textContent=user.email||'';
   await user.reload().catch(()=>{});
   if(!user.emailVerified){ showLogin(); $('#verify-box').style.display='block'; return; }
   $('#verify-box').style.display='none';
@@ -477,6 +489,7 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
     $('#verify-box').style.display='block'; setTab('login'); $('#login-email').value=email;
   }catch(e){ msg(MSGS[e.code]||'Ocurrió un error. Intenta nuevamente.'); }
 });
+
 document.getElementById('btn-check-verify').addEventListener('click', async ()=>{
   if(auth.currentUser){ await auth.currentUser.reload(); if(auth.currentUser.emailVerified){ $('#verify-box').style.display='none'; showCourse(); } }
 });
@@ -487,6 +500,7 @@ document.getElementById('btn-resend-verify').addEventListener('click', async ()=
     else { msg('Primero inicia sesión.'); }
   }catch(e){ msg(MSGS[e.code]||'No se pudo enviar.'); }
 });
+
 document.getElementById('btn-login').addEventListener('click', async ()=>{
   const email=($('#login-email').value||'').trim().toLowerCase();
   const pass=($('#login-pass').value||'').trim();
@@ -497,8 +511,7 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
     const cred=await auth.signInWithEmailAndPassword(email,pass);
     const u=cred.user||auth.currentUser; await u.reload().catch(()=>{});
     if(!u.emailVerified){ msg('Debes verificar tu correo antes de continuar.'); $('#verify-box').style.display='block'; return; }
-    msg('Sesión iniciada.'); $('#verify-box').style.display='none';
-    showCourse(); syncFromCloud(u).catch(()=>{});
+    msg('Sesión iniciada.'); $('#verify-box').style.display='none'; showCourse(); syncFromCloud(u).catch(()=>{});
   }catch(e){
     let methods=[]; try{methods=await auth.fetchSignInMethodsForEmail(email);}catch(_){}
     if(!methods||methods.length===0){ msg('Correo no registrado.'); setTab('reg'); $('#reg-email').value=email; }
@@ -522,19 +535,15 @@ document.getElementById('btn-reset').addEventListener('click', async ()=>{
 document.getElementById('btn-logout').addEventListener('click', async ()=>{ await auth.signOut(); msg('Sesión cerrada.'); });
 
 /* ======================== Vistas / Perfil ======================== */
-let allowEditSpec=true;
-
 function showCourse(){
   if(!auth.currentUser) return;
   if(!auth.currentUser.emailVerified){ showLogin(); $('#verify-box').style.display='block'; return; }
-
   $('#step-welcome').style.display='none';
   $('#btn-logout').style.display='inline-flex';
   $('#profile').style.display='block';
 
-  // Edición permanente para permitir múltiples cambios seguidos
-  setProfileReadonly(false);
-  $('#pf-help').textContent='Edita tus datos y guarda los cambios.';
+  if(profileComplete()){ setProfileReadonly(true); $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.'; }
+  else{ setProfileReadonly(false); $('#pf-help').textContent='Completa todos los campos para habilitar los módulos.'; }
 
   $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
   $('#pf-id').value=state.profile?.iddoc||'';
@@ -546,23 +555,32 @@ function showCourse(){
   loadProfile().then(()=>{
     renderAllBySpecialty(getSpecialty());
     updateGlobalProgress();
+    if(profileComplete()){ setProfileReadonly(true); $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.'; }
   }).catch(()=>{});
 }
-function showLogin(){ $('#step-welcome').style.display='block'; $('#profile').style.display='none'; $('#progress').style.display='none'; $('#modules').style.display='none'; }
-function profileComplete(){ const p=state.profile||{}; return !!(p.name&&p.iddoc&&p.spec&&ESPECIALIDADES.includes(p.spec)); }
-
+function showLogin(){
+  $('#step-welcome').style.display='block';
+  $('#profile').style.display='none';
+  $('#progress').style.display='none';
+  $('#modules').style.display='none';
+}
+function profileComplete(){
+  const p=state.profile||{};
+  return !!(p.name&&p.iddoc&&p.spec&&ESPECIALIDADES.includes(p.spec));
+}
 function setProfileReadonly(ro){
-  const specInput=document.getElementById('pf-spec');
+  // Nombre y documento sí se bloquean/permiten
   ['pf-name','pf-id'].forEach(id=>{
     const el=document.getElementById(id);
     el.readOnly=ro; el.style.background=ro?'#eef2ff':'#fff';
   });
-  specInput.readOnly = ro ? true : false;
-  specInput.style.background = ro ? '#eef2ff' : '#fff';
-  allowEditSpec = !ro;
+  // ⚠️ Especialidad: SIEMPRE editable para permitir cambios rápidos
+  const specInput=document.getElementById('pf-spec');
+  specInput.readOnly=false;
+  specInput.style.background=ro?'#eef2ff':'#fff';
 
   document.getElementById('btn-edit-profile').style.display=ro?'inline-flex':'none';
-  document.getElementById('btn-save-profile').style.display=ro?'none':'inline-flex';
+  document.getElementById('btn-save-profile').style.display='inline-flex';
 }
 document.getElementById('btn-edit-profile').addEventListener('click',()=>{
   setProfileReadonly(false);
@@ -570,7 +588,6 @@ document.getElementById('btn-edit-profile').addEventListener('click',()=>{
 });
 function getSpecialty(){ return (state.profile?.spec||'').trim(); }
 
-/* Realtime profile (no pisa inputs cuando estás editando) */
 function startProfileRealtime(){
   if (unsubProfile) { try{unsubProfile();}catch(_){ } unsubProfile=null; }
   const uid=auth.currentUser?.uid; if(!uid) return;
@@ -580,13 +597,16 @@ function startProfileRealtime(){
     const cloud=snap.data()||{};
     const prevSpec=state.profile?.spec;
     state.profile={...state.profile,...cloud}; persist();
-    if(document.getElementById('pf-name').readOnly){
-      $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
-      $('#pf-id').value=state.profile?.iddoc||'';
-      $('#pf-spec').value=state.profile?.spec||'';
-    }
+    if(document.getElementById('pf-name')){ $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||''; }
+    if(document.getElementById('pf-id')){ $('#pf-id').value=state.profile?.iddoc||''; }
+    if(document.getElementById('pf-spec')){ $('#pf-spec').value=state.profile?.spec||''; }
     if(prevSpec!==state.profile?.spec && ESPECIALIDADES.includes(state.profile?.spec||'')){
       renderAllBySpecialty(state.profile.spec); updateGlobalProgress();
+    }
+    if(savingProfile){
+      savingProfile=false;
+      const pfMsg=$('#pf-msg'); pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Perfil guardado.';
+      setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; },3000);
     }
   });
 }
@@ -603,134 +623,138 @@ async function loadProfile(){
   }catch(e){ console.warn('Perfil no disponible',e); }
 }
 
-/* ====== Guardado robusto + watchdog + re-habilitar al editar ====== */
-function markDirty(){
-  const btn=$('#btn-save-profile');
-  btn.disabled=false;
-  const pfMsg=$('#pf-msg');
-  pfMsg.classList.remove('saving');
-  if(/guardado|tardó/i.test(pfMsg.textContent)) pfMsg.textContent='';
-  savingProfile=false;
-}
-['pf-name','pf-id','pf-spec'].forEach(id=>{
-  const el=document.getElementById(id);
-  ['input','change','keydown','paste'].forEach(evt=>el.addEventListener(evt,markDirty));
-});
-
+/* ====== Guardado robusto (watchdog + reintentos + offline) ====== */
 async function saveProfile(){
   const name=($('#pf-name').value||'').trim();
   const iddoc=($('#pf-id').value||'').trim();
   const spec=($('#pf-spec').value||'').trim();
-  const pfMsg=$('#pf-msg'); const btn=$('#btn-save-profile');
+  const pfMsg=$('#pf-msg');
+  const btn=$('#btn-save-profile');
 
   if(!name||!iddoc||!spec){ pfMsg.textContent='Completa nombre, cédula/pasaporte y especialidad.'; return; }
   if(!ESPECIALIDADES.includes(spec)){ pfMsg.textContent='Selecciona una especialidad válida de la lista.'; return; }
 
+  // Cierra panel si estuviera abierto (evita “sensación” de cuelgue visual)
+  document.getElementById('spec-combo')?.classList.remove('show');
+
   state.profile={name,iddoc,spec}; persist();
   renderAllBySpecialty(spec); updateGlobalProgress();
-  pfMsg.classList.add('saving'); pfMsg.textContent='Guardando…'; btn.disabled=true; savingProfile=true;
 
-  // Watchdog 15s
-  const watchdog = setTimeout(()=>{
-    if(savingProfile){
+  pfMsg.classList.add('saving'); pfMsg.textContent='Guardando…';
+  btn.disabled=true; savingProfile=true;
+
+  // Watchdog: si tarda demasiado, libera la UI y permite reintentar
+  let watchdogCleared=false;
+  const watchdog=setTimeout(()=>{
+    if(!watchdogCleared){
       savingProfile=false;
-      btn.disabled=false;
       pfMsg.classList.remove('saving');
-      pfMsg.textContent='La red tardó demasiado. Intenta guardar otra vez.';
+      pfMsg.textContent = navigator.onLine
+        ? 'Tarda más de lo normal. Puedes intentar de nuevo.'
+        : 'Sin conexión. Guardado local; se sincronizará al volver la red.';
+      btn.disabled=false;
     }
-  },15000);
-
-  try{ if(name){ await auth.currentUser.updateProfile({displayName:name}); } }catch(_){}
+  }, 8000);
 
   try{
+    if(name){ try{ await auth.currentUser.updateProfile({displayName:name}); }catch(_){ } }
     const uid=auth.currentUser?.uid; if(!uid) throw new Error('Sin UID');
     const ref=db.collection('users').doc(uid).collection('profile').doc('main');
     const payload={...state.profile,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
 
+    // 3 reintentos con backoff
     let ok=false, lastErr=null;
     for(let i=0;i<3 && !ok;i++){
       try{ await ref.set(payload,{merge:true}); ok=true; }
-      catch(e){ lastErr=e; await new Promise(r=>setTimeout(r, 700*(i+1))); }
+      catch(e){ lastErr=e; await new Promise(r=>setTimeout(r, 600*(i+1))); }
     }
     if(!ok) throw lastErr || new Error('No se pudo guardar');
 
-    savingProfile=false; pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Perfil guardado.';
-    // Mantener edición habilitada para cambios sucesivos
-    $('#btn-save-profile').disabled=false;
+    watchdogCleared=true; clearTimeout(watchdog);
+    savingProfile=false; pfMsg.classList.remove('saving');
+    pfMsg.textContent='✅ Perfil guardado.'; btn.disabled=false;
+
   }catch(e){
+    watchdogCleared=true; clearTimeout(watchdog);
     savingProfile=false; pfMsg.classList.remove('saving');
     if(!navigator.onLine){
       pfMsg.textContent='Sin conexión. Guardado local; se sincronizará al volver la red.';
     }else{
       pfMsg.textContent='No se pudo guardar en la nube; tus datos quedan localmente.';
     }
-  }finally{
-    clearTimeout(watchdog);
+    btn.disabled=false; // ← nunca se queda colgado
   }
 }
 document.getElementById('btn-save-profile').addEventListener('click',saveProfile);
 
-/* ======================== Combo de Especialidad (estable) ======================== */
+/* ======================== Combo de Especialidad (SIEMPRE editable) ======================== */
 (function setupSpecCombo(){
   const wrap=document.getElementById('spec-combo');
   const input=document.getElementById('pf-spec');
   const panel=document.getElementById('spec-panel');
-  let filtered=ESPECIALIDADES.slice(), open=false, hoverIndex=-1;
 
-  function render(list){
+  let open=false, filtered=[...ESPECIALIDADES], activeIndex=-1;
+  const render=(list)=>{
     panel.innerHTML='';
     list.forEach((name,idx)=>{
       const div=document.createElement('div');
-      div.className='opt';
+      div.className='opt' + (idx===activeIndex?' active':'');
       div.textContent=name;
-      div.dataset.index=idx;
-      div.addEventListener('mousemove',()=>{ hoverIndex=idx; });
       div.addEventListener('mousedown',(e)=>{
-        if(input.readOnly) return;
         e.preventDefault(); e.stopPropagation();
-        input.value=name; hide(); markDirty();
+        input.value=name;
+        hide(); input.focus();
       });
       panel.appendChild(div);
     });
-  }
-  function show(){
-    if(input.readOnly || !allowEditSpec) return;
-    if(!open){ wrap.classList.add('show'); open=true; }
-  }
-  function hide(){ if(open){ wrap.classList.remove('show'); open=false; hoverIndex=-1; } }
+  };
+  const show=()=>{ wrap.classList.add('show'); open=true; };
+  const hide=()=>{ wrap.classList.remove('show'); open=false; activeIndex=-1; };
 
-  wrap.addEventListener('mousedown',()=>{
-    if(input.readOnly || !allowEditSpec) return;
-    if(!open){ filtered=ESPECIALIDADES.slice(); render(filtered); show(); }
+  const openIfNeeded=()=>{
+    if(!open){ filtered=[...ESPECIALIDADES]; render(filtered); show(); }
+  };
+
+  // Click en campo o flecha: abre
+  wrap.addEventListener('mousedown',(e)=>{
+    // Evita que el click burbujee y cierre por el listener global
+    e.stopPropagation();
+    openIfNeeded();
   });
-  input.addEventListener('focus',()=>{
-    if(!input.readOnly && allowEditSpec){ filtered=ESPECIALIDADES.slice(); render(filtered); show(); }
-  });
-  input.addEventListener('input',()=>{
-    if(input.readOnly || !allowEditSpec) return;
+
+  input.addEventListener('focus', openIfNeeded);
+
+  input.addEventListener('input', ()=>{
     const q=input.value.trim().toLowerCase();
     filtered=ESPECIALIDADES.filter(e=>e.toLowerCase().includes(q));
+    activeIndex = filtered.length ? 0 : -1;
     render(filtered); show();
   });
+
   input.addEventListener('keydown',(e)=>{
-    if(input.readOnly || !allowEditSpec) return;
-    if(!open && ['ArrowDown','Enter'].includes(e.key)){ show(); e.preventDefault(); return; }
+    if(!open && (e.key==='ArrowDown' || e.key==='Enter')){ openIfNeeded(); e.preventDefault(); return; }
     if(!open) return;
-    if(e.key==='ArrowDown'){ hoverIndex=Math.min((hoverIndex<0?0:hoverIndex+1), filtered.length-1); e.preventDefault(); scrollIntoView(); }
-    else if(e.key==='ArrowUp'){ hoverIndex=Math.max((hoverIndex<=0?0:hoverIndex-1), 0); e.preventDefault(); scrollIntoView(); }
+    if(e.key==='ArrowDown'){ activeIndex=Math.min(activeIndex+1, filtered.length-1); render(filtered); e.preventDefault(); }
+    else if(e.key==='ArrowUp'){ activeIndex=Math.max(activeIndex-1, 0); render(filtered); e.preventDefault(); }
     else if(e.key==='Enter'){
-      if(filtered.length>0){ input.value=filtered[Math.max(hoverIndex,0)]; hide(); markDirty(); e.preventDefault(); }
-    }else if(e.key==='Escape'){ hide(); }
+      if(activeIndex>=0 && filtered[activeIndex]){ input.value=filtered[activeIndex]; hide(); e.preventDefault(); }
+    }else if(e.key==='Escape'){ hide(); e.preventDefault(); }
   });
-  function scrollIntoView(){
-    const el=panel.querySelector(`.opt[data-index="${hoverIndex}"]`);
-    if(el){ el.scrollIntoView({block:'nearest'}); }
-  }
+
+  // Cierre al hacer click fuera
   document.addEventListener('mousedown',(e)=>{ if(!wrap.contains(e.target)) hide(); });
+
+  // Validación suave al salir: si escribió algo no exacto, lo deja vacío (para obligar selección válida al guardar)
+  input.addEventListener('change',()=>{
+    const v=input.value.trim();
+    if(!ESPECIALIDADES.includes(v)) input.value='';
+  });
+
+  // Inicial
   render(filtered);
 })();
 
-/* ======================== Render/quiz/progreso ======================== */
+/* ======================== Render de módulos / progreso (igual que tu versión) ======================== */
 function mkModule(id,titulo,ytIds){
   const vids=(ytIds&&ytIds.length?ytIds:DEFAULT_VIDEOS).slice(0,5).map((v,i)=>({yt:v,dur:'08:00',n:i+1}));
   const quiz=[
@@ -752,22 +776,16 @@ function renderAllBySpecialty(spec){
   const useSpec=spec||'MEDICINA INTERNA';
   const modulesDef=pickModulesFor(useSpec);
   state.course={spec:useSpec,modules:modulesDef}; persist();
-
   $('#progress').style.display='block'; $('#modules').style.display='grid';
   renderModules(modulesDef); updateGlobalProgress();
 }
 function renderModules(modulesDef){
-  Object.keys(players).forEach(k=>{
-    try{ players[k]?.player?.stopVideo?.(); players[k]?.player?.destroy?.(); }catch(_){}
-    delete players[k];
-  });
+  Object.keys(players).forEach(k=>{ try{ players[k]?.player?.stopVideo?.(); players[k]?.player?.destroy?.(); }catch(_){} delete players[k]; });
   cfgByPid.clear();
-
   const wrap=$('#modules'); wrap.innerHTML='';
   modulesDef.forEach((m,modIdx)=>{
     const doneVideos=(state.videosDone?.[m.id]||{});
     const firstLockedMsg = modIdx===0 ? null : (prevModuleConcluded(m.id) ? null : 'Primero concluye el módulo anterior');
-
     const videosHtml=m.videos.map((v,i)=>{
       const pid = `player-${m.id}-${i}`;
       const locked = (i===0) ? !!firstLockedMsg : !doneVideos[m.videos[i-1].yt];
@@ -775,14 +793,12 @@ function renderModules(modulesDef){
       cfgByPid.set(pid,{pid,videoId:v.yt,moduleId:m.id,index:i});
       return makePoster(pid, v.yt, lockedMsg);
     }).join('');
-
     const canStart=m.videos.every(v=>doneVideos[v.yt]);
     const passed=state.quizzes?.[m.id]?.passed;
     const quizBtnLabel=passed?'Aprobado ✓':'Comenzar evaluación';
     const quizBtnClass=passed?'btn-success':'btn-primary';
     const quizDisabled=canStart?'':'disabled';
     const quizHint=canStart?'Listo para evaluar':'Completa los videos para habilitar';
-
     const card=document.createElement('article');
     card.className='card module';
     card.innerHTML=`
@@ -804,14 +820,12 @@ function renderModules(modulesDef){
         </div>
       </div>`;
     wrap.appendChild(card);
-
     m.videos.forEach((v,i)=>{
       const pid = `player-${m.id}-${i}`;
       const poster = card.querySelector(`[data-load="${pid}"]`);
       poster?.addEventListener('click',()=>clickToLoad(pid));
       poster?.querySelector('button')?.addEventListener('click',(e)=>{ e.stopPropagation(); clickToLoad(pid); });
     });
-
     document.getElementById(`btn-${m.id}`).addEventListener('click',()=>{
       if(state.quizzes?.[m.id]?.passed) return;
       renderQuizForModule(m);
@@ -839,9 +853,15 @@ function renderQuizForModule(m){
   wrap.appendChild(submit); wrap.style.display='block';
 }
 function gradeQuizModule(m){
-  let correct=0; m.quiz.forEach(q=>{ const c=document.querySelector(`input[name="${q.id}"]:checked`); if(c && c.value===q.correct) correct++; });
-  const PASS_PCT=80; const scorePct=Math.round((correct/m.quiz.length)*100);
-  state.quizzes=state.quizzes||{}; state.quizzes[m.id]={correct,total:m.quiz.length,scorePct,passed:scorePct>=PASS_PCT}; persist();
+  let correct=0;
+  m.quiz.forEach(q=>{
+    const c=document.querySelector(`input[name="${q.id}"]:checked`);
+    if(c && c.value===q.correct) correct++;
+  });
+  const PASS_PCT=80;
+  const scorePct=Math.round((correct/m.quiz.length)*100);
+  state.quizzes=state.quizzes||{};
+  state.quizzes[m.id]={correct,total:m.quiz.length,scorePct,passed:scorePct>=PASS_PCT}; persist();
   const res=document.querySelector(`#res-${m.id}`); res.style.display='block';
   res.textContent=`Resultado: ${correct}/${m.quiz.length} (${scorePct}%). ${state.quizzes[m.id].passed?'✅ Aprobado':'❌ No aprobado'}.`;
   if(state.quizzes[m.id].passed){
@@ -851,7 +871,7 @@ function gradeQuizModule(m){
   }
 }
 function updateGlobalProgress(){
-  const spec=(state.profile?.spec||'MEDICINA INTERNA').trim();
+  const spec=getSpecialty()||'MEDICINA INTERNA';
   const modulesDef=pickModulesFor(spec);
   const totalVideos=modulesDef.reduce((a,m)=>a+m.videos.length,0);
   const doneVideos=modulesDef.reduce((a,m)=>a + m.videos.filter(v=>(state.videosDone?.[m.id]||{})[v.yt]).length,0);
@@ -865,7 +885,8 @@ function updateGlobalProgress(){
   if(allPassed){
     const preferName = state.profile?.name || auth.currentUser?.displayName || '';
     document.getElementById('cert-nombre').textContent = preferName;
-    const f=new Date(); const fecha=f.toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'});
+    const f=new Date();
+    const fecha=f.toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'});
     document.getElementById('cert-fecha').textContent=`Fecha: ${fecha}`;
     document.getElementById('certificado').classList.add('show');
   }
