@@ -37,7 +37,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 #certificado.show{display:block}
 @media print{.no-print{display:none !important} #certificado{display:block}}
 .cert-card{background:#fff;border:4px solid var(--brand);border-radius:20px;padding:40px;text-align:center}
-.cert-title{font-size:28px;font-weight:800;margin:0 0 10px;color:var(--brand)}
+.cert-title{font-size:28px;font-weight:800;margin:0 0 10px;color:#var(--brand)}
 .cert-name{font-size:26px;font-weight:800;margin:8px 0}
 .cert-meta{color:#374151;margin-top:10px}
 
@@ -240,7 +240,7 @@ const ESPEC_MODS={
   "INFECTOLOGIA":BASE_MEDICA,"INFECTOLOGIA PEDIATRICA":BASE_MEDICA,"INTERVENCIONISMO":BASE_QUIR,"MASTOLOGIA":BASE_QUIR,"MAXILO FACIAL":BASE_QUIR,
   "MEDICINA CRITICA":BASE_MEDICA,"MEDICINA CRITICA PEDIATRICA":BASE_MEDICA,"MEDICINA DEL DEPORTE":BASE_MEDICA,"MEDICINA FAMILIAR":[M.G,M.CE],"MEDICINA FAMILIAR EMERGENCIA":[M.G,M.EM],
   "MEDICINA GENERAL":BASE_MEDICA,"MEDICINA INTERNA":BASE_MEDICA,"MEDICINA MATERNO FETAL":BASE_MEDICA,"MEDICINA PALIATIVA":BASE_MEDICA,"MICROBIOLOGIA":BASE_MEDICA,
-  "NEFROLOGIA":BASE_MEDICA,"NEFROLOGIA PEDIATRICA":BASE_MEDICA,"NEONATOLOGIA":BASE_MEDICA,"NEUMOLOGIA":BASE_MEDICA,"NEUMOLOGIA PEDIATRICA":BASE_MEDICA,
+  "NEFROLOGIA":BASE_MEDICA,"NEFROLOGIA PEDIATRICA":BASE_MEDICA,"NEONATOLOGIA":BASE_MEDICA,"NEUMOLOGIA":BASEMEDICA,"NEUMOLOGIA PEDIATRICA":BASE_MEDICA,
   "NEUROCIRUGIA":BASE_QUIR,"NEUROFISIOLOGIA CLINICA":BASE_MEDICA,"NEUROLOGIA":BASE_QUIR,"NEUROLOGIA PEDIATRICA":BASE_QUIR,"NEUROPSICOLOGIA":BASE_MEDICA,"NEURORADIOL INTERVENCIONISTA":BASE_QUIR,"NEURORADIOLOGIA":BASE_QUIR,
   "NUTRICION":BASE_MEDICA,"ODONTOLOGIA":BASE_QUIR,"ODONTOPEDIATRIA":BASE_QUIR,"OFTALMOLOGIA":BASE_QUIR,"OFTALMOLOGIA PEDIATRICA":BASE_QUIR,
   "ONCOLOGIA CLINICA":BASE_QUIR,"OTORRINOLARINGOLOGIA":BASE_QUIR,"PATOLOGIA":BASE_MEDICA,"PEDIATRIA":BASE_MEDICA,"PSICOLOGIA":BASE_MEDICA,"PSIQUIATRIA":BASE_MEDICA,
@@ -296,6 +296,7 @@ const players={}; // pid -> {player,meta}
 const cfgByPid=new Map(); // para cargar bajo demanda
 let lastPlayingPid=null;
 
+/* --- Póster y locks --- */
 function ytThumb(id){ return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`; }
 function makePoster(pid, videoId, lockedMsg){
   const lockLayer = lockedMsg ? `<div class="lock" id="lock-${pid}">🔒 ${lockedMsg}</div>` : '';
@@ -304,7 +305,7 @@ function makePoster(pid, videoId, lockedMsg){
       <div id="${pid}"></div>
       <div class="poster" data-load="${pid}">
         <img src="${ytThumb(videoId)}" alt="">
-        <button type="button">Ver video ▶</button>
+        <button type="button">Cargar video ▶</button>
       </div>
       ${lockLayer}
       <div class="warnmsg" id="warn-${pid}"></div>
@@ -321,25 +322,6 @@ function prevModuleConcluded(moduleId){
   return passed || allVideosDone;
 }
 
-function moduleConcluded(moduleId){
-  const m = (state.course?.modules||[]).find(mm=>mm.id===moduleId);
-  if(!m) return false;
-  const allVideosDone = m.videos.every(v => (state.videosDone?.[m.id]||{})[v.yt]);
-  return allVideosDone || !!(state.quizzes?.[m.id]?.passed);
-}
-
-function unlockFirstOfNextModuleIfReady(moduleId){
-  const mods = state.course?.modules || [];
-  const idx = mods.findIndex(m=>m.id===moduleId);
-  if(idx<0) return;
-  if(!moduleConcluded(moduleId)) return;
-  const next = mods[idx+1];
-  if(!next) return;
-  const firstPid = `player-${next.id}-0`;
-  const lock = document.getElementById(`lock-${firstPid}`);
-  if(lock) lock.remove();
-}
-
 function ensureStoreFor(mid,vid){
   state.play=state.play||{};
   state.play[mid]=state.play[mid]||{};
@@ -348,7 +330,7 @@ function ensureStoreFor(mid,vid){
 }
 function persist(){ saveStateLocal(CURRENT_UID,state); }
 
-/* Crear player al click (sin autoplay) */
+/* --- Crear player al clicar el póster (SIN autoplay) --- */
 function clickToLoad(pid){
   const cfg=cfgByPid.get(pid); if(!cfg) return;
   if(isLocked(cfg)){ showWarn(pid, lockReason(cfg)); return; }
@@ -396,7 +378,6 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
           if(ifr) ifr.setAttribute('allow','autoplay; fullscreen; encrypted-media; picture-in-picture');
           ev.target.unMute(); ev.target.setVolume(100);
         }catch(_){}
-        // Reanudar desde última posición permitida (sin autoplay)
         const startAt=Math.min(store.t||0,store.allow||0);
         if(startAt>1){ try{ev.target.seekTo(startAt,true);}catch(_){} }
       },
@@ -404,35 +385,33 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
         const p=ev.target, st=ev.data;
         if(st===YT.PlayerState.PLAYING){
           lastPlayingPid=pid;
+
           if(isLocked(meta)){
             showWarn(pid, lockReason(meta));
             try{ p.pauseVideo(); }catch(_){}
             return;
           }
+
           startTick();
         }else if(st===YT.PlayerState.PAUSED){
           persist();
         }else if(st===YT.PlayerState.ENDED){
           stopTick();
-          // marcar visto
+
           state.videosDone=state.videosDone||{};
           state.videosDone[moduleId]=state.videosDone[moduleId]||{};
           state.videosDone[moduleId][videoId]=true;
-          // permitir avance completo
+
           store.allow=store.dur||store.allow; store.t=store.allow;
           persist();
 
-          // desbloquear siguiente video del mismo módulo
+          const m = (state.course?.modules||[]).find(mm=>mm.id===moduleId);
           const nextPid = `player-${moduleId}-${index+1}`;
           const nextLock = document.getElementById(`lock-${nextPid}`);
           if(nextLock) nextLock.remove();
 
           updateGlobalProgress();
-          const m = (state.course?.modules||[]).find(mm=>mm.id===moduleId);
           maybeEnableQuiz({id: moduleId, videos: m?.videos || []});
-
-          // si se terminó el módulo, desbloquear primero del siguiente
-          unlockFirstOfNextModuleIfReady(moduleId);
         }
       },
       onError:()=>{
@@ -460,11 +439,11 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
       try{ cur=p.getCurrentTime?.()||0; dur=p.getDuration?.()||0; st=p.getPlayerState?.(); }catch(_){}
       if(dur && (!store.dur || Math.abs(store.dur-dur)>0.5)){ store.dur=dur; persist(); }
 
-      // Anti-seek
       if(cur > (store.allow+1.0)){
         try{ p.seekTo(store.allow,true); }catch(_){}
         return;
       }
+
       if(st===YT.PlayerState.PLAYING){
         if(cur>store.allow) store.allow=cur;
         store.t=cur;
@@ -476,74 +455,20 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
   function stopTick(){ if(meta.tick){ clearInterval(meta.tick); meta.tick=null; } }
 }
 
-/* Pausar cuando sale de la pestaña (sin auto reanudar) */
+/* Pausar/reanudar al cambiar visibilidad */
 document.addEventListener('visibilitychange', ()=>{
   if(document.hidden){
     Object.values(players).forEach(({player})=>{ try{player.pauseVideo();}catch(_){ } });
     persist();
+  }else{
+    if(lastPlayingPid && players[lastPlayingPid]?.player){
+      try{ players[lastPlayingPid].player.playVideo(); }catch(_){}
+    }
   }
 });
 window.addEventListener('pagehide', persist);
 window.addEventListener('beforeunload', persist);
-
 window.onYouTubeIframeAPIReady=()=>{ ytApiReady=true; };
-
-/* ======================== Combo de Especialidad (habilitado) ======================== */
-(function setupSpecCombo(){
-  const wrap = document.getElementById('spec-combo');
-  const input = document.getElementById('pf-spec');
-  const panel = document.getElementById('spec-panel');
-  if(!wrap || !input || !panel) return;
-
-  let filtered = ESPECIALIDADES.slice();
-  let open = false;
-
-  function render(list){
-    panel.innerHTML = '';
-    list.forEach(name=>{
-      const div=document.createElement('div');
-      div.className='opt';
-      div.textContent=name;
-      div.addEventListener('mousedown',(e)=>{
-        if(input.readOnly) { e.preventDefault(); return; }
-        e.preventDefault(); e.stopPropagation();
-        input.value=name;
-        hide();
-      });
-      panel.appendChild(div);
-    });
-  }
-  function show(){ if(input.readOnly) return; wrap.classList.add('show'); open=true; }
-  function hide(){ wrap.classList.remove('show'); open=false; }
-
-  wrap.addEventListener('click',()=>{
-    if(input.readOnly) return;
-    if(!open){ filtered=ESPECIALIDADES.slice(); render(filtered); show(); input.focus(); }
-  });
-  input.addEventListener('focus',()=>{
-    if(input.readOnly) return;
-    filtered=ESPECIALIDADES.slice(); render(filtered); show();
-  });
-  input.addEventListener('input',()=>{
-    if(input.readOnly) return;
-    const q=(input.value||'').trim().toLowerCase();
-    filtered=ESPECIALIDADES.filter(e=>e.toLowerCase().includes(q));
-    render(filtered); show();
-  });
-  input.addEventListener('keydown',(e)=>{
-    if(input.readOnly) return;
-    if(e.key==='Enter'){
-      if(filtered.length>0){ input.value=filtered[0]; hide(); e.preventDefault(); }
-    }else if(e.key==='Escape'){ hide(); }
-  });
-  document.addEventListener('mousedown',(e)=>{ if(!wrap.contains(e.target)) hide(); });
-  input.addEventListener('change',()=>{
-    const v=(input.value||'').trim();
-    if(v && !ESPECIALIDADES.includes(v)) input.value='';
-  });
-
-  render(filtered);
-})();
 
 /* ======================== Auth + UI ======================== */
 document.querySelectorAll('.eye').forEach(btn=>{
@@ -639,6 +564,51 @@ document.getElementById('btn-reset').addEventListener('click', async ()=>{
 });
 document.getElementById('btn-logout').addEventListener('click', async ()=>{ await auth.signOut(); msg('Sesión cerrada.'); });
 
+/* ======================== Combo de Especialidad (mostrar todo al abrir) ======================== */
+const comboEl = document.getElementById('spec-combo');
+const inputSpec = document.getElementById('pf-spec');
+const panelSpec = document.getElementById('spec-panel');
+
+function renderSpecOptions(filterText=''){
+  const f = (filterText||'').trim().toLowerCase();
+  const list = ESPECIALIDADES
+    .filter(e => !f || e.toLowerCase().includes(f))
+    .map(e => `<div class="opt" tabindex="0" data-val="${e.replace(/"/g,'&quot;')}">${e}</div>`)
+    .join('') || `<div class="opt" style="opacity:.7;cursor:default">No hay resultados</div>`;
+  panelSpec.innerHTML = list;
+
+  panelSpec.querySelectorAll('.opt[data-val]').forEach(opt=>{
+    const val = opt.getAttribute('data-val');
+    opt.addEventListener('click', ()=>{
+      inputSpec.value = val;
+      state.profile = state.profile || {};
+      state.profile.spec = val;
+      persist();
+      closeSpecPanel();
+    });
+    opt.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ opt.click(); } });
+  });
+}
+
+function openSpecPanel(){
+  if (inputSpec.readOnly) return;
+  comboEl.classList.add('show');
+  renderSpecOptions(''); // mostrar TODAS al abrir
+  try{
+    inputSpec.focus();
+    inputSpec.setSelectionRange(0, inputSpec.value.length);
+  }catch(_){}
+}
+function closeSpecPanel(){ comboEl.classList.remove('show'); }
+
+// Abrir SIEMPRE (sin toggle) y cerrar al hacer click afuera
+inputSpec.addEventListener('click', (e)=>{ e.stopPropagation(); openSpecPanel(); });
+document.addEventListener('click', (e)=>{ if(!comboEl.contains(e.target)) closeSpecPanel(); });
+
+// Filtrar al escribir (si no está readonly)
+inputSpec.addEventListener('input', ()=>{ if(!inputSpec.readOnly) renderSpecOptions(inputSpec.value); });
+inputSpec.addEventListener('keydown', (e)=>{ if (e.key==='Escape'){ closeSpecPanel(); } });
+
 /* ======================== Vistas / Perfil ======================== */
 function showCourse(){
   if(!auth.currentUser) return;
@@ -657,29 +627,33 @@ function showCourse(){
   }
 
   $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
-  $('#pf-id').value=state.profile?.iddoc||'';
-  $('#pf-spec').value=state.profile?.spec||''; // muestra la especialidad actual
+  $('#pf-id').value=state.profile?.iddoc||';
+  $('#pf-spec').value=state.profile?.spec||'';
+
+  renderSpecOptions(''); // precargar lista
 
   renderAllBySpecialty(getSpecialty());
   updateGlobalProgress();
   startProfileRealtime();
-  loadProfile().then(()=>{ renderAllBySpecialty(getSpecialty()); updateGlobalProgress(); if(profileComplete()) setProfileReadonly(true); }).catch(()=>{});
+  loadProfile().then(()=>{
+    $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
+    $('#pf-id').value=state.profile?.iddoc||'';
+    $('#pf-spec').value=state.profile?.spec||'';
+    renderAllBySpecialty(getSpecialty());
+    updateGlobalProgress();
+    if(profileComplete()) setProfileReadonly(true);
+  }).catch(()=>{});
 }
-function showLogin(){ $('#step-welcome').style.display='block'; $('#profile').style.display='none'; $('#progress').style.display='none'; $('#modules').style.display='none'; }
 function profileComplete(){ const p=state.profile||{}; return !!(p.name&&p.iddoc&&p.spec&&ESPECIALIDADES.includes(p.spec)); }
 function setProfileReadonly(ro){
   ['pf-name','pf-id','pf-spec'].forEach(id=>{
     const el=document.getElementById(id);
-    el.readOnly = ro;
-    el.style.background = ro ? '#eef2ff' : '#fff';
+    if(id==='pf-spec'){ el.readOnly = ro ? true : false; el.style.background = ro ? '#eef2ff' : '#fff'; }
+    else{ el.readOnly = ro; el.style.background = ro ? '#eef2ff' : '#fff'; }
   });
-  $('#btn-edit-profile').style.display=ro?'inline-flex':'none';
-  $('#btn-save-profile').style.display=ro?'none':'inline-flex';
+  if(ro) closeSpecPanel();
 }
-document.getElementById('btn-edit-profile').addEventListener('click',()=>{
-  setProfileReadonly(false);
-  $('#pf-help').textContent='Edita tus datos y guarda los cambios.';
-});
+document.getElementById('btn-edit-profile').addEventListener('click',()=>{ setProfileReadonly(false); $('#pf-help').textContent='Edita tus datos y guarda los cambios.'; });
 function getSpecialty(){ return (state.profile?.spec||'').trim(); }
 function startProfileRealtime(){
   if (unsubProfile) { try{unsubProfile();}catch(_){ } unsubProfile=null; }
@@ -819,7 +793,6 @@ function renderModules(modulesDef){
       </div>`;
     wrap.appendChild(card);
 
-    // Click-to-load en cada póster
     m.videos.forEach((v,i)=>{
       const pid = `player-${m.id}-${i}`;
       const poster = card.querySelector(`[data-load="${pid}"]`);
@@ -865,8 +838,6 @@ function gradeQuizModule(m){
     const btn=document.querySelector(`#btn-${m.id}`);
     if(btn){ btn.textContent='Aprobado ✓'; btn.classList.remove('btn-primary'); btn.classList.add('btn-success'); }
     setTimeout(syncToCloud,300);
-    // desbloquear primer video del siguiente módulo si aplica
-    unlockFirstOfNextModuleIfReady(m.id);
   }
 }
 function updateGlobalProgress(){
