@@ -170,7 +170,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
       <label>Cédula o Pasaporte<br><input id="pf-id" type="text" required></label>
       <label style="grid-column:1/-1">Especialidad<br>
         <div class="combo" id="spec-combo">
-          <input id="pf-spec" type="text" placeholder="Escribe para buscar…" autocomplete="off" readonly>
+          <input id="pf-spec" type="text" placeholder="Escribe para buscar…" autocomplete="off">
           <span class="arrow">▾</span>
           <div class="panel" id="spec-panel"></div>
         </div>
@@ -265,7 +265,6 @@ const firebaseConfig={apiKey:"AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",authDomai
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
 
-// ⚠️ Habilita persistencia offline ANTES de usar db
 try{
   firebase.firestore().enablePersistence({synchronizeTabs:true}).catch(err=>{
     console.warn('Firestore persistence no habilitada:', err && err.code);
@@ -386,7 +385,6 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
           if(ifr) ifr.setAttribute('allow','autoplay; fullscreen; encrypted-media; picture-in-picture');
           ev.target.unMute(); ev.target.setVolume(100);
         }catch(_){}
-        // reanudar desde última posición permitida (sin autoplay)
         const startAt=Math.min(store.t||0,store.allow||0);
         if(startAt>1){ try{ev.target.seekTo(startAt,true);}catch(_){} }
       },
@@ -450,7 +448,7 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
   function stopTick(){ if(meta.tick){ clearInterval(meta.tick); meta.tick=null; } }
 }
 
-/* Pausar cuando sale de la pestaña y reanudar (sin adelantar) */
+/* Pausar cuando sale de la pestaña y reanudar */
 document.addEventListener('visibilitychange', ()=>{
   if(document.hidden){
     Object.values(players).forEach(({player})=>{ try{player.pauseVideo();}catch(_){ } });
@@ -598,20 +596,23 @@ function showCourse(){
 }
 function showLogin(){ $('#step-welcome').style.display='block'; $('#profile').style.display='none'; $('#progress').style.display='none'; $('#modules').style.display='none'; }
 function profileComplete(){ const p=state.profile||{}; return !!(p.name&&p.iddoc&&p.spec&&ESPECIALIDADES.includes(p.spec)); }
+
+/* 🔁 NUEVO: modo lectura sin bloquear el combo durante edición */
 function setProfileReadonly(ro){
   const specInput=document.getElementById('pf-spec');
   ['pf-name','pf-id'].forEach(id=>{
     const el=document.getElementById(id);
     el.readOnly=ro; el.style.background=ro?'#eef2ff':'#fff';
   });
-  // la especialidad se puede editar sólo cuando no es readonly
-  specInput.readOnly = ro ? true : false;
+  // Especialidad sólo readonly cuando el perfil está bloqueado
+  specInput.readOnly = ro;
   specInput.style.background = ro ? '#eef2ff' : '#fff';
   allowEditSpec = !ro;
 
   document.getElementById('btn-edit-profile').style.display=ro?'inline-flex':'none';
   document.getElementById('btn-save-profile').style.display=ro?'none':'inline-flex';
 }
+
 document.getElementById('btn-edit-profile').addEventListener('click',()=>{
   setProfileReadonly(false);
   $('#pf-help').textContent='Edita tus datos y guarda los cambios.';
@@ -656,7 +657,7 @@ async function loadProfile(){
   }catch(e){ console.warn('Perfil no disponible',e); }
 }
 
-/* ====== Guardado robusto (sin timeout + reintentos + offline) ====== */
+/* ====== Guardado robusto con watchdog ====== */
 async function saveProfile(){
   const name=($('#pf-name').value||'').trim();
   const iddoc=($('#pf-id').value||'').trim();
@@ -670,6 +671,16 @@ async function saveProfile(){
   renderAllBySpecialty(spec); updateGlobalProgress();
   document.getElementById('modules')?.scrollIntoView({behavior:'smooth',block:'start'});
   pfMsg.classList.add('saving'); pfMsg.textContent='Guardando…'; btn.disabled=true; savingProfile=true;
+
+  // ⏱️ Watchdog: si algo se queda colgado, reactivamos el botón
+  const watchdog = setTimeout(()=>{
+    if(savingProfile){
+      savingProfile=false;
+      btn.disabled=false;
+      pfMsg.classList.remove('saving');
+      pfMsg.textContent='La red tardó demasiado. Intenta guardar otra vez.';
+    }
+  },15000);
 
   try{ if(name){ await auth.currentUser.updateProfile({displayName:name}); } }catch(_){}
 
@@ -693,60 +704,85 @@ async function saveProfile(){
     savingProfile=false; pfMsg.classList.remove('saving');
     if(!navigator.onLine){
       pfMsg.textContent='Sin conexión. Guardado local; se sincronizará al volver la red.';
-      setProfileReadonly(true); // dejamos listo y Firestore hará el sync
+      setProfileReadonly(true);
     }else{
       pfMsg.textContent='No se pudo guardar en la nube; tus datos quedan localmente.';
       setProfileReadonly(false);
     }
-  }finally{ btn.disabled=false; }
+  }finally{
+    clearTimeout(watchdog);
+    btn.disabled=false;
+  }
 }
 document.getElementById('btn-save-profile').addEventListener('click',saveProfile);
 
-/* ======================== Combo de Especialidad (click para abrir) ======================== */
+/* ======================== Combo de Especialidad (estable) ======================== */
 (function setupSpecCombo(){
   const wrap=document.getElementById('spec-combo');
   const input=document.getElementById('pf-spec');
   const panel=document.getElementById('spec-panel');
-  let filtered=ESPECIALIDADES.slice(), open=false;
+  let filtered=ESPECIALIDADES.slice(), open=false, hoverIndex=-1;
 
   function render(list){
     panel.innerHTML='';
-    list.forEach(name=>{
+    list.forEach((name,idx)=>{
       const div=document.createElement('div');
       div.className='opt';
       div.textContent=name;
+      div.dataset.index=idx;
+      div.addEventListener('mousemove',()=>{ hoverIndex=idx; });
       div.addEventListener('mousedown',(e)=>{
-        if(input.readOnly){ e.preventDefault(); return; }
+        if(input.readOnly) return;
         e.preventDefault(); e.stopPropagation();
-        input.value=name; hide(); input.readOnly=true; input.blur();
+        input.value=name; hide();
       });
       panel.appendChild(div);
     });
   }
   function show(){
-    if(input.readOnly) return;
-    wrap.classList.add('show'); open=true;
+    if(input.readOnly || !allowEditSpec) return;
+    if(!open){ wrap.classList.add('show'); open=true; }
   }
-  function hide(){ wrap.classList.remove('show'); open=false; }
+  function hide(){ if(open){ wrap.classList.remove('show'); open=false; hoverIndex=-1; } }
 
+  // Abrir al hacer click en el contenedor o en el input
   wrap.addEventListener('mousedown',(e)=>{
-    if(input.readOnly) return;
-    if(!open){ input.focus(); filtered=ESPECIALIDADES.slice(); render(filtered); show(); }
+    if(input.readOnly || !allowEditSpec) return;
+    if(!open){ filtered=ESPECIALIDADES.slice(); render(filtered); show(); }
   });
+  input.addEventListener('focus',()=>{
+    if(!input.readOnly && allowEditSpec){ filtered=ESPECIALIDADES.slice(); render(filtered); show(); }
+  });
+
+  // Buscar mientras escribe (no bloquea)
   input.addEventListener('input',()=>{
-    if(input.readOnly) return;
+    if(input.readOnly || !allowEditSpec) return;
     const q=input.value.trim().toLowerCase();
     filtered=ESPECIALIDADES.filter(e=>e.toLowerCase().includes(q));
     render(filtered); show();
   });
+
+  // Navegación con teclado
   input.addEventListener('keydown',(e)=>{
-    if(input.readOnly) return;
-    if(e.key==='Enter'){
-      if(filtered.length>0){ input.value=filtered[0]; hide(); input.readOnly=true; input.blur(); e.preventDefault(); }
-    }else if(e.key==='Escape'){ hide(); input.readOnly=true; input.blur(); }
+    if(input.readOnly || !allowEditSpec) return;
+    if(!open && ['ArrowDown','Enter'].includes(e.key)){ show(); e.preventDefault(); return; }
+    if(!open) return;
+    if(e.key==='ArrowDown'){ hoverIndex=Math.min((hoverIndex<0?0:hoverIndex+1), filtered.length-1); e.preventDefault(); scrollIntoView(); }
+    else if(e.key==='ArrowUp'){ hoverIndex=Math.max((hoverIndex<=0?0:hoverIndex-1), 0); e.preventDefault(); scrollIntoView(); }
+    else if(e.key==='Enter'){
+      if(filtered.length>0){ input.value=filtered[Math.max(hoverIndex,0)]; hide(); e.preventDefault(); }
+    }else if(e.key==='Escape'){ hide(); }
   });
-  document.addEventListener('mousedown',(e)=>{ if(!wrap.contains(e.target)){ hide(); } });
-  input.addEventListener('change',()=>{ const v=input.value.trim(); if(v && !ESPECIALIDADES.includes(v)) input.value=''; });
+  function scrollIntoView(){
+    const el=panel.querySelector(`.opt[data-index="${hoverIndex}"]`);
+    if(el){ el.scrollIntoView({block:'nearest'}); }
+  }
+
+  // Cerrar si clicas fuera
+  document.addEventListener('mousedown',(e)=>{ if(!wrap.contains(e.target)) hide(); });
+
+  // Validación suave: si escribe algo que no esté en la lista, no bloquea el input;
+  // lo validamos recién al guardar.
   render(filtered);
 })();
 
@@ -779,7 +815,6 @@ function renderAllBySpecialty(spec){
 }
 
 function renderModules(modulesDef){
-  // destruir players previos
   Object.keys(players).forEach(k=>{
     try{ players[k]?.player?.stopVideo?.(); players[k]?.player?.destroy?.(); }catch(_){}
     delete players[k];
@@ -828,7 +863,6 @@ function renderModules(modulesDef){
       </div>`;
     wrap.appendChild(card);
 
-    // Click-to-load en cada póster
     m.videos.forEach((v,i)=>{
       const pid = `player-${m.id}-${i}`;
       const poster = card.querySelector(`[data-load="${pid}"]`);
