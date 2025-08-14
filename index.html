@@ -52,7 +52,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 
 /* Guardando… */
 .saving::after{content:'';display:inline-block;width:14px;height:14px;margin-left:8px;border:2px solid #9ca3af;border-top-color:transparent;border-radius:999px;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes spin{to{transform:rotate(360deg)}
 
 /* Combo de especialidad */
 .combo{position:relative}
@@ -292,8 +292,8 @@ let savingProfile=false;
 
 /* ======================== YouTube control ======================== */
 let ytApiReady=false;
-const players={}; // pid -> {player,meta}
-const cfgByPid=new Map(); // para cargar bajo demanda
+const players={};
+const cfgByPid=new Map();
 let lastPlayingPid=null;
 
 /* --- Póster y locks --- */
@@ -334,7 +334,7 @@ function persist(){ saveStateLocal(CURRENT_UID,state); }
 function clickToLoad(pid){
   const cfg=cfgByPid.get(pid); if(!cfg) return;
   if(isLocked(cfg)){ showWarn(pid, lockReason(cfg)); return; }
-  if(players[pid]) return; // ya creado
+  if(players[pid]) return;
   actuallyCreatePlayer(cfg);
   const poster = document.querySelector(`.poster[data-load="${pid}"]`);
   if(poster) poster.remove();
@@ -451,7 +451,7 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
   function stopTick(){ if(meta.tick){ clearInterval(meta.tick); meta.tick=null; } }
 }
 
-/* Pausar cuando sale de la pestaña y reanudar (sin adelantar) */
+/* Pausar cuando sale de la pestaña y reanudar */
 document.addEventListener('visibilitychange', ()=>{
   if(document.hidden){
     Object.values(players).forEach(({player})=>{ try{player.pauseVideo();}catch(_){ } });
@@ -464,7 +464,6 @@ document.addEventListener('visibilitychange', ()=>{
 });
 window.addEventListener('pagehide', persist);
 window.addEventListener('beforeunload', persist);
-
 window.onYouTubeIframeAPIReady=()=>{ ytApiReady=true; };
 
 /* ======================== Auth + UI ======================== */
@@ -561,7 +560,7 @@ document.getElementById('btn-reset').addEventListener('click', async ()=>{
 });
 document.getElementById('btn-logout').addEventListener('click', async ()=>{ await auth.signOut(); msg('Sesión cerrada.'); });
 
-/* ======================== Combo de Especialidad (NUEVO) ======================== */
+/* ======================== Combo de Especialidad (ARREGLADO) ======================== */
 const comboEl = document.getElementById('spec-combo');
 const inputSpec = document.getElementById('pf-spec');
 const panelSpec = document.getElementById('spec-panel');
@@ -570,48 +569,44 @@ function renderSpecOptions(filterText=''){
   const f = (filterText||'').trim().toLowerCase();
   const list = ESPECIALIDADES
     .filter(e => !f || e.toLowerCase().includes(f))
-    .map(e => `<div class="opt" data-val="${e.replace(/"/g,'&quot;')}">${e}</div>`)
+    .map(e => `<div class="opt" tabindex="0" data-val="${e.replace(/"/g,'&quot;')}">${e}</div>`)
     .join('') || `<div class="opt" style="opacity:.7;cursor:default">No hay resultados</div>`;
   panelSpec.innerHTML = list;
 
-  // handlers de cada opción
-  panelSpec.querySelectorAll('.opt').forEach(opt=>{
+  panelSpec.querySelectorAll('.opt[data-val]').forEach(opt=>{
     const val = opt.getAttribute('data-val');
-    if(!val) return; // "No hay resultados"
     opt.addEventListener('click', ()=>{
       inputSpec.value = val;
-      // No guardamos aún en nube; el guardado ocurre con el botón "Guardar perfil"
       state.profile = state.profile || {};
       state.profile.spec = val;
       persist();
       closeSpecPanel();
     });
+    opt.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter'){ opt.click(); }
+    });
   });
 }
 function openSpecPanel(){
-  if (inputSpec.readOnly) return; // respetar modo solo lectura
+  if (inputSpec.readOnly) return;
   comboEl.classList.add('show');
-  renderSpecOptions(inputSpec.value);
+  renderSpecOptions(''); // Mostrar TODAS al abrir
+  try{
+    inputSpec.focus();
+    inputSpec.setSelectionRange(0, inputSpec.value.length);
+  }catch(_){}
 }
-function closeSpecPanel(){
-  comboEl.classList.remove('show');
-}
-function toggleSpecPanel(){
-  if (comboEl.classList.contains('show')) closeSpecPanel(); else openSpecPanel();
-}
+function closeSpecPanel(){ comboEl.classList.remove('show'); }
 
-// Abrir/cerrar al click
-inputSpec.addEventListener('click', (e)=>{ e.stopPropagation(); toggleSpecPanel(); });
-// Filtrar al tipear (sólo si no está readonly)
+// Abrir siempre (sin toggle) y mostrar todas
+inputSpec.addEventListener('click', (e)=>{ e.stopPropagation(); openSpecPanel(); });
+// Filtrar al escribir (solo si no está readonly)
 inputSpec.addEventListener('input', ()=>{ if(!inputSpec.readOnly) renderSpecOptions(inputSpec.value); });
 // Cerrar al hacer click fuera
-document.addEventListener('click', (e)=>{
-  if(!comboEl.contains(e.target)) closeSpecPanel();
-});
-// Acceso rápido con teclado
+document.addEventListener('click', (e)=>{ if(!comboEl.contains(e.target)) closeSpecPanel(); });
+// Teclado básico
 inputSpec.addEventListener('keydown', (e)=>{
   if (e.key==='Escape'){ closeSpecPanel(); }
-  if (e.key==='ArrowDown'){ openSpecPanel(); const first=panelSpec.querySelector('.opt'); first?.focus?.(); }
 });
 
 /* ======================== Vistas / Perfil ======================== */
@@ -635,7 +630,7 @@ function showCourse(){
   $('#pf-id').value=state.profile?.iddoc||'';
   $('#pf-spec').value=state.profile?.spec||'';
 
-  // Asegurar que el panel tenga las opciones desde el inicio
+  // Pre-render del panel para que esté listo
   renderSpecOptions('');
 
   renderAllBySpecialty(getSpecialty());
