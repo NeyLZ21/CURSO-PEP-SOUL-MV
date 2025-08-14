@@ -241,7 +241,7 @@ const ESPEC_MODS={
   "MEDICINA CRITICA":BASE_MEDICA,"MEDICINA CRITICA PEDIATRICA":BASE_MEDICA,"MEDICINA DEL DEPORTE":BASE_MEDICA,"MEDICINA FAMILIAR":[M.G,M.CE],"MEDICINA FAMILIAR EMERGENCIA":[M.G,M.EM],
   "MEDICINA GENERAL":BASE_MEDICA,"MEDICINA INTERNA":BASE_MEDICA,"MEDICINA MATERNO FETAL":BASE_MEDICA,"MEDICINA PALIATIVA":BASE_MEDICA,"MICROBIOLOGIA":BASE_MEDICA,
   "NEFROLOGIA":BASE_MEDICA,"NEFROLOGIA PEDIATRICA":BASE_MEDICA,"NEONATOLOGIA":BASE_MEDICA,"NEUMOLOGIA":BASE_MEDICA,"NEUMOLOGIA PEDIATRICA":BASE_MEDICA,
-  "NEUROCIRUGIA":BASE_QUIR,"NEUROFISIOLOGIA CLINICA":BASE_MEDICA,"NEUROLOGIA":BASE_QUIR,"NEUROLOGIA PEDIATRICA":BASE_QUIR,"NEUROPSICOLOGIA":BASE_MEDICA,"NEURORADIOL INTERVENCIONISTA":BASE_QUIR,"NEURORADIOLOGIA":BASE_QUIR,
+  "NEUROCIRUGIA":BASE_QUIR,"(NEUROLOGIA)":BASE_QUIR,"NEUROLOGIA":BASE_QUIR,"NEUROLOGIA PEDIATRICA":BASE_QUIR,"NEUROPSICOLOGIA":BASE_MEDICA,"NEURORADIOL INTERVENCIONISTA":BASE_QUIR,"NEURORADIOLOGIA":BASE_QUIR,
   "NUTRICION":BASE_MEDICA,"ODONTOLOGIA":BASE_QUIR,"ODONTOPEDIATRIA":BASE_QUIR,"OFTALMOLOGIA":BASE_QUIR,"OFTALMOLOGIA PEDIATRICA":BASE_QUIR,
   "ONCOLOGIA CLINICA":BASE_QUIR,"OTORRINOLARINGOLOGIA":BASE_QUIR,"PATOLOGIA":BASE_MEDICA,"PEDIATRIA":BASE_MEDICA,"PSICOLOGIA":BASE_MEDICA,"PSIQUIATRIA":BASE_MEDICA,
   "RADIOLOGIA":BASE_QUIR,"RADIOLOGIA INTERVENCIONISTA":BASE_QUIR,"RADIOTERAPIA":BASE_QUIR,"RESIDENTE/INTERNO":BASE_QUIR,"REUMATOLOGIA":BASE_MEDICA,"REUMATOLOGIA PEDIATRICA":BASE_MEDICA,"SEXOLOGIA":BASE_MEDICA,
@@ -264,8 +264,9 @@ firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
 const db=firebase.firestore();
 
-// ✅ Persistencia offline (multi-pestaña). Si el navegador no lo soporta, ignoramos el error.
-db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+// ★ Recomendado: persistencia offline y pequeños ajustes
+db.enablePersistence({synchronizeTabs:true}).catch(()=>{ /* Ignorar si ya está habilitado en otra pestaña */ });
+db.settings({ignoreUndefinedProperties:true});
 
 /* ======================== Estado / helpers ======================== */
 const $=s=>document.querySelector(s);
@@ -718,48 +719,47 @@ async function loadProfile(){
     }
   }catch(e){ console.warn('Perfil no disponible',e); }
 }
+
+/* ★★★ ARREGLO AQUÍ: saveProfile SIN TIMEOUT artificial y con errores reales ★★★ */
 async function saveProfile(){
   const name=($('#pf-name').value||'').trim();
   const iddoc=($('#pf-id').value||'').trim();
   const spec=($('#pf-spec').value||'').trim();
   const pfMsg=$('#pf-msg'); const btn=$('#btn-save-profile');
 
-  if(!name||!iddoc||!spec) { pfMsg.textContent='Completa nombre, cédula/pasaporte y especialidad.'; return; }
-  if(!ESPECIALIDADES.includes(spec)) { pfMsg.textContent='Selecciona una especialidad válida de la lista.'; return; }
+  if(!name||!iddoc||!spec){ pfMsg.textContent='Completa nombre, cédula/pasaporte y especialidad.'; return; }
+  if(!ESPECIALIDADES.includes(spec)){ pfMsg.textContent='Selecciona una especialidad válida de la lista.'; return; }
 
+  // Estado local optimista
   state.profile={name,iddoc,spec}; persist();
   renderAllBySpecialty(spec); updateGlobalProgress();
   document.getElementById('modules')?.scrollIntoView({behavior:'smooth',block:'start'});
 
   pfMsg.classList.add('saving'); pfMsg.textContent='Guardando…'; btn.disabled=true; savingProfile=true;
 
-  try{ if(name){ await auth.currentUser.updateProfile({displayName:name}); } }catch(_){}
-
   try{
-    const uid=auth.currentUser?.uid; if(!uid) throw new Error('unauthenticated');
+    if(name){ try{ await auth.currentUser.updateProfile({displayName:name}); }catch(_){ /* no crítico */ } }
+
+    const uid=auth.currentUser?.uid; if(!uid) throw new Error('Sin UID de usuario autenticado');
     const ref=db.collection('users').doc(uid).collection('profile').doc('main');
     const payload={...state.profile,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
 
-    // ✅ Sin timeout artificial: esperamos el set() real (persistencia offline maneja intermitencias)
+    // ➜ SIN Promise.race ni timeout: dejamos que Firestore confirme
     await ref.set(payload,{merge:true});
 
-    savingProfile=false; pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Perfil guardado.'; setProfileReadonly(true);
+    savingProfile=false;
+    pfMsg.classList.remove('saving');
+    pfMsg.textContent='✅ Perfil guardado.';
+    setProfileReadonly(true);
     setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; },3000);
-
   }catch(e){
-    savingProfile=false; pfMsg.classList.remove('saving');
-    if(e?.code==='permission-denied'){
-      pfMsg.textContent='No tienes permisos para guardar el perfil (permission-denied). Revisa reglas de Firestore.';
-    }else if(e?.message==='unauthenticated'){
-      pfMsg.textContent='Sesión no válida. Inicia sesión nuevamente.';
-    }else{
-      if(typeof navigator!=='undefined' && navigator.onLine===false){
-        pfMsg.textContent='Sin conexión. Guardado localmente; se sincronizará cuando vuelvas a estar en línea.';
-      }else{
-        pfMsg.textContent='No se pudo guardar en la nube. Tus datos quedan localmente y reintentaremos luego.';
-      }
-    }
-    btn.disabled=false;
+    console.error('Error guardando perfil:', e);
+    savingProfile=false;
+    pfMsg.classList.remove('saving');
+    // Mensaje claro con detalle real si existe
+    pfMsg.textContent = e && (e.message || e.code)
+      ? `No se pudo guardar en la nube: ${e.message || e.code}. Tus datos quedan localmente.`
+      : 'No se pudo guardar en la nube; tus datos quedan localmente.';
     setProfileReadonly(false);
   }finally{
     btn.disabled=false;
@@ -891,6 +891,7 @@ function gradeQuizModule(m){
     const btn=document.querySelector(`#btn-${m.id}`);
     if(btn){ btn.textContent='Aprobado ✓'; btn.classList.remove('btn-primary'); btn.classList.add('btn-success'); }
     setTimeout(syncToCloud,300);
+    // desbloquear primer video del siguiente módulo si aplica
     unlockFirstOfNextModuleIfReady(m.id);
   }
 }
