@@ -297,7 +297,12 @@ const loadState=(uid)=>{try{return JSON.parse(localStorage.getItem(keyFor(uid))|
 const saveStateLocal=(uid,st)=>localStorage.setItem(keyFor(uid),JSON.stringify(st));
 let state=loadState(null);
 let unsubProfile=null;
+
+// NUEVO: control de guardados (single-flight + cola)
 let savingProfile=false;
+let saveInFlight=false;
+let pendingSave=null;
+let lastLocalStamp=0;
 
 /* ======================== YouTube control ======================== */
 let ytApiReady=false;
@@ -386,7 +391,6 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
           if(ifr) ifr.setAttribute('allow','autoplay; fullscreen; encrypted-media; picture-in-picture');
           ev.target.unMute(); ev.target.setVolume(100);
         }catch(_){}
-        // reanudar desde última posición permitida (sin autoplay)
         const startAt=Math.min(store.t||0,store.allow||0);
         if(startAt>1){ try{ev.target.seekTo(startAt,true);}catch(_){} }
       },
@@ -437,7 +441,6 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
       let cur=0,dur=0,st;
       try{ cur=p.getCurrentTime?.()||0; dur=p.getDuration?.()||0; st=p.getPlayerState?.(); }catch(_){}
       if(dur && (!store.dur || Math.abs(store.dur-dur)>0.5)){ store.dur=dur; persist(); }
-      // Anti-seek
       if(cur>(store.allow+1.0)){ try{ p.seekTo(store.allow,true); }catch(_){ } return; }
       if(st===YT.PlayerState.PLAYING){
         if(cur>store.allow) store.allow=cur;
@@ -587,8 +590,10 @@ function showCourse(){
   renderAllBySpecialty(getSpecialty());
   updateGlobalProgress();
   startProfileRealtime();
+
+  const before=getSpecialty();
   loadProfile().then(()=>{
-    renderAllBySpecialty(getSpecialty());
+    if(getSpecialty()!==before){ renderAllBySpecialty(getSpecialty()); }
     updateGlobalProgress();
     if(profileComplete()){
       setProfileReadonly(true);
@@ -604,7 +609,6 @@ function setProfileReadonly(ro){
     const el=document.getElementById(id);
     el.readOnly=ro; el.style.background=ro?'#eef2ff':'#fff';
   });
-  // la especialidad se puede editar sólo cuando no es readonly
   specInput.readOnly = ro ? true : false;
   specInput.style.background = ro ? '#eef2ff' : '#fff';
   allowEditSpec = !ro;
@@ -613,11 +617,13 @@ function setProfileReadonly(ro){
   document.getElementById('btn-save-profile').style.display=ro?'none':'inline-flex';
 }
 document.getElementById('btn-edit-profile').addEventListener('click',()=>{
+  allowEditSpec=true;
   setProfileReadonly(false);
   $('#pf-help').textContent='Edita tus datos y guarda los cambios.';
 });
 function getSpecialty(){ return (state.profile?.spec||'').trim(); }
 
+/* ======================== Realtime Profile con anti-race ======================== */
 function startProfileRealtime(){
   if (unsubProfile) { try{unsubProfile();}catch(_){ } unsubProfile=null; }
   const uid=auth.currentUser?.uid; if(!uid) return;
@@ -625,20 +631,28 @@ function startProfileRealtime(){
   unsubProfile=ref.onSnapshot((snap)=>{
     if(!snap.exists) return;
     const cloud=snap.data()||{};
+
+    // ignora snapshots más viejos que el último guardado local
+    const cloudStamp = (cloud.clientUpdatedAt || 0);
+    if (cloudStamp && cloudStamp < lastLocalStamp) return;
+
     const prevSpec=state.profile?.spec;
     state.profile={...state.profile,...cloud}; persist();
+
     if(document.getElementById('pf-name').readOnly){
       $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
       $('#pf-id').value=state.profile?.iddoc||'';
       $('#pf-spec').value=state.profile?.spec||'';
     }
+
     if(prevSpec!==state.profile?.spec && ESPECIALIDADES.includes(state.profile?.spec||'')){
       renderAllBySpecialty(state.profile.spec); updateGlobalProgress();
     }
+
     if(savingProfile){
       savingProfile=false;
       const pfMsg=$('#pf-msg'); pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Perfil guardado.';
-      setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; },3000);
+      setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; },2000);
       setProfileReadonly(true);
     }
   });
@@ -656,27 +670,49 @@ async function loadProfile(){
   }catch(e){ console.warn('Perfil no disponible',e); }
 }
 
-/* ====== Guardado robusto (sin timeout + reintentos + offline) ====== */
-async function saveProfile(){
-  const name=($('#pf-name').value||'').trim();
-  const iddoc=($('#pf-id').value||'').trim();
-  const spec=($('#pf-spec').value||'').trim();
-  const pfMsg=$('#pf-msg'); const btn=$('#btn-save-profile');
+/* ====== Guardado robusto (single-flight + cola + offline) ====== */
+async function saveProfile(payloadFromQueue){
+  const pfMsg=$('#pf-msg');
+  const btn=$('#btn-save-profile');
+
+  const name =(payloadFromQueue?.name ?? ($('#pf-name').value||'').trim());
+  const iddoc=(payloadFromQueue?.iddoc ?? ($('#pf-id').value||'').trim());
+  const spec =(payloadFromQueue?.spec  ?? ($('#pf-spec').value||'').trim());
+
+  closeSpecCombo?.();
 
   if(!name||!iddoc||!spec){ pfMsg.textContent='Completa nombre, cédula/pasaporte y especialidad.'; return; }
   if(!ESPECIALIDADES.includes(spec)){ pfMsg.textContent='Selecciona una especialidad válida de la lista.'; return; }
 
+  // Si hay un guardado en curso, encola el último y sal
+  if (saveInFlight) {
+    pendingSave = {name,iddoc,spec};
+    pfMsg.textContent='Guardando…';
+    pfMsg.classList.add('saving');
+    return;
+  }
+
+  saveInFlight = true;
+  savingProfile = true;
+  pendingSave = null;
+
+  const prevSpec = state.profile?.spec;
   state.profile={name,iddoc,spec}; persist();
-  renderAllBySpecialty(spec); updateGlobalProgress();
+
+  if(spec!==prevSpec){ renderAllBySpecialty(spec); updateGlobalProgress(); }
   document.getElementById('modules')?.scrollIntoView({behavior:'smooth',block:'start'});
-  pfMsg.classList.add('saving'); pfMsg.textContent='Guardando…'; btn.disabled=true; savingProfile=true;
+
+  pfMsg.classList.add('saving'); pfMsg.textContent='Guardando…'; btn.disabled=true;
+
+  const myStamp = Date.now();
+  lastLocalStamp = Math.max(lastLocalStamp, myStamp);
 
   try{ if(name){ await auth.currentUser.updateProfile({displayName:name}); } }catch(_){}
 
   try{
     const uid=auth.currentUser?.uid; if(!uid) throw new Error('Sin UID');
     const ref=db.collection('users').doc(uid).collection('profile').doc('main');
-    const payload={...state.profile,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+    const payload={...state.profile, clientUpdatedAt: myStamp, updatedAt: firebase.firestore.FieldValue.serverTimestamp()};
 
     // 3 reintentos con backoff
     let ok=false, lastErr=null;
@@ -686,67 +722,91 @@ async function saveProfile(){
     }
     if(!ok) throw lastErr || new Error('No se pudo guardar');
 
-    savingProfile=false; pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Perfil guardado.';
-    setProfileReadonly(true);
-    setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; },3000);
+    savingProfile=false; pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Perfil guardado.'; setProfileReadonly(true);
+    setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; },2000);
   }catch(e){
     savingProfile=false; pfMsg.classList.remove('saving');
     if(!navigator.onLine){
       pfMsg.textContent='Sin conexión. Guardado local; se sincronizará al volver la red.';
-      setProfileReadonly(true); // dejamos listo y Firestore hará el sync
+      setProfileReadonly(true);
     }else{
       pfMsg.textContent='No se pudo guardar en la nube; tus datos quedan localmente.';
       setProfileReadonly(false);
     }
-  }finally{ btn.disabled=false; }
-}
-document.getElementById('btn-save-profile').addEventListener('click',saveProfile);
+  }finally{
+    btn.disabled=false;
+    saveInFlight=false;
 
-/* ======================== Combo de Especialidad (click para abrir) ======================== */
+    // ¿Quedó un cambio pendiente? Lánzalo ahora (coalesce: sólo el último)
+    if(pendingSave){
+      const next=pendingSave; pendingSave=null;
+      saveProfile(next);
+    }
+  }
+}
+document.getElementById('btn-save-profile').addEventListener('click', ()=>saveProfile());
+
+/* ======================== Combo de Especialidad (rápido y estable) ======================== */
+let closeSpecCombo = null; // expuesto para cerrar desde saveProfile()
 (function setupSpecCombo(){
   const wrap=document.getElementById('spec-combo');
   const input=document.getElementById('pf-spec');
   const panel=document.getElementById('spec-panel');
-  let filtered=ESPECIALIDADES.slice(), open=false;
+
+  let filtered=ESPECIALIDADES.slice();
+  let open=false;
 
   function render(list){
+    // DocumentFragment para performance
     panel.innerHTML='';
-    list.forEach(name=>{
+    const frag=document.createDocumentFragment();
+    for(const name of list){
       const div=document.createElement('div');
       div.className='opt';
       div.textContent=name;
       div.addEventListener('mousedown',(e)=>{
-        if(input.readOnly){ e.preventDefault(); return; }
+        if(input.readOnly || !allowEditSpec){ e.preventDefault(); return; }
         e.preventDefault(); e.stopPropagation();
         input.value=name; hide(); input.readOnly=true; input.blur();
       });
-      panel.appendChild(div);
-    });
+      frag.appendChild(div);
+    }
+    panel.appendChild(frag);
   }
-  function show(){
-    if(input.readOnly) return;
-    wrap.classList.add('show'); open=true;
-  }
-  function hide(){ wrap.classList.remove('show'); open=false; }
+  function show(){ if(input.readOnly || !allowEditSpec) return; if(!open){ wrap.classList.add('show'); open=true; } }
+  function hide(){ if(open){ wrap.classList.remove('show'); open=false; } }
+  closeSpecCombo = hide;
 
   wrap.addEventListener('mousedown',(e)=>{
-    if(input.readOnly) return;
-    if(!open){ input.focus(); filtered=ESPECIALIDADES.slice(); render(filtered); show(); }
+    if(input.readOnly || !allowEditSpec) return;
+    if(!open){
+      input.readOnly=false;
+      input.focus();
+      filtered=ESPECIALIDADES.slice();
+      render(filtered);
+      show();
+    }
   });
   input.addEventListener('input',()=>{
-    if(input.readOnly) return;
+    if(input.readOnly || !allowEditSpec) return;
     const q=input.value.trim().toLowerCase();
-    filtered=ESPECIALIDADES.filter(e=>e.toLowerCase().includes(q));
-    render(filtered); show();
+    // filtro rápido y sin bloqueos
+    filtered = q ? ESPECIALIDADES.filter(e=>e.toLowerCase().includes(q)) : ESPECIALIDADES.slice();
+    render(filtered);
+    show();
   });
   input.addEventListener('keydown',(e)=>{
-    if(input.readOnly) return;
+    if(!allowEditSpec) return;
     if(e.key==='Enter'){
-      if(filtered.length>0){ input.value=filtered[0]; hide(); input.readOnly=true; input.blur(); e.preventDefault(); }
+      if(filtered.length>0){
+        input.value=filtered[0];
+        hide(); input.readOnly=true; input.blur(); e.preventDefault();
+      }
     }else if(e.key==='Escape'){ hide(); input.readOnly=true; input.blur(); }
   });
   document.addEventListener('mousedown',(e)=>{ if(!wrap.contains(e.target)){ hide(); } });
   input.addEventListener('change',()=>{ const v=input.value.trim(); if(v && !ESPECIALIDADES.includes(v)) input.value=''; });
+
   render(filtered);
 })();
 
