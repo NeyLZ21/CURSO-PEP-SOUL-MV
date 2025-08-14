@@ -59,7 +59,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .combo .arrow{position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none}
 .combo .panel{position:absolute;z-index:20;left:0;right:0;max-height:280px;overflow:auto;background:#111827;color:#f9fafb;border-radius:12px;padding:6px 0;box-shadow:0 10px 24px rgba(0,0,0,.18);display:none}
 .combo .opt{padding:10px 12px;cursor:pointer}
-.combo .opt[aria-selected="true"], .combo .opt:hover{background:#1f2937}
+.combo .opt:hover{background:#1f2937}
 .combo.show .panel{display:block}
 
 /* Quiz */
@@ -172,7 +172,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
         <div class="combo" id="spec-combo">
           <input id="pf-spec" type="text" placeholder="Escribe para buscar…" autocomplete="off" readonly>
           <span class="arrow">▾</span>
-          <div class="panel" id="spec-panel" role="listbox" aria-label="Especialidades"></div>
+          <div class="panel" id="spec-panel"></div>
         </div>
         <small class="muted">Selecciona de la lista. Esto define los módulos que verás.</small>
       </label>
@@ -235,7 +235,7 @@ const ESPEC_MODS={
   "ENFERMEDADES AUTOINMUNES":BASE_MEDICA,"FISIATRIA":BASE_MEDICA,"FONOAUDIOLOGIA":BASE_MEDICA,
   "GASTROENTEROLOGIA":BASE_QUIR,"GASTROENTEROLOGIA PEDIATRICA":BASE_QUIR,"GENETICA MEDICA":BASE_MEDICA,"GERIATRIA":BASE_MEDICA,
   "GINECOLOGIA INFANTO JUVENIL":BASE_QUIR,"GINECOLOGIA ONCOLOGICA":BASE_QUIR,"GINECOLOGIA Y OBSTETRICIA":BASE_QUIR,
-  "HEMATOLOGIA":BASE_QUIR,"HEMATOLOGO ONCOCOLOGO PEDIATRIA":BASE_QUIR,"HEPATOLOGIA":BASE_MEDICA,
+  "HEMATOLOGIA":BASE_QUIR,"HEMATOLOGO ONCOLOGO PEDIATRIA":BASE_QUIR,"HEPATOLOGIA":BASE_MEDICA,
   "INFECTOLOGIA":BASE_MEDICA,"INFECTOLOGIA PEDIATRICA":BASE_MEDICA,"INTERVENCIONISMO":BASE_QUIR,"MASTOLOGIA":BASE_QUIR,"MAXILO FACIAL":BASE_QUIR,
   "MEDICINA CRITICA":BASE_MEDICA,"MEDICINA CRITICA PEDIATRICA":BASE_MEDICA,"MEDICINA DEL DEPORTE":BASE_MEDICA,"MEDICINA FAMILIAR":[M.G,M.CE],"MEDICINA FAMILIAR EMERGENCIA":[M.G,M.EM],
   "MEDICINA GENERAL":BASE_MEDICA,"MEDICINA INTERNA":BASE_MEDICA,"MEDICINA MATERNO FETAL":BASE_MEDICA,"MEDICINA PALIATIVA":BASE_MEDICA,"MICROBIOLOGIA":BASE_MEDICA,
@@ -265,7 +265,7 @@ const firebaseConfig={apiKey:"AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",authDomai
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
 
-// Persistencia offline ANTES de usar db
+// ⚠️ Habilita persistencia offline ANTES de usar db
 try{
   firebase.firestore().enablePersistence({synchronizeTabs:true}).catch(err=>{
     console.warn('Firestore persistence no habilitada:', err && err.code);
@@ -299,10 +299,10 @@ let state=loadState(null);
 let unsubProfile=null;
 let savingProfile=false;
 
-/* ======================== YouTube control (lazy) ======================== */
+/* ======================== YouTube control ======================== */
 let ytApiReady=false;
 const players={}; // pid -> {player,meta}
-const cfgByPid=new Map();
+const cfgByPid=new Map(); // para cargar bajo demanda
 let lastPlayingPid=null;
 
 function ytThumb(id){ return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`; }
@@ -338,11 +338,11 @@ function ensureStoreFor(mid,vid){
 }
 function persist(){ saveStateLocal(CURRENT_UID,state); }
 
-/* Crear player al clicar el póster (SIN autoplay) */
+/* --- Crear player al clicar el póster (SIN autoplay) --- */
 function clickToLoad(pid){
   const cfg=cfgByPid.get(pid); if(!cfg) return;
   if(isLocked(cfg)){ showWarn(pid, lockReason(cfg)); return; }
-  if(players[pid]) return;
+  if(players[pid]) return; // ya creado
   actuallyCreatePlayer(cfg);
   const poster=document.querySelector(`.poster[data-load="${pid}"]`);
   if(poster) poster.remove();
@@ -386,6 +386,7 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
           if(ifr) ifr.setAttribute('allow','autoplay; fullscreen; encrypted-media; picture-in-picture');
           ev.target.unMute(); ev.target.setVolume(100);
         }catch(_){}
+        // reanudar desde última posición permitida (sin autoplay)
         const startAt=Math.min(store.t||0,store.allow||0);
         if(startAt>1){ try{ev.target.seekTo(startAt,true);}catch(_){} }
       },
@@ -436,6 +437,7 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
       let cur=0,dur=0,st;
       try{ cur=p.getCurrentTime?.()||0; dur=p.getDuration?.()||0; st=p.getPlayerState?.(); }catch(_){}
       if(dur && (!store.dur || Math.abs(store.dur-dur)>0.5)){ store.dur=dur; persist(); }
+      // Anti-seek
       if(cur>(store.allow+1.0)){ try{ p.seekTo(store.allow,true); }catch(_){ } return; }
       if(st===YT.PlayerState.PLAYING){
         if(cur>store.allow) store.allow=cur;
@@ -448,7 +450,7 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
   function stopTick(){ if(meta.tick){ clearInterval(meta.tick); meta.tick=null; } }
 }
 
-/* Pausas al cambiar de pestaña */
+/* Pausar cuando sale de la pestaña y reanudar (sin adelantar) */
 document.addEventListener('visibilitychange', ()=>{
   if(document.hidden){
     Object.values(players).forEach(({player})=>{ try{player.pauseVideo();}catch(_){ } });
@@ -559,7 +561,7 @@ document.getElementById('btn-reset').addEventListener('click', async ()=>{
 document.getElementById('btn-logout').addEventListener('click', async ()=>{ await auth.signOut(); msg('Sesión cerrada.'); });
 
 /* ======================== Vistas / Perfil ======================== */
-let allowEditSpec=true; // si false, la lista no abre
+let allowEditSpec=true; // controla si se puede abrir la lista
 
 function showCourse(){
   if(!auth.currentUser) return;
@@ -602,10 +604,10 @@ function setProfileReadonly(ro){
     const el=document.getElementById(id);
     el.readOnly=ro; el.style.background=ro?'#eef2ff':'#fff';
   });
-  // especialidad sólo editable si no readonly
-  allowEditSpec = !ro;
-  specInput.readOnly = ro;
+  // la especialidad se puede editar sólo cuando no es readonly
+  specInput.readOnly = ro ? true : false;
   specInput.style.background = ro ? '#eef2ff' : '#fff';
+  allowEditSpec = !ro;
 
   document.getElementById('btn-edit-profile').style.display=ro?'inline-flex':'none';
   document.getElementById('btn-save-profile').style.display=ro?'none':'inline-flex';
@@ -654,7 +656,7 @@ async function loadProfile(){
   }catch(e){ console.warn('Perfil no disponible',e); }
 }
 
-/* ====== Guardado robusto ====== */
+/* ====== Guardado robusto (sin timeout + reintentos + offline) ====== */
 async function saveProfile(){
   const name=($('#pf-name').value||'').trim();
   const iddoc=($('#pf-id').value||'').trim();
@@ -675,6 +677,7 @@ async function saveProfile(){
     const uid=auth.currentUser?.uid; if(!uid) throw new Error('Sin UID');
     const ref=db.collection('users').doc(uid).collection('profile').doc('main');
     const payload={...state.profile,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+
     // 3 reintentos con backoff
     let ok=false, lastErr=null;
     for(let i=0;i<3 && !ok;i++){
@@ -683,140 +686,67 @@ async function saveProfile(){
     }
     if(!ok) throw lastErr || new Error('No se pudo guardar');
 
-    // Reposo hasta que el onSnapshot lo confirme; si no llega, fallback
-    setTimeout(()=>{ if(savingProfile){ savingProfile=false; pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Guardado (confirmación diferida).'; setProfileReadonly(true); btn.disabled=false; } }, 6000);
+    savingProfile=false; pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Perfil guardado.';
+    setProfileReadonly(true);
+    setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; },3000);
   }catch(e){
-    savingProfile=false; pfMsg.classList.remove('saving'); btn.disabled=false;
+    savingProfile=false; pfMsg.classList.remove('saving');
     if(!navigator.onLine){
       pfMsg.textContent='Sin conexión. Guardado local; se sincronizará al volver la red.';
-      setProfileReadonly(true);
+      setProfileReadonly(true); // dejamos listo y Firestore hará el sync
     }else{
       pfMsg.textContent='No se pudo guardar en la nube; tus datos quedan localmente.';
       setProfileReadonly(false);
     }
-  }
+  }finally{ btn.disabled=false; }
 }
 document.getElementById('btn-save-profile').addEventListener('click',saveProfile);
 
-/* ======================== Combo de Especialidad ======================== */
-/* Arreglado para evitar “cuelgues”:
-   - Usa allowEditSpec + readOnly coherentes
-   - Tecla ↑/↓ y Enter
-   - Filtrado con pequeño debounce
-   - Cierra con click fuera o Escape
-*/
+/* ======================== Combo de Especialidad (click para abrir) ======================== */
 (function setupSpecCombo(){
   const wrap=document.getElementById('spec-combo');
   const input=document.getElementById('pf-spec');
   const panel=document.getElementById('spec-panel');
-
-  let filtered=ESPECIALIDADES.slice();
-  let open=false;
-  let activeIndex=-1;
-  let debounceId=null;
+  let filtered=ESPECIALIDADES.slice(), open=false;
 
   function render(list){
     panel.innerHTML='';
-    list.forEach((name,idx)=>{
+    list.forEach(name=>{
       const div=document.createElement('div');
       div.className='opt';
       div.textContent=name;
-      div.setAttribute('role','option');
-      div.setAttribute('aria-selected', idx===activeIndex ? 'true':'false');
-      // pointerdown evita perder el foco antes de asignar valor
-      div.addEventListener('pointerdown',(e)=>{
-        if(input.readOnly || !allowEditSpec){ e.preventDefault(); return; }
+      div.addEventListener('mousedown',(e)=>{
+        if(input.readOnly){ e.preventDefault(); return; }
         e.preventDefault(); e.stopPropagation();
-        pick(name);
+        input.value=name; hide(); input.readOnly=true; input.blur();
       });
       panel.appendChild(div);
     });
   }
+  function show(){
+    if(input.readOnly) return;
+    wrap.classList.add('show'); open=true;
+  }
+  function hide(){ wrap.classList.remove('show'); open=false; }
 
-  function openPanel(){
-    if(!allowEditSpec) return;
-    if(open) return;
-    input.readOnly=false;
-    wrap.classList.add('show');
-    open=true;
-    activeIndex=-1;
-    filtered=ESPECIALIDADES.slice();
-    render(filtered);
-    input.setSelectionRange(0, input.value.length);
-  }
-  function closePanel(){
-    if(!open) return;
-    wrap.classList.remove('show');
-    open=false;
-    activeIndex=-1;
-    input.readOnly = !allowEditSpec;
-  }
-  function pick(name){
-    input.value=name;
-    closePanel();
-    input.readOnly=true; // ya elegido
-    input.blur();
-  }
-  function move(delta){
-    if(!open) return;
-    if(filtered.length===0){ activeIndex=-1; render(filtered); return; }
-    activeIndex = (activeIndex + delta + filtered.length) % filtered.length;
-    Array.from(panel.children).forEach((el,i)=>el.setAttribute('aria-selected', i===activeIndex ? 'true':'false'));
-    const el = panel.children[activeIndex];
-    if(el) el.scrollIntoView({block:'nearest'});
-  }
-  function doFilter(q){
-    filtered = ESPECIALIDADES.filter(e=>e.toLowerCase().includes(q));
-    activeIndex = filtered.length ? 0 : -1;
-    render(filtered);
-  }
-  function debounceFilter(){
-    clearTimeout(debounceId);
-    debounceId=setTimeout(()=>{
-      const q=input.value.trim().toLowerCase();
-      doFilter(q);
-    },120);
-  }
-
-  // Abrir panel al click en el contenedor
-  wrap.addEventListener('pointerdown',(e)=>{
-    if(!allowEditSpec){ e.preventDefault(); return; }
-    if(!open){ openPanel(); }
+  wrap.addEventListener('mousedown',(e)=>{
+    if(input.readOnly) return;
+    if(!open){ input.focus(); filtered=ESPECIALIDADES.slice(); render(filtered); show(); }
   });
-
-  input.addEventListener('focus',()=>{ if(allowEditSpec) openPanel(); });
   input.addEventListener('input',()=>{
-    if(input.readOnly || !allowEditSpec) return;
-    debounceFilter();
+    if(input.readOnly) return;
+    const q=input.value.trim().toLowerCase();
+    filtered=ESPECIALIDADES.filter(e=>e.toLowerCase().includes(q));
+    render(filtered); show();
   });
-
   input.addEventListener('keydown',(e)=>{
-    if(!allowEditSpec){
-      if(e.key==='Enter'){ e.preventDefault(); }
-      return;
-    }
-    if(e.key==='ArrowDown'){ e.preventDefault(); if(!open) openPanel(); move(1); }
-    else if(e.key==='ArrowUp'){ e.preventDefault(); if(!open) openPanel(); move(-1); }
-    else if(e.key==='Enter'){
-      e.preventDefault();
-      if(open){
-        if(activeIndex>=0 && filtered[activeIndex]) pick(filtered[activeIndex]);
-        else if(filtered.length>0) pick(filtered[0]);
-      }else{
-        openPanel();
-      }
-    }else if(e.key==='Escape'){ e.preventDefault(); closePanel(); input.blur(); }
+    if(input.readOnly) return;
+    if(e.key==='Enter'){
+      if(filtered.length>0){ input.value=filtered[0]; hide(); input.readOnly=true; input.blur(); e.preventDefault(); }
+    }else if(e.key==='Escape'){ hide(); input.readOnly=true; input.blur(); }
   });
-
-  document.addEventListener('pointerdown',(e)=>{
-    if(!wrap.contains(e.target)) closePanel();
-  });
-
-  input.addEventListener('change',()=>{
-    const v=input.value.trim();
-    if(v && !ESPECIALIDADES.includes(v)) input.value='';
-  });
-
+  document.addEventListener('mousedown',(e)=>{ if(!wrap.contains(e.target)){ hide(); } });
+  input.addEventListener('change',()=>{ const v=input.value.trim(); if(v && !ESPECIALIDADES.includes(v)) input.value=''; });
   render(filtered);
 })();
 
@@ -844,6 +774,11 @@ function renderAllBySpecialty(spec){
   const modulesDef=pickModulesFor(useSpec);
   state.course={spec:useSpec,modules:modulesDef}; persist();
 
+  $('#progress').style.display='block'; $('#modules').style.display='grid';
+  renderModules(modulesDef); updateGlobalProgress();
+}
+
+function renderModules(modulesDef){
   // destruir players previos
   Object.keys(players).forEach(k=>{
     try{ players[k]?.player?.stopVideo?.(); players[k]?.player?.destroy?.(); }catch(_){}
@@ -851,11 +786,6 @@ function renderAllBySpecialty(spec){
   });
   cfgByPid.clear();
 
-  $('#progress').style.display='block'; $('#modules').style.display='grid';
-  renderModules(modulesDef); updateGlobalProgress();
-}
-
-function renderModules(modulesDef){
   const wrap=$('#modules'); wrap.innerHTML='';
   modulesDef.forEach((m,modIdx)=>{
     const doneVideos=(state.videosDone?.[m.id]||{});
