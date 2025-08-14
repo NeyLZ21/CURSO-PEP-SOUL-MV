@@ -57,10 +57,10 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 /* Combo de especialidad */
 .combo{position:relative}
 .combo input{padding-right:36px}
-.combo .arrow{position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:auto;cursor:pointer}
+.combo .arrow{position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none}
 .combo .panel{position:absolute;z-index:20;left:0;right:0;max-height:280px;overflow:auto;background:#111827;color:#f9fafb;border-radius:12px;padding:6px 0;box-shadow:0 10px 24px rgba(0,0,0,.18);display:none}
 .combo .opt{padding:10px 12px;cursor:pointer}
-.combo .opt[aria-selected="true"], .combo .opt:hover{background:#1f2937}
+.combo .opt:hover{background:#1f2937}
 .combo.show .panel{display:block}
 
 /* Quiz */
@@ -172,8 +172,8 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
       <label style="grid-column:1/-1">Especialidad<br>
         <div class="combo" id="spec-combo">
           <input id="pf-spec" type="text" placeholder="Escribe para buscar…" autocomplete="off" readonly>
-          <span class="arrow" id="spec-arrow">▾</span>
-          <div class="panel" id="spec-panel" role="listbox" aria-label="Especialidades"></div>
+          <span class="arrow">▾</span>
+          <div class="panel" id="spec-panel"></div>
         </div>
         <small class="muted">Selecciona de la lista. Esto define los módulos que verás.</small>
       </label>
@@ -224,18 +224,20 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 
 <script>
 /* ======================== ESPECIALIDADES / MÓDULOS / VIDEOS ======================== */
-const ESPECIALIDADES=[ "ACUPUNTURA","ALERGOLOGIA","ANESTESIOLOGIA","CARDIOLOGIA","CARDIOLOGIA HEMODINAMIA","CARDIOLOGIA INTERVENCIONISTA","CARDIOLOGIA PEDIATRICA","CIR. GENERAL-COLOPROCTOLOGIA","CIR. MANO/MUÑE-NERVIO PERI/BRA","CIRUGIA CARDIACA","CIRUGIA DE CABEZA Y CUELLO","CIRUGIA DE COLUMNA","CIRUGIA DE HOMBRO Y CODO","CIRUGIA GENERAL","CIRUGIA ONCOLOGICA","CIRUGIA PEDIATRICA","CIRUGIA PLASTICA","CIRUGIA TORACICA","CIRUGIA VASCULAR","COLOPROCTOLOGIA","CUIDADOS PALIATIVOS","DERMATOLOGIA","DIABETOLOGIA","EMERGENCIAS Y DESASTRES","ENDOCRINO PEDIATRA","ENDOCRINOLOGIA","ENFERMEDADES AUTOINMUNES","FISIATRIA","FONOAUDIOLOGIA","GASTROENTEROLOGIA","GASTROENTEROLOGIA PEDIATRICA","GENETICA MEDICA","GERIATRIA","GINECOLOGIA INFANTO JUVENIL","GINECOLOGIA ONCOLOGICA","GINECOLOGIA Y OBSTETRICIA","HEMATOLOGIA","HEMATOLOGO ONCOCOLOGO PEDIATRIA".replace("ONCOCOLOGO","ONCOLOGO"),"HEPATOLOGIA","INFECTOLOGIA","INFECTOLOGIA PEDIATRICA","INTERVENCIONISMO","MASTOLOGIA","MAXILO FACIAL","MEDICINA CRITICA","MEDICINA CRITICA PEDIATRICA","MEDICINA DEL DEPORTE","MEDICINA FAMILIAR","MEDICINA FAMILIAR EMERGENCIA","MEDICINA GENERAL","MEDICINA INTERNA","MEDICINA MATERNO FETAL","MEDICINA PALIATIVA","MICROBIOLOGIA","NEFROLOGIA","NEFROLOGIA PEDIATRICA","NEONATOLOGIA","NEUMOLOGIA","NEUMOLOGIA PEDIATRICA","NEUROCIRUGIA","NEUROFISIOLOGIA CLINICA","NEUROLOGIA","NEUROLOGIA PEDIATRICA","NEUROPSICOLOGIA","NEURORADIOL INTERVENCIONISTA","NEURORADIOLOGIA","NUTRICION","ODONTOLOGIA","ODONTOPEDIATRIA","OFTALMOLOGIA","OFTALMOLOGIA PEDIATRICA","ONCOLOGIA CLINICA","OTORRINOLARINGOLOGIA","PATOLOGIA","PEDIATRIA","PSICOLOGIA","PSIQUIATRIA","RADIOLOGIA","RADIOLOGIA INTERVENCIONISTA","RADIOTERAPIA","RESIDENTE/INTERNO","REUMATOLOGIA","REUMATOLOGIA PEDIATRICA","SEXOLOGIA","TRATAMIENTO DEL DOLOR","TRAUMATO PEDIATRICA DE COLUMNA","TRAUMATOLOGIA DEL COLUMNA","TRAUMATOLOGIA ONCOLOGICA","TRAUMATOLOGIA PEDIATRICA","TRAUMATOLOGIA Y ORTOPEDIA","UROLOGIA","UROLOGIA PEDIATRICA" ];
+const ESPECIALIDADES=[ "ACUPUNTURA","ALERGOLOGIA","ANESTESIOLOGIA","CARDIOLOGIA","CARDIOLOGIA HEMODINAMIA","CARDIOLOGIA INTERVENCIONISTA","CARDIOLOGIA PEDIATRICA","CIR. GENERAL-COLOPROCTOLOGIA","CIR. MANO/MUÑE-NERVIO PERI/BRA","CIRUGIA CARDIACA","CIRUGIA DE CABEZA Y CUELLO","CIRUGIA DE COLUMNA","CIRUGIA DE HOMBRO Y CODO","CIRUGIA GENERAL","CIRUGIA ONCOLOGICA","CIRUGIA PEDIATRICA","CIRUGIA PLASTICA","CIRUGIA TORACICA","CIRUGIA VASCULAR","COLOPROCTOLOGIA","CUIDADOS PALIATIVOS","DERMATOLOGIA","DIABETOLOGIA","EMERGENCIAS Y DESASTRES","ENDOCRINO PEDIATRA","ENDOCRINOLOGIA","ENFERMEDADES AUTOINMUNES","FISIATRIA","FONOAUDIOLOGIA","GASTROENTEROLOGIA","GASTROENTEROLOGIA PEDIATRICA","GENETICA MEDICA","GERIATRIA","GINECOLOGIA INFANTO JUVENIL","GINECOLOGIA ONCOLOGICA","GINECOLOGIA Y OBSTETRICIA","HEMATOLOGIA","HEMATOLOGO ONCOLOGO PEDIATRIA","HEPATOLOGIA","INFECTOLOGIA","INFECTOLOGIA PEDIATRICA","INTERVENCIONISMO","MASTOLOGIA","MAXILO FACIAL","MEDICINA CRITICA","MEDICINA CRITICA PEDIATRICA","MEDICINA DEL DEPORTE","MEDICINA FAMILIAR","MEDICINA FAMILIAR EMERGENCIA","MEDICINA GENERAL","MEDICINA INTERNA","MEDICINA MATERNO FETAL","MEDICINA PALIATIVA","MICROBIOLOGIA","NEFROLOGIA","NEFROLOGIA PEDIATRICA","NEONATOLOGIA","NEUMOLOGIA","NEUMOLOGIA PEDIATRICA","NEUROCIRUGIA","NEUROFISIOLOGIA CLINICA","NEUROLOGIA","NEUROLOGIA PEDIATRICA","NEUROPSICOLOGIA","NEURORADIOL INTERVENCIONISTA","NEURORADIOLOGIA","NUTRICION","ODONTOLOGIA","ODONTOPEDIATRIA","OFTALMOLOGIA","OFTALMOLOGIA PEDIATRICA","ONCOLOGIA CLINICA","OTORRINOLARINGOLOGIA","PATOLOGIA","PEDIATRIA","PSICOLOGIA","PSIQUIATRIA","RADIOLOGIA","RADIOLOGIA INTERVENCIONISTA","RADIOTERAPIA","RESIDENTE/INTERNO","REUMATOLOGIA","REUMATOLOGIA PEDIATRICA","SEXOLOGIA","TRATAMIENTO DEL DOLOR","TRAUMATO PEDIATRICA DE COLUMNA","TRAUMATOLOGIA DEL COLUMNA","TRAUMATOLOGIA ONCOLOGICA","TRAUMATOLOGIA PEDIATRICA","TRAUMATOLOGIA Y ORTOPEDIA","UROLOGIA","UROLOGIA PEDIATRICA" ];
 const M={ CE:"CONSULTA EXTERNA", H:"HOSPITALIZACIÓN-HDD", CQ:"CENTRO QUIRÚRGICO", G:"GENERALIDADES", AN:"ANESTESIOLOGÍA", EM:"EMERGENCIAS" };
 const BASE_MEDICA=[M.G,M.H,M.CE], BASE_QUIR=[M.G,M.H,M.CE,M.CQ];
 const ESPEC_MODS={
   "ACUPUNTURA":BASE_MEDICA,"ALERGOLOGIA":BASE_MEDICA,"ANESTESIOLOGIA":[M.G,M.AN],
   "CARDIOLOGIA":BASE_MEDICA,"CARDIOLOGIA HEMODINAMIA":BASE_MEDICA,"CARDIOLOGIA INTERVENCIONISTA":BASE_MEDICA,"CARDIOLOGIA PEDIATRICA":BASE_MEDICA,
-  "CIR. GENERAL-COLOPROCTOLOGIA":BASE_QUIR,"CIR. MANO/MUÑE-NERVIO PERI/BRA":BASE_QUIR,"CIRUGIA CARDIACA":BASE_QUIR,"CIRUGIA DE CABEZA Y CUELLO":BASE_QUIR,"CIRUGIA DE COLUMNA":BASE_QUIR,"CIRUGIA DE HOMBRO Y CODO":BASE_QUIR,"CIRUGIA GENERAL":BASE_QUIR,"CIRUGIA ONCOLOGICA":BASE_QUIR,"CIRUGIA PEDIATRICA":BASE_QUIR,"CIRUGIA PLASTICA":BASE_QUIR,"CIRUGIA TORACICA":BASE_QUIR,"CIRUGIA VASCULAR":BASE_QUIR,
-  "COLOPROCTOLOGIA":BASE_QUIR,"CUIDADOS PALIATIVOS":BASE_MEDICA,"DERMATOLOGIA":BASE_MEDICA,"DIABETOLOGIA":BASE_MEDICA,
-  "EMERGENCIAS Y DESASTRES":[M.G,M.EM],"ENDOCRINO PEDIATRA":BASE_MEDICA,"ENDOCRINOLOGIA":BASE_MEDICA,"ENFERMEDADES AUTOINMUNES":BASE_MEDICA,"FISIATRIA":BASE_MEDICA,"FONOAUDIOLOGIA":BASE_MEDICA,
+  "CIR. GENERAL-COLOPROCTOLOGIA":BASE_QUIR,"CIR. MANO/MUÑE-NERVIO PERI/BRA":BASE_QUIR,"CIRUGIA CARDIACA":BASE_QUIR,"CIRUGIA DE CABEZA Y CUELLO":BASE_QUIR,"CIRUGIA DE COLUMNA":BASE_QUIR,"CIRUGIA DE HOMBRO Y CODO":BASE_QUIR,"CIRUGIA GENERAL":BASE_QUIR,"CIRUGIA ONCOLOGICA":BASE_QUIR,"CIRUGIA PEDIATRICA":BASE_QUIR,"CIRUGIA PLASTICA":BASE_QUIR,"CIRUGIA TORACICA":BASE_QUIR,"CIRUGIA VASCULAR":BASE_QUIR,"COLOPROCTOLOGIA":BASE_QUIR,
+  "CUIDADOS PALIATIVOS":BASE_MEDICA,"DERMATOLOGIA":BASE_MEDICA,"DIABETOLOGIA":BASE_MEDICA,
+  "EMERGENCIAS Y DESASTRES":[M.G,M.EM],"ENDOCRINO PEDIATRA":BASE_MEDICA,"ENDOCRINOLOGIA":BASE_MEDICA,
+  "ENFERMEDADES AUTOINMUNES":BASE_MEDICA,"FISIATRIA":BASE_MEDICA,"FONOAUDIOLOGIA":BASE_MEDICA,
   "GASTROENTEROLOGIA":BASE_QUIR,"GASTROENTEROLOGIA PEDIATRICA":BASE_QUIR,"GENETICA MEDICA":BASE_MEDICA,"GERIATRIA":BASE_MEDICA,
   "GINECOLOGIA INFANTO JUVENIL":BASE_QUIR,"GINECOLOGIA ONCOLOGICA":BASE_QUIR,"GINECOLOGIA Y OBSTETRICIA":BASE_QUIR,
-  "HEMATOLOGIA":BASE_QUIR,"HEMATOLOGO ONCOLOGO PEDIATRIA":BASE_QUIR,"HEPATOLOGIA":BASE_MEDICA,"INFECTOLOGIA":BASE_MEDICA,"INFECTOLOGIA PEDIATRICA":BASE_MEDICA,"INTERVENCIONISMO":BASE_QUIR,"MASTOLOGIA":BASE_QUIR,"MAXILO FACIAL":BASE_QUIR,
+  "HEMATOLOGIA":BASE_QUIR,"HEMATOLOGO ONCOLOGO PEDIATRIA":BASE_QUIR,"HEPATOLOGIA":BASE_MEDICA,
+  "INFECTOLOGIA":BASE_MEDICA,"INFECTOLOGIA PEDIATRICA":BASE_MEDICA,"INTERVENCIONISMO":BASE_QUIR,"MASTOLOGIA":BASE_QUIR,"MAXILO FACIAL":BASE_QUIR,
   "MEDICINA CRITICA":BASE_MEDICA,"MEDICINA CRITICA PEDIATRICA":BASE_MEDICA,"MEDICINA DEL DEPORTE":BASE_MEDICA,"MEDICINA FAMILIAR":[M.G,M.CE],"MEDICINA FAMILIAR EMERGENCIA":[M.G,M.EM],
   "MEDICINA GENERAL":BASE_MEDICA,"MEDICINA INTERNA":BASE_MEDICA,"MEDICINA MATERNO FETAL":BASE_MEDICA,"MEDICINA PALIATIVA":BASE_MEDICA,"MICROBIOLOGIA":BASE_MEDICA,
   "NEFROLOGIA":BASE_MEDICA,"NEFROLOGIA PEDIATRICA":BASE_MEDICA,"NEONATOLOGIA":BASE_MEDICA,"NEUMOLOGIA":BASE_MEDICA,"NEUMOLOGIA PEDIATRICA":BASE_MEDICA,
@@ -261,6 +263,9 @@ const firebaseConfig={apiKey:"AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",authDomai
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
 const db=firebase.firestore();
+
+// ✅ Persistencia offline (multi-pestaña). Si el navegador no lo soporta, ignoramos el error.
+db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
 
 /* ======================== Estado / helpers ======================== */
 const $=s=>document.querySelector(s);
@@ -294,7 +299,6 @@ const players={}; // pid -> {player,meta}
 const cfgByPid=new Map(); // para cargar bajo demanda
 let lastPlayingPid=null;
 
-/* --- Póster y locks --- */
 function ytThumb(id){ return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`; }
 function makePoster(pid, videoId, lockedMsg){
   const lockLayer = lockedMsg ? `<div class="lock" id="lock-${pid}">🔒 ${lockedMsg}</div>` : '';
@@ -303,7 +307,7 @@ function makePoster(pid, videoId, lockedMsg){
       <div id="${pid}"></div>
       <div class="poster" data-load="${pid}">
         <img src="${ytThumb(videoId)}" alt="">
-        <button type="button">Cargar video ▶</button>
+        <button type="button">Ver video ▶</button>
       </div>
       ${lockLayer}
       <div class="warnmsg" id="warn-${pid}"></div>
@@ -320,6 +324,25 @@ function prevModuleConcluded(moduleId){
   return passed || allVideosDone;
 }
 
+function moduleConcluded(moduleId){
+  const m = (state.course?.modules||[]).find(mm=>mm.id===moduleId);
+  if(!m) return false;
+  const allVideosDone = m.videos.every(v => (state.videosDone?.[m.id]||{})[v.yt]);
+  return allVideosDone || !!(state.quizzes?.[m.id]?.passed);
+}
+
+function unlockFirstOfNextModuleIfReady(moduleId){
+  const mods = state.course?.modules || [];
+  const idx = mods.findIndex(m=>m.id===moduleId);
+  if(idx<0) return;
+  if(!moduleConcluded(moduleId)) return;
+  const next = mods[idx+1];
+  if(!next) return;
+  const firstPid = `player-${next.id}-0`;
+  const lock = document.getElementById(`lock-${firstPid}`);
+  if(lock) lock.remove();
+}
+
 function ensureStoreFor(mid,vid){
   state.play=state.play||{};
   state.play[mid]=state.play[mid]||{};
@@ -328,7 +351,7 @@ function ensureStoreFor(mid,vid){
 }
 function persist(){ saveStateLocal(CURRENT_UID,state); }
 
-/* --- Crear player al clicar el póster (SIN autoplay) --- */
+/* Crear player al click (sin autoplay) */
 function clickToLoad(pid){
   const cfg=cfgByPid.get(pid); if(!cfg) return;
   if(isLocked(cfg)){ showWarn(pid, lockReason(cfg)); return; }
@@ -376,6 +399,7 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
           if(ifr) ifr.setAttribute('allow','autoplay; fullscreen; encrypted-media; picture-in-picture');
           ev.target.unMute(); ev.target.setVolume(100);
         }catch(_){}
+        // Reanudar desde última posición permitida (sin autoplay)
         const startAt=Math.min(store.t||0,store.allow||0);
         if(startAt>1){ try{ev.target.seekTo(startAt,true);}catch(_){} }
       },
@@ -393,19 +417,25 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
           persist();
         }else if(st===YT.PlayerState.ENDED){
           stopTick();
+          // marcar visto
           state.videosDone=state.videosDone||{};
           state.videosDone[moduleId]=state.videosDone[moduleId]||{};
           state.videosDone[moduleId][videoId]=true;
+          // permitir avance completo
           store.allow=store.dur||store.allow; store.t=store.allow;
           persist();
 
-          const m = (state.course?.modules||[]).find(mm=>mm.id===moduleId);
+          // desbloquear siguiente video del mismo módulo
           const nextPid = `player-${moduleId}-${index+1}`;
           const nextLock = document.getElementById(`lock-${nextPid}`);
           if(nextLock) nextLock.remove();
 
           updateGlobalProgress();
+          const m = (state.course?.modules||[]).find(mm=>mm.id===moduleId);
           maybeEnableQuiz({id: moduleId, videos: m?.videos || []});
+
+          // si se terminó el módulo, desbloquear primero del siguiente
+          unlockFirstOfNextModuleIfReady(moduleId);
         }
       },
       onError:()=>{
@@ -433,11 +463,11 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
       try{ cur=p.getCurrentTime?.()||0; dur=p.getDuration?.()||0; st=p.getPlayerState?.(); }catch(_){}
       if(dur && (!store.dur || Math.abs(store.dur-dur)>0.5)){ store.dur=dur; persist(); }
 
+      // Anti-seek
       if(cur > (store.allow+1.0)){
         try{ p.seekTo(store.allow,true); }catch(_){}
         return;
       }
-
       if(st===YT.PlayerState.PLAYING){
         if(cur>store.allow) store.allow=cur;
         store.t=cur;
@@ -449,21 +479,74 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
   function stopTick(){ if(meta.tick){ clearInterval(meta.tick); meta.tick=null; } }
 }
 
-/* Pausar cuando sale de la pestaña y reanudar (sin adelantar) */
+/* Pausar cuando sale de la pestaña (sin auto reanudar) */
 document.addEventListener('visibilitychange', ()=>{
   if(document.hidden){
     Object.values(players).forEach(({player})=>{ try{player.pauseVideo();}catch(_){ } });
     persist();
-  }else{
-    if(lastPlayingPid && players[lastPlayingPid]?.player){
-      try{ players[lastPlayingPid].player.playVideo(); }catch(_){}
-    }
   }
 });
 window.addEventListener('pagehide', persist);
 window.addEventListener('beforeunload', persist);
 
 window.onYouTubeIframeAPIReady=()=>{ ytApiReady=true; };
+
+/* ======================== Combo de Especialidad (habilitado) ======================== */
+(function setupSpecCombo(){
+  const wrap = document.getElementById('spec-combo');
+  const input = document.getElementById('pf-spec');
+  const panel = document.getElementById('spec-panel');
+  if(!wrap || !input || !panel) return;
+
+  let filtered = ESPECIALIDADES.slice();
+  let open = false;
+
+  function render(list){
+    panel.innerHTML = '';
+    list.forEach(name=>{
+      const div=document.createElement('div');
+      div.className='opt';
+      div.textContent=name;
+      div.addEventListener('mousedown',(e)=>{
+        if(input.readOnly) { e.preventDefault(); return; }
+        e.preventDefault(); e.stopPropagation();
+        input.value=name;
+        hide();
+      });
+      panel.appendChild(div);
+    });
+  }
+  function show(){ if(input.readOnly) return; wrap.classList.add('show'); open=true; }
+  function hide(){ wrap.classList.remove('show'); open=false; }
+
+  wrap.addEventListener('click',()=>{
+    if(input.readOnly) return;
+    if(!open){ filtered=ESPECIALIDADES.slice(); render(filtered); show(); input.focus(); }
+  });
+  input.addEventListener('focus',()=>{
+    if(input.readOnly) return;
+    filtered=ESPECIALIDADES.slice(); render(filtered); show();
+  });
+  input.addEventListener('input',()=>{
+    if(input.readOnly) return;
+    const q=(input.value||'').trim().toLowerCase();
+    filtered=ESPECIALIDADES.filter(e=>e.toLowerCase().includes(q));
+    render(filtered); show();
+  });
+  input.addEventListener('keydown',(e)=>{
+    if(input.readOnly) return;
+    if(e.key==='Enter'){
+      if(filtered.length>0){ input.value=filtered[0]; hide(); e.preventDefault(); }
+    }else if(e.key==='Escape'){ hide(); }
+  });
+  document.addEventListener('mousedown',(e)=>{ if(!wrap.contains(e.target)) hide(); });
+  input.addEventListener('change',()=>{
+    const v=(input.value||'').trim();
+    if(v && !ESPECIALIDADES.includes(v)) input.value='';
+  });
+
+  render(filtered);
+})();
 
 /* ======================== Auth + UI ======================== */
 document.querySelectorAll('.eye').forEach(btn=>{
@@ -559,96 +642,6 @@ document.getElementById('btn-reset').addEventListener('click', async ()=>{
 });
 document.getElementById('btn-logout').addEventListener('click', async ()=>{ await auth.signOut(); msg('Sesión cerrada.'); });
 
-/* ======================== Combo de Especialidad (FUNCIONAL) ======================== */
-const comboEl = document.getElementById('spec-combo');
-const inputSpec = document.getElementById('pf-spec');
-const panelSpec = document.getElementById('spec-panel');
-const arrowSpec = document.getElementById('spec-arrow');
-
-(function initSpecCombo(){
-  if(!comboEl || !inputSpec || !panelSpec) return;
-
-  let open=false, filtered=[...ESPECIALIDADES], activeIndex=-1;
-
-  function render(list){
-    panelSpec.innerHTML = list.map((name,i)=>(
-      `<div class="opt" role="option" tabindex="-1" aria-selected="${i===activeIndex?'true':'false'}" data-val="${name.replace(/"/g,'&quot;')}">${name}</div>`
-    )).join('') || `<div class="opt" style="opacity:.7;cursor:default" tabindex="-1">No hay resultados</div>`;
-  }
-  function syncActive(){
-    [...panelSpec.children].forEach((el,i)=>el.setAttribute('aria-selected', i===activeIndex?'true':'false'));
-  }
-  function choose(name){
-    inputSpec.value = name;
-    state.profile = state.profile || {};
-    state.profile.spec = name;
-    // El guardado real ocurre al pulsar "Guardar perfil"
-    hide();
-  }
-  function show(){
-    if(inputSpec.readOnly) return;
-    open=true;
-    comboEl.classList.add('show');
-
-    // >>> Mostrar SIEMPRE la lista completa al abrir (sin filtrar por el valor actual)
-    filtered = ESPECIALIDADES.slice();
-
-    // Preseleccionar el valor actual si existe en la lista
-    const cur = (inputSpec.value || '').trim();
-    const idx = filtered.findIndex(e => e === cur);
-    activeIndex = idx >= 0 ? idx : 0;
-
-    render(filtered);
-    syncActive();
-  }
-  function hide(){
-    open=false;
-    comboEl.classList.remove('show');
-  }
-
-  // Abrir/cerrar por clic en input o flecha (sin filtrar aquí)
-  inputSpec.addEventListener('click', (e)=>{ e.stopPropagation(); open ? hide() : show(); });
-  arrowSpec?.addEventListener('click', (e)=>{ e.stopPropagation(); open ? hide() : show(); });
-
-  // Filtrar al escribir (si no está readonly)
-  inputSpec.addEventListener('input', ()=>{
-    if(inputSpec.readOnly) return;
-    const q=inputSpec.value.trim().toLowerCase();
-    filtered = ESPECIALIDADES.filter(e=>e.toLowerCase().includes(q));
-    activeIndex = filtered.length ? 0 : -1;
-    render(filtered);
-    syncActive();
-  });
-
-  // Selección con clic
-  panelSpec.addEventListener('mousedown',(e)=>{
-    const opt=e.target.closest('.opt'); if(!opt) return;
-    const val=opt.getAttribute('data-val'); if(!val) return;
-    choose(val);
-  });
-
-  // Teclado en input
-  inputSpec.addEventListener('keydown',(e)=>{
-    if(inputSpec.readOnly) return;
-    if(e.key==='ArrowDown'){ if(!open) show(); else { activeIndex=Math.min(activeIndex+1, filtered.length-1); syncActive(); } e.preventDefault(); }
-    else if(e.key==='ArrowUp'){ if(open){ activeIndex=Math.max(activeIndex-1, 0); syncActive(); e.preventDefault(); } }
-    else if(e.key==='Enter'){ if(open && filtered.length){ choose(filtered[Math.max(activeIndex,0)]); e.preventDefault(); } }
-    else if(e.key==='Escape'){ hide(); }
-  });
-
-  // Cerrar al click fuera
-  document.addEventListener('mousedown',(e)=>{ if(!comboEl.contains(e.target)) hide(); });
-
-  // Validación fuerte si cambian el valor a mano
-  inputSpec.addEventListener('change',()=>{
-    const v=(inputSpec.value||'').trim();
-    if(v && !ESPECIALIDADES.includes(v)) inputSpec.value='';
-  });
-
-  // Render inicial (lista completa)
-  render(ESPECIALIDADES);
-})();
-
 /* ======================== Vistas / Perfil ======================== */
 function showCourse(){
   if(!auth.currentUser) return;
@@ -668,34 +661,28 @@ function showCourse(){
 
   $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
   $('#pf-id').value=state.profile?.iddoc||'';
-  $('#pf-spec').value=state.profile?.spec||'';
+  $('#pf-spec').value=state.profile?.spec||''; // muestra la especialidad actual
 
   renderAllBySpecialty(getSpecialty());
   updateGlobalProgress();
   startProfileRealtime();
-  loadProfile().then(()=>{
-    $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
-    $('#pf-id').value=state.profile?.iddoc||'';
-    $('#pf-spec').value=state.profile?.spec||'';
-    renderAllBySpecialty(getSpecialty());
-    updateGlobalProgress();
-    if(profileComplete()) setProfileReadonly(true);
-  }).catch(()=>{});
+  loadProfile().then(()=>{ renderAllBySpecialty(getSpecialty()); updateGlobalProgress(); if(profileComplete()) setProfileReadonly(true); }).catch(()=>{});
 }
 function showLogin(){ $('#step-welcome').style.display='block'; $('#profile').style.display='none'; $('#progress').style.display='none'; $('#modules').style.display='none'; }
 function profileComplete(){ const p=state.profile||{}; return !!(p.name&&p.iddoc&&p.spec&&ESPECIALIDADES.includes(p.spec)); }
 function setProfileReadonly(ro){
   ['pf-name','pf-id','pf-spec'].forEach(id=>{
     const el=document.getElementById(id);
-    if(id==='pf-spec'){ el.readOnly = ro ? true : false; el.style.background = ro ? '#eef2ff' : '#fff'; }
-    else{ el.readOnly = ro; el.style.background = ro ? '#eef2ff' : '#fff'; }
+    el.readOnly = ro;
+    el.style.background = ro ? '#eef2ff' : '#fff';
   });
-  // Cerrar panel del combo si pasamos a solo lectura
-  if(ro){ const box=document.getElementById('spec-combo'); box?.classList.remove('show'); }
   $('#btn-edit-profile').style.display=ro?'inline-flex':'none';
   $('#btn-save-profile').style.display=ro?'none':'inline-flex';
 }
-document.getElementById('btn-edit-profile').addEventListener('click',()=>{ setProfileReadonly(false); $('#pf-help').textContent='Edita tus datos y guarda los cambios.'; });
+document.getElementById('btn-edit-profile').addEventListener('click',()=>{
+  setProfileReadonly(false);
+  $('#pf-help').textContent='Edita tus datos y guarda los cambios.';
+});
 function getSpecialty(){ return (state.profile?.spec||'').trim(); }
 function startProfileRealtime(){
   if (unsubProfile) { try{unsubProfile();}catch(_){ } unsubProfile=null; }
@@ -736,24 +723,47 @@ async function saveProfile(){
   const iddoc=($('#pf-id').value||'').trim();
   const spec=($('#pf-spec').value||'').trim();
   const pfMsg=$('#pf-msg'); const btn=$('#btn-save-profile');
-  if(!name||!iddoc||!spec) return pfMsg.textContent='Completa nombre, cédula/pasaporte y especialidad.';
-  if(!ESPECIALIDADES.includes(spec)) return pfMsg.textContent='Selecciona una especialidad válida de la lista.';
+
+  if(!name||!iddoc||!spec) { pfMsg.textContent='Completa nombre, cédula/pasaporte y especialidad.'; return; }
+  if(!ESPECIALIDADES.includes(spec)) { pfMsg.textContent='Selecciona una especialidad válida de la lista.'; return; }
+
   state.profile={name,iddoc,spec}; persist();
   renderAllBySpecialty(spec); updateGlobalProgress();
   document.getElementById('modules')?.scrollIntoView({behavior:'smooth',block:'start'});
+
   pfMsg.classList.add('saving'); pfMsg.textContent='Guardando…'; btn.disabled=true; savingProfile=true;
+
   try{ if(name){ await auth.currentUser.updateProfile({displayName:name}); } }catch(_){}
+
   try{
-    const uid=auth.currentUser?.uid; if(!uid) throw new Error('Sin UID');
+    const uid=auth.currentUser?.uid; if(!uid) throw new Error('unauthenticated');
     const ref=db.collection('users').doc(uid).collection('profile').doc('main');
     const payload={...state.profile,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
-    const write=ref.set(payload,{merge:true});
-    await Promise.race([write,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),6000))]);
+
+    // ✅ Sin timeout artificial: esperamos el set() real (persistencia offline maneja intermitencias)
+    await ref.set(payload,{merge:true});
+
     savingProfile=false; pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Perfil guardado.'; setProfileReadonly(true);
     setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; },3000);
+
   }catch(e){
-    savingProfile=false; pfMsg.classList.remove('saving'); pfMsg.textContent='No se pudo guardar en la nube; tus datos quedan localmente.'; setProfileReadonly(false);
-  }finally{ btn.disabled=false; }
+    savingProfile=false; pfMsg.classList.remove('saving');
+    if(e?.code==='permission-denied'){
+      pfMsg.textContent='No tienes permisos para guardar el perfil (permission-denied). Revisa reglas de Firestore.';
+    }else if(e?.message==='unauthenticated'){
+      pfMsg.textContent='Sesión no válida. Inicia sesión nuevamente.';
+    }else{
+      if(typeof navigator!=='undefined' && navigator.onLine===false){
+        pfMsg.textContent='Sin conexión. Guardado localmente; se sincronizará cuando vuelvas a estar en línea.';
+      }else{
+        pfMsg.textContent='No se pudo guardar en la nube. Tus datos quedan localmente y reintentaremos luego.';
+      }
+    }
+    btn.disabled=false;
+    setProfileReadonly(false);
+  }finally{
+    btn.disabled=false;
+  }
 }
 document.getElementById('btn-save-profile').addEventListener('click',saveProfile);
 
@@ -786,6 +796,7 @@ function renderAllBySpecialty(spec){
 }
 
 function renderModules(modulesDef){
+  // destruir players previos
   Object.keys(players).forEach(k=>{
     try{ players[k]?.player?.stopVideo?.(); players[k]?.player?.destroy?.(); }catch(_){}
     delete players[k];
@@ -834,6 +845,7 @@ function renderModules(modulesDef){
       </div>`;
     wrap.appendChild(card);
 
+    // Click-to-load en cada póster
     m.videos.forEach((v,i)=>{
       const pid = `player-${m.id}-${i}`;
       const poster = card.querySelector(`[data-load="${pid}"]`);
@@ -879,6 +891,7 @@ function gradeQuizModule(m){
     const btn=document.querySelector(`#btn-${m.id}`);
     if(btn){ btn.textContent='Aprobado ✓'; btn.classList.remove('btn-primary'); btn.classList.add('btn-success'); }
     setTimeout(syncToCloud,300);
+    unlockFirstOfNextModuleIfReady(m.id);
   }
 }
 function updateGlobalProgress(){
