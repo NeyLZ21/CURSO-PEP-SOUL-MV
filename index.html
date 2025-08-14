@@ -235,8 +235,8 @@ const ESPEC_MODS={
   "ACUPUNTURA": BASE_MEDICA, "ALERGOLOGIA": BASE_MEDICA, "ANESTESIOLOGIA": [M.G,M.AN],
   "CARDIOLOGIA": BASE_MEDICA, "CARDIOLOGIA HEMODINAMIA": BASE_MEDICA, "CARDIOLOGIA INTERVENCIONISTA": BASE_MEDICA, "CARDIOLOGIA PEDIATRICA": BASE_MEDICA,
   "CIR. GENERAL-COLOPROCTOLOGIA": BASE_QUIR, "CIR. MANO/MUÑE-NERVIO PERI/BRA": BASE_QUIR, "CIRUGIA CARDIACA": BASE_QUIR, "CIRUGIA DE CABEZA Y CUELLO": BASE_QUIR,
-  "CIRUGIA DE COLUMNA": BASE_QUIR, "CIRUGIA DE HOMBRO Y CODO": BASE_QUIR, "CIRUGIA GENERAL": BASE_QUIR, "CIRUGIA ONCOLOGICA": BASE_QUIR, "CIRUGIA PEDIATRICA": BASE_QUIR,
-  "CIRUGIA PLASTICA": BASE_QUIR, "CIRUGIA TORACICA": BASE_QUIR, "CIRUGIA VASCULAR": BASE_QUIR, "COLOPROCTOLOGIA": BASE_QUIR,
+  "CIRUGIA DE COLUMNA": BASE_QUIR, "CIRUGIA DE HOMBRO Y CODO": BASE_QUIR, "CIRUGIA GENERAL": BASE_QUIR, "CIRUGIA ONCOCOLOGICA": BASE_QUIR,
+  "CIRUGIA PEDIATRICA": BASE_QUIR, "CIRUGIA PLASTICA": BASE_QUIR, "CIRUGIA TORACICA": BASE_QUIR, "CIRUGIA VASCULAR": BASE_QUIR, "COLOPROCTOLOGIA": BASE_QUIR,
   "CUIDADOS PALIATIVOS": BASE_MEDICA, "DERMATOLOGIA": BASE_MEDICA, "DIABETOLOGIA": BASE_MEDICA,
   "EMERGENCIAS Y DESASTRES": [M.G,M.EM],
   "ENDOCRINO PEDIATRA": BASE_MEDICA, "ENDOCRINOLOGIA": BASE_MEDICA, "ENFERMEDADES AUTOINMUNES": BASE_MEDICA,
@@ -301,13 +301,13 @@ let state=loadState(null);
 let unsubProfile=null,savingProfile=false;
 
 /* ================================================================
-   YouTube: lazy + “fast path” para carga inmediata
+   YouTube: lazy + autoplay + anti-seek + bloqueo por orden
 ================================================================= */
-let ytApiReady=false;
 const players={};         // pid -> {player, meta}
 const toCreate=new Map();  // pid -> cfg pendiente
-let io=null;
+let io=null, ytApiReady=false;
 
+// poster
 function makePoster(pid, videoId){
   const thumb=`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
   return `
@@ -326,7 +326,13 @@ function ensureStoreFor(mid,vid){
 }
 function throttleSaveProgress(){ saveState(CURRENT_UID||null,state); }
 
-/* === FAST PATH: embed temporal inmediato mientras llega la API === */
+// No permitir cargar si el anterior no está terminado
+function isPrevDone(moduleId, index, prevVideoId){
+  if(index===0) return true;
+  return !!(state.videosDone?.[moduleId]?.[prevVideoId]);
+}
+
+/* === FAST PATH temporal mientras llega la API (para autoplay inmediato) === */
 function tempEmbed(pid, videoId){
   const holder = document.getElementById(pid);
   if (!holder) return;
@@ -346,14 +352,20 @@ function removeTempEmbed(pid){
   if (tmp && tmp.parentElement) tmp.parentElement.removeChild(tmp);
 }
 
-/* === CLICK-TO-LOAD: reproduce YA y luego migra al player oficial === */
+/* Clic del usuario para cargar (resuelve políticas de autoplay) */
 function clickToLoad(pid){
   const cfg = toCreate.get(pid);
   if (!cfg) return;
 
-  cfg.autoplay = true;   // reproducir tras clic
-  cfg.force = true;      // asegurar creación cuando la API esté
+  // Si no está habilitado por orden, no cargar
+  if(!isPrevDone(cfg.moduleId, cfg.index, cfg.prevId)){
+    const errEl=document.getElementById(`err-${pid}`);
+    if(errEl){ errEl.style.display='block'; errEl.textContent='🔒 Termina el video anterior para continuar.'; }
+    return;
+  }
 
+  cfg.autoplay = true;   // reproducir tras clic
+  cfg.force = true;      // asegurar creación
   const tryCreate = () => {
     if (ytApiReady && window.YT && YT.Player) {
       toCreate.delete(pid);
@@ -364,23 +376,24 @@ function clickToLoad(pid){
     return false;
   };
 
-  if (tryCreate()) return;        // API ya lista → player inmediato
-  tempEmbed(pid, cfg.videoId);    // API no lista → embed temporal
+  if (tryCreate()) return;        // API ya lista
+  tempEmbed(pid, cfg.videoId);    // API no lista → embed temporal con autoplay
   let ticks = 0;
-  const h = setInterval(() => {   // cuando la API llegue, migramos
+  const h = setInterval(() => {
     ticks++;
     if (tryCreate()) clearInterval(h);
-    else if (ticks > 12) clearInterval(h); // 3s de espera
+    else if (ticks > 12) clearInterval(h); // 3s máx
   }, 250);
 }
 
-/* Al estar lista la API, creamos forzados o visibles */
+/* API lista → crear los visibles o forzados */
 window.onYouTubeIframeAPIReady=function(){
   ytApiReady=true;
   for(const [pid,cfg] of [...toCreate]){
     const el=document.getElementById(pid);
     const inViewport = el && el.getBoundingClientRect().top < (window.innerHeight + 200);
-    if (cfg.force || inViewport) {
+    const okOrder = isPrevDone(cfg.moduleId, cfg.index, cfg.prevId);
+    if ((cfg.force || inViewport) && okOrder) {
       toCreate.delete(pid);
       removeTempEmbed(pid);
       createPlayer(cfg);
@@ -399,8 +412,8 @@ function createPlayer(cfg){
   players[pid]={player:null,meta};
 
   const locked=document.getElementById(`lock-${moduleId}-${index}`);
-  const donePrev = index===0 ? true : !!(state.videosDone?.[moduleId]?.[cfg.prevId]);
-  if(locked) locked.style.display = donePrev ? 'none':'grid';
+  const prevDone = isPrevDone(moduleId,index,cfg.prevId);
+  if(locked) locked.style.display = prevDone ? 'none':'grid';
 
   players[pid].player=new YT.Player(pid,{
     height:'360',width:'640',videoId,
@@ -411,7 +424,16 @@ function createPlayer(cfg){
         try{ev.target.unMute();ev.target.setVolume(100);}catch(_){}
         const startAt=Math.min(store.t||0,store.allow||0);
         if(startAt>1){ try{ev.target.seekTo(startAt,true);}catch(_){ } }
-        if (autoplay) { try{ ev.target.playVideo(); }catch(_){ } }
+
+        // Si el anterior no está completo, pausar y no permitir
+        if(!prevDone){
+          try{ ev.target.pauseVideo(); }catch(_){}
+          const errEl=document.getElementById(`err-${pid}`);
+          if(errEl){ errEl.style.display='block'; errEl.textContent='🔒 Termina el video anterior para continuar.'; }
+        }else{
+          // Intentar autoplay
+          if (autoplay || startAt>0) { try{ ev.target.playVideo(); }catch(_){ } }
+        }
         startTick();
       },
       onStateChange:(ev)=>{
@@ -455,7 +477,7 @@ function createPlayer(cfg){
       const cur=p.getCurrentTime?.()||0;
       const dur=p.getDuration?.()||0;
       if(dur && (!store.dur || Math.abs(store.dur-dur)>0.5)){ store.dur=dur; throttleSaveProgress(); }
-      // Anti-seek
+      // Anti-seek: si adelanta, volver a último permitido
       if(cur>(store.allow+1)){ try{ p.seekTo(store.allow,true); }catch(_){ } return; }
       const ps=p.getPlayerState?.();
       if(ps===YT.PlayerState.PLAYING){ if(cur>store.allow) store.allow=cur; store.t=cur; } else { store.t=cur; }
@@ -472,7 +494,15 @@ function queueLazy(cfg){
         if(!e.isIntersecting) return;
         const el=e.target; const pid=el.id;
         const cfg=toCreate.get(pid); if(!cfg) return;
-        if(ytApiReady){ toCreate.delete(pid); removeTempEmbed(pid); createPlayer(cfg); }
+
+        // Intentar autoplay del primer video pendiente al volverse visible
+        const okOrder = isPrevDone(cfg.moduleId, cfg.index, cfg.prevId);
+        if(ytApiReady && okOrder){
+          cfg.autoplay = true;
+          toCreate.delete(pid);
+          removeTempEmbed(pid);
+          createPlayer(cfg);
+        }
       });
     },{root:null,rootMargin:"200px 0px",threshold:0.01});
   }
@@ -781,7 +811,7 @@ function renderAllBySpecialty(spec){
     m.videos.forEach((v,idx)=>{
       const pid=`player-${m.id}-${idx}`;
       const prevId = idx===0 ? null : m.videos[idx-1].yt;
-      const cfg={pid,videoId:v.yt,moduleId:m.id,index:idx,prevId};
+      const cfg={pid,videoId:v.yt,moduleId:m.id,index:idx,prevId,autoplay:(idx===0)}; // intentar autoplay del primero
       queueLazy(cfg);
     });
   });
@@ -840,7 +870,6 @@ function renderModules(modulesDef){
       const poster = card.querySelector(`[data-load="${pid}"]`);
       if(poster){
         poster.addEventListener('click',()=>clickToLoad(pid));
-        // también si se hace click en el botón
         const btn = poster.querySelector('button');
         if(btn) btn.addEventListener('click',e=>{ e.stopPropagation(); clickToLoad(pid); });
       }
@@ -964,9 +993,10 @@ async function syncToCloud(){
    Entradas / inicialización
 ================================================================= */
 document.getElementById('year').textContent=new Date().getFullYear();
+
+// Pausar y guardar al salir de la página/ventana
 window.addEventListener('visibilitychange', ()=>{
   if(document.hidden){
-    // pausar y guardar
     Object.values(players).forEach(({player})=>{ try{ player.pauseVideo(); }catch(_){ } });
     throttleSaveProgress();
   }
@@ -975,7 +1005,6 @@ window.addEventListener('pagehide', throttleSaveProgress);
 window.addEventListener('beforeunload', throttleSaveProgress);
 
 function showLogin(){ document.getElementById('step-welcome').style.display='block'; document.getElementById('profile').style.display='none'; document.getElementById('progress').style.display='none'; document.getElementById('modules').style.display='none'; }
-
 </script>
 </body>
 </html>
