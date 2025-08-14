@@ -52,15 +52,15 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 
 /* Guardando… */
 .saving::after{content:'';display:inline-block;width:14px;height:14px;margin-left:8px;border:2px solid #9ca3af;border-top-color:transparent;border-radius:999px;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}
+@keyframes spin{to{transform:rotate(360deg)}}
 
 /* Combo de especialidad */
 .combo{position:relative}
 .combo input{padding-right:36px}
-.combo .arrow{position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none}
+.combo .arrow{position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:auto;cursor:pointer}
 .combo .panel{position:absolute;z-index:20;left:0;right:0;max-height:280px;overflow:auto;background:#111827;color:#f9fafb;border-radius:12px;padding:6px 0;box-shadow:0 10px 24px rgba(0,0,0,.18);display:none}
 .combo .opt{padding:10px 12px;cursor:pointer}
-.combo .opt:hover{background:#1f2937}
+.combo .opt[aria-selected="true"], .combo .opt:hover{background:#1f2937}
 .combo.show .panel{display:block}
 
 /* Quiz */
@@ -172,8 +172,8 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
       <label style="grid-column:1/-1">Especialidad<br>
         <div class="combo" id="spec-combo">
           <input id="pf-spec" type="text" placeholder="Escribe para buscar…" autocomplete="off" readonly>
-          <span class="arrow">▾</span>
-          <div class="panel" id="spec-panel"></div>
+          <span class="arrow" id="spec-arrow">▾</span>
+          <div class="panel" id="spec-panel" role="listbox" aria-label="Especialidades"></div>
         </div>
         <small class="muted">Selecciona de la lista. Esto define los módulos que verás.</small>
       </label>
@@ -292,8 +292,8 @@ let savingProfile=false;
 
 /* ======================== YouTube control ======================== */
 let ytApiReady=false;
-const players={};
-const cfgByPid=new Map();
+const players={}; // pid -> {player,meta}
+const cfgByPid=new Map(); // para cargar bajo demanda
 let lastPlayingPid=null;
 
 /* --- Póster y locks --- */
@@ -334,7 +334,7 @@ function persist(){ saveStateLocal(CURRENT_UID,state); }
 function clickToLoad(pid){
   const cfg=cfgByPid.get(pid); if(!cfg) return;
   if(isLocked(cfg)){ showWarn(pid, lockReason(cfg)); return; }
-  if(players[pid]) return;
+  if(players[pid]) return; // ya creado
   actuallyCreatePlayer(cfg);
   const poster = document.querySelector(`.poster[data-load="${pid}"]`);
   if(poster) poster.remove();
@@ -451,7 +451,7 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
   function stopTick(){ if(meta.tick){ clearInterval(meta.tick); meta.tick=null; } }
 }
 
-/* Pausar cuando sale de la pestaña y reanudar */
+/* Pausar cuando sale de la pestaña y reanudar (sin adelantar) */
 document.addEventListener('visibilitychange', ()=>{
   if(document.hidden){
     Object.values(players).forEach(({player})=>{ try{player.pauseVideo();}catch(_){ } });
@@ -464,6 +464,7 @@ document.addEventListener('visibilitychange', ()=>{
 });
 window.addEventListener('pagehide', persist);
 window.addEventListener('beforeunload', persist);
+
 window.onYouTubeIframeAPIReady=()=>{ ytApiReady=true; };
 
 /* ======================== Auth + UI ======================== */
@@ -560,54 +561,82 @@ document.getElementById('btn-reset').addEventListener('click', async ()=>{
 });
 document.getElementById('btn-logout').addEventListener('click', async ()=>{ await auth.signOut(); msg('Sesión cerrada.'); });
 
-/* ======================== Combo de Especialidad (ARREGLADO) ======================== */
+/* ======================== Combo de Especialidad (FUNCIONAL) ======================== */
 const comboEl = document.getElementById('spec-combo');
 const inputSpec = document.getElementById('pf-spec');
 const panelSpec = document.getElementById('spec-panel');
+const arrowSpec = document.getElementById('spec-arrow');
 
-function renderSpecOptions(filterText=''){
-  const f = (filterText||'').trim().toLowerCase();
-  const list = ESPECIALIDADES
-    .filter(e => !f || e.toLowerCase().includes(f))
-    .map(e => `<div class="opt" tabindex="0" data-val="${e.replace(/"/g,'&quot;')}">${e}</div>`)
-    .join('') || `<div class="opt" style="opacity:.7;cursor:default">No hay resultados</div>`;
-  panelSpec.innerHTML = list;
+(function initSpecCombo(){
+  if(!comboEl || !inputSpec || !panelSpec) return;
 
-  panelSpec.querySelectorAll('.opt[data-val]').forEach(opt=>{
-    const val = opt.getAttribute('data-val');
-    opt.addEventListener('click', ()=>{
-      inputSpec.value = val;
-      state.profile = state.profile || {};
-      state.profile.spec = val;
-      persist();
-      closeSpecPanel();
-    });
-    opt.addEventListener('keydown', (e)=>{
-      if(e.key==='Enter'){ opt.click(); }
-    });
+  let open=false, filtered=[...ESPECIALIDADES], activeIndex=-1;
+
+  function render(list){
+    panelSpec.innerHTML = list.map((name,i)=>(
+      `<div class="opt" role="option" tabindex="-1" aria-selected="${i===activeIndex?'true':'false'}" data-val="${name.replace(/"/g,'&quot;')}">${name}</div>`
+    )).join('') || `<div class="opt" style="opacity:.7;cursor:default" tabindex="-1">No hay resultados</div>`;
+  }
+  function show(){
+    if(inputSpec.readOnly) return;
+    open=true; comboEl.classList.add('show');
+    filtered = ESPECIALIDADES.filter(e => (inputSpec.value||'').trim() ? e.toLowerCase().includes(inputSpec.value.trim().toLowerCase()) : true);
+    activeIndex = filtered.length ? 0 : -1;
+    render(filtered); syncActive();
+  }
+  function hide(){ open=false; comboEl.classList.remove('show'); }
+  function syncActive(){
+    [...panelSpec.children].forEach((el,i)=>el.setAttribute('aria-selected', i===activeIndex?'true':'false'));
+  }
+  function choose(name){
+    inputSpec.value = name;
+    state.profile = state.profile || {};
+    state.profile.spec = name;
+    // No bloqueamos aquí; el bloqueo lo maneja setProfileReadonly() al guardar/perfil completo
+    hide();
+  }
+
+  // Abrir/cerrar por clic en input o flecha
+  inputSpec.addEventListener('click', (e)=>{ e.stopPropagation(); open?hide():show(); });
+  arrowSpec?.addEventListener('click', (e)=>{ e.stopPropagation(); open?hide():show(); });
+
+  // Filtrar al escribir (si no está readonly)
+  inputSpec.addEventListener('input', ()=>{
+    if(inputSpec.readOnly) return;
+    const q=inputSpec.value.trim().toLowerCase();
+    filtered = ESPECIALIDADES.filter(e=>e.toLowerCase().includes(q));
+    activeIndex = filtered.length ? 0 : -1;
+    render(filtered); syncActive();
   });
-}
-function openSpecPanel(){
-  if (inputSpec.readOnly) return;
-  comboEl.classList.add('show');
-  renderSpecOptions(''); // Mostrar TODAS al abrir
-  try{
-    inputSpec.focus();
-    inputSpec.setSelectionRange(0, inputSpec.value.length);
-  }catch(_){}
-}
-function closeSpecPanel(){ comboEl.classList.remove('show'); }
 
-// Abrir siempre (sin toggle) y mostrar todas
-inputSpec.addEventListener('click', (e)=>{ e.stopPropagation(); openSpecPanel(); });
-// Filtrar al escribir (solo si no está readonly)
-inputSpec.addEventListener('input', ()=>{ if(!inputSpec.readOnly) renderSpecOptions(inputSpec.value); });
-// Cerrar al hacer click fuera
-document.addEventListener('click', (e)=>{ if(!comboEl.contains(e.target)) closeSpecPanel(); });
-// Teclado básico
-inputSpec.addEventListener('keydown', (e)=>{
-  if (e.key==='Escape'){ closeSpecPanel(); }
-});
+  // Selección con clic
+  panelSpec.addEventListener('mousedown',(e)=>{
+    const opt=e.target.closest('.opt'); if(!opt) return;
+    const val=opt.getAttribute('data-val'); if(!val) return;
+    choose(val);
+  });
+
+  // Teclado en input
+  inputSpec.addEventListener('keydown',(e)=>{
+    if(inputSpec.readOnly) return;
+    if(e.key==='ArrowDown'){ if(!open) show(); else { activeIndex=Math.min(activeIndex+1, filtered.length-1); syncActive(); } e.preventDefault(); }
+    else if(e.key==='ArrowUp'){ if(open){ activeIndex=Math.max(activeIndex-1, 0); syncActive(); e.preventDefault(); } }
+    else if(e.key==='Enter'){ if(open && filtered.length){ choose(filtered[Math.max(activeIndex,0)]); e.preventDefault(); } }
+    else if(e.key==='Escape'){ hide(); }
+  });
+
+  // Cerrar al click fuera
+  document.addEventListener('mousedown',(e)=>{ if(!comboEl.contains(e.target)) hide(); });
+
+  // Validación fuerte si cambian valor a mano
+  inputSpec.addEventListener('change',()=>{
+    const v=(inputSpec.value||'').trim();
+    if(v && !ESPECIALIDADES.includes(v)) inputSpec.value='';
+  });
+
+  // Render inicial (lista completa)
+  render(ESPECIALIDADES);
+})();
 
 /* ======================== Vistas / Perfil ======================== */
 function showCourse(){
@@ -630,9 +659,6 @@ function showCourse(){
   $('#pf-id').value=state.profile?.iddoc||'';
   $('#pf-spec').value=state.profile?.spec||'';
 
-  // Pre-render del panel para que esté listo
-  renderSpecOptions('');
-
   renderAllBySpecialty(getSpecialty());
   updateGlobalProgress();
   startProfileRealtime();
@@ -653,7 +679,8 @@ function setProfileReadonly(ro){
     if(id==='pf-spec'){ el.readOnly = ro ? true : false; el.style.background = ro ? '#eef2ff' : '#fff'; }
     else{ el.readOnly = ro; el.style.background = ro ? '#eef2ff' : '#fff'; }
   });
-  if(ro) closeSpecPanel();
+  // Cerrar panel del combo si pasamos a solo lectura
+  if(ro){ const box=document.getElementById('spec-combo'); box?.classList.remove('show'); }
   $('#btn-edit-profile').style.display=ro?'inline-flex':'none';
   $('#btn-save-profile').style.display=ro?'none':'inline-flex';
 }
