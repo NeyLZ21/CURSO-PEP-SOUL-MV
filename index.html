@@ -218,10 +218,10 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 /* ================================================================
    ESPECIALIDADES, módulos, videos (usa tus mismos datos)
 ================================================================= */
-const ESPECIALIDADES=[ "ACUPUNTURA","ALERGOLOGIA","ANESTESIOLOGIA","CARDIOLOGIA","CARDIOLOGIA HEMODINAMIA","CARDIOLOGIA INTERVENCIONISTA","CARDIOLOGIA PEDIATRICA","CIR. GENERAL-COLOPROCTOLOGIA","CIR. MANO/MUÑE-NERVIO PERI/BRA","CIRUGIA CARDIACA","CIRUGIA DE CABEZA Y CUELLO","CIRUGIA DE COLUMNA","CIRUGIA DE HOMBRO Y CODO","CIRUGIA GENERAL","CIRUGIA ONCOLOGICA","CIRUGIA PEDIATRICA","CIRUGIA PLASTICA","CIRUGIA TORACICA","CIRUGIA VASCULAR","COLOPROCTOLOGIA","CUIDADOS PALIATIVOS","DERMATOLOGIA","DIABETOLOGIA","EMERGENCIAS Y DESASTRES","ENDOCRINO PEDIATRA","ENDOCRINOLOGIA","ENFERMEDADES AUTOINMUNES","FISIATRIA","FONOAUDIOLOGIA","GASTROENTEROLOGIA","GASTROENTEROLOGIA PEDIATRICA","GENETICA MEDICA","GERIATRIA","GINECOLOGIA  INFANTO JUVENIL","GINECOLOGIA ONCOLOGICA","GINECOLOGIA Y OBSTETRICIA","HEMATOLOGIA","HEMATOLOGO ONCOCOLOGO PEDIATRIA","HEPATOLOGIA","INFECTOLOGIA","INFECTOLOGIA PEDIATRICA","INTERVENCIONISMO","MASTOLOGIA","MAXILO FACIAL","MEDICINA CRITICA","MEDICINA CRITICA PEDIATRICA","MEDICINA DEL DEPORTE","MEDICINA FAMILIAR","MEDICINA FAMILIAR EMERGENCIA","MEDICINA GENERAL","MEDICINA INTERNA","MEDICINA MATERNO FETAL","MEDICINA PALIATIVA","MICROBIOLOGIA","NEFROLOGIA","NEFROLOGIA PEDIATRICA","NEONATOLOGIA","NEUMOLOGIA","NEUMOLOGIA PEDIATRICA","NEUROCIRUGIA","NEUROFISIOLOGIA CLINICA","NEUROLOGIA","NEUROLOGIA PEDIATRICA","NEUROPSICOLOGIA","NEURORADIOL INTERVENCIONISTA","NEURORADIOLOGIA","NUTRICION","ODONTOLOGIA","ODONTOPEDIATRIA","OFTALMOLOGIA","OFTALMOLOGIA PEDIATRICA","ONCOLOGIA CLINICA","OTORRINOLARINGOLOGIA","PATOLOGIA","PEDIATRIA","PSICOLOGIA","PSIQUIATRIA","RADIOLOGIA","RADIOLOGIA INTERVENCIONISTA","RADIOTERAPIA","RESIDENTE/INTERNO","REUMATOLOGIA","REUMATOLOGIA PEDIATRICA","SEXOLOGIA","TRATAMIENTO DEL DOLOR","TRAUMATO PEDIATRICA DE COLUMNA","TRAUMATOLOGIA DEL COLUMNA","TRAUMATOLOGIA ONCOLOGICA","TRAUMATOLOGIA PEDIATRICA","TRAUMATOLOGIA Y ORTOPEDIA","UROLOGIA","UROLOGIA PEDIATRICA" ];
+const ESPECIALIDADES=[ "ACUPUNTURA","ALERGOLOGIA","ANESTESIOLOGIA","CARDIOLOGIA","CARDIOLOGIA HEMODINAMIA","CARDIOLOGIA INTERVENCIONISTA","CARDIOLOGIA PEDIATRICA","CIR. GENERAL-COLOPROCTOLOGIA","CIR. MANO/MUÑE-NERVIO PERI/BRA","CIRUGIA CARDIACA","CIRUGIA DE CABEZA Y CUELLO","CIRUGIA DE COLUMNA","CIRUGIA DE HOMBRO Y CODO","CIRUGIA GENERAL","CIRUGIA ONCOLOGICA","CIRUGIA PEDIATRICA","CIRUGIA PLASTICA","CIRUGIA TORACICA","CIRUGIA VASCULAR","COLOPROCTOLOGIA","CUIDADOS PALIATIVOS","DERMATOLOGIA","DIABETOLOGIA","EMERGENCIAS Y DESASTRES","ENDOCRINO PEDIATRA","ENDOCRINOLOGIA","ENFERMEDADES AUTOINMUNES","FISIATRIA","FONOAUDIOLOGIA","GASTROENTEROLOGIA","GASTROENTEROLOGIA PEDIATRICA","GENETICA MEDICA","GERIATRIA","GINECOLOGIA  INFANTO JUVENIL","GINECOLOGIA ONCOLOGICA","GINECOLOGIA Y OBSTETRICIA","HEMATOLOGIA","HEMATOLOGO ONCOLOGO PEDIATRIA","HEPATOLOGIA","INFECTOLOGIA","INFECTOLOGIA PEDIATRICA","INTERVENCIONISMO","MASTOLOGIA","MAXILO FACIAL","MEDICINA CRITICA","MEDICINA CRITICA PEDIATRICA","MEDICINA DEL DEPORTE","MEDICINA FAMILIAR","MEDICINA FAMILIAR EMERGENCIA","MEDICINA GENERAL","MEDICINA INTERNA","MEDICINA MATERNO FETAL","MEDICINA PALIATIVA","MICROBIOLOGIA","NEFROLOGIA","NEFROLOGIA PEDIATRICA","NEONATOLOGIA","NEUMOLOGIA","NEUMOLOGIA PEDIATRICA","NEUROCIRUGIA","NEUROFISIOLOGIA CLINICA","NEUROLOGIA","NEUROLOGIA PEDIATRICA","NEUROPSICOLOGIA","NEURORADIOL INTERVENCIONISTA","NEURORADIOLOGIA","NUTRICION","ODONTOLOGIA","ODONTOPEDIATRIA","OFTALMOLOGIA","OFTALMOLOGIA PEDIATRICA","ONCOLOGIA CLINICA","OTORRINOLARINGOLOGIA","PATOLOGIA","PEDIATRIA","PSICOLOGIA","PSIQUIATRIA","RADIOLOGIA","RADIOLOGIA INTERVENCIONISTA","RADIOTERAPIA","RESIDENTE/INTERNO","REUMATOLOGIA","REUMATOLOGIA PEDIATRICA","SEXOLOGIA","TRATAMIENTO DEL DOLOR","TRAUMATO PEDIATRICA DE COLUMNA","TRAUMATOLOGIA DEL COLUMNA","TRAUMATOLOGIA ONCOLOGICA","TRAUMATOLOGIA PEDIATRICA","TRAUMATOLOGIA Y ORTOPEDIA","UROLOGIA","UROLOGIA PEDIATRICA" ];
 const M={ CE:"CONSULTA EXTERNA", H:"HOSPITALIZACIÓN-HDD", CQ:"CENTRO QUIRÚRGICO", G:"GENERALIDADES", AN:"ANESTESIOLOGÍA", EM:"EMERGENCIAS" };
 const BASE_MEDICA=[M.G,M.H,M.CE], BASE_QUIR=[M.G,M.H,M.CE,M.CQ];
-const ESPEC_MODS={
+const ESPEC_MODS={ /* (igual que el tuyo) */ 
   "ACUPUNTURA": BASE_MEDICA, "ALERGOLOGIA": BASE_MEDICA, "ANESTESIOLOGIA": [M.G,M.AN],
   "CARDIOLOGIA": BASE_MEDICA, "CARDIOLOGIA HEMODINAMIA": BASE_MEDICA, "CARDIOLOGIA INTERVENCIONISTA": BASE_MEDICA, "CARDIOLOGIA PEDIATRICA": BASE_MEDICA,
   "CIR. GENERAL-COLOPROCTOLOGIA": BASE_QUIR, "CIR. MANO/MUÑE-NERVIO PERI/BRA": BASE_QUIR, "CIRUGIA CARDIACA": BASE_QUIR, "CIRUGIA DE CABEZA Y CUELLO": BASE_QUIR,
@@ -234,7 +234,7 @@ const ESPEC_MODS={
   "GASTROENTEROLOGIA": BASE_QUIR, "GASTROENTEROLOGIA PEDIATRICA": BASE_QUIR,
   "GENETICA MEDICA": BASE_MEDICA, "GERIATRIA": BASE_MEDICA,
   "GINECOLOGIA  INFANTO JUVENIL": BASE_QUIR, "GINECOLOGIA ONCOLOGICA": BASE_QUIR, "GINECOLOGIA Y OBSTETRICIA": BASE_QUIR,
-  "HEMATOLOGIA": BASE_QUIR, "HEMATOLOGO ONCOCOLOGO PEDIATRIA": BASE_QUIR,
+  "HEMATOLOGIA": BASE_QUIR, "HEMATOLOGO ONCOLOGO PEDIATRIA": BASE_QUIR,
   "HEPATOLOGIA": BASE_MEDICA, "INFECTOLOGIA": BASE_MEDICA, "INFECTOLOGIA PEDIATRICA": BASE_MEDICA,
   "INTERVENCIONISMO": BASE_QUIR, "MASTOLOGIA": BASE_QUIR, "MAXILO FACIAL": BASE_QUIR,
   "MEDICINA CRITICA": BASE_MEDICA, "MEDICINA CRITICA PEDIATRICA": BASE_MEDICA, "MEDICINA DEL DEPORTE": BASE_MEDICA,
@@ -258,7 +258,7 @@ const ESPEC_MODS={
   "UROLOGIA": BASE_QUIR, "UROLOGIA PEDIATRICA": BASE_QUIR
 };
 const VIDEO_DEFAULTS={
-  "GENERALIDADES":["dQw4w9WgXcQ","l482T0yNkeo","9bZgp7q19f0".replace('gp','zk')], // ejemplo
+  "GENERALIDADES":["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0"],
   "HOSPITALIZACIÓN-HDD":["eY52Zsg-KVI","fJ9rUzIMcZQ","L_jWHffIx5E"],
   "CONSULTA EXTERNA":["kXYiU_JCYtU","hTWKbfoikeg","QH2-TGUlwu4"],
   "CENTRO QUIRÚRGICO":["3JZ_D3ELwOQ","04854XqcfCY","ktvTqknDobU"],
@@ -291,7 +291,7 @@ let state=loadState(null);
 let unsubProfile=null,savingProfile=false;
 
 /* ================================================================
-   YouTube Lazy Loader con fix de “click-to-load”
+   YouTube Lazy Loader (anti “pantalla negra”)
 ================================================================= */
 let ytApiReady=false;
 const players={};         // pid -> {player, meta}
@@ -316,43 +316,8 @@ function ensureStoreFor(mid,vid){
 }
 function throttleSaveProgress(){ saveState(CURRENT_UID||null,state); }
 
-/* === FIX 1: clickToLoad no borra la config si API aún no está lista === */
-function clickToLoad(pid){
-  const cfg = toCreate.get(pid);
-  if (!cfg) return;
-  cfg.autoplay = true;   // reproducir tras clic
-  cfg.force = true;      // creación obligatoria cuando la API esté lista
-
-  if (ytApiReady) {
-    toCreate.delete(pid);
-    createPlayer(cfg);
-  } else {
-    // Mostrar feedback mientras llega la API
-    const poster = document.querySelector(`[data-load="${pid}"]`);
-    if (poster) {
-      const btn = poster.querySelector('button');
-      if (btn) { btn.disabled = true; btn.textContent = 'Cargando…'; }
-    }
-    // Mantener cfg en la cola
-    toCreate.set(pid, cfg);
-  }
-}
-
-/* === FIX 2: al estar lista la API, crear todos los forzados (y los visibles) === */
-window.onYouTubeIframeAPIReady=function(){
-  ytApiReady=true;
-  for(const [pid,cfg] of [...toCreate]){
-    const el=document.getElementById(pid);
-    const inViewport = el && el.getBoundingClientRect().top < (window.innerHeight + 200);
-    if (cfg.force || inViewport) {
-      toCreate.delete(pid);
-      createPlayer(cfg);
-    }
-  }
-};
-
 function createPlayer(cfg){
-  const {pid,videoId,moduleId,index,autoplay}=cfg;
+  const {pid,videoId,moduleId,index}=cfg;
   if(players[pid]) return;
   const holder=document.getElementById(pid);
   if(!holder) return;
@@ -372,14 +337,12 @@ function createPlayer(cfg){
   players[pid].player=new YT.Player(pid,{
     height:'360',width:'640',videoId,
     host:'https://www.youtube.com',
-    // Importante: sin 'origin' para evitar bloqueos en file:// o dominios no estándar
-    playerVars:{rel:0,modestbranding:1,controls:1,disablekb:1,playsinline:1},
+    playerVars:{rel:0,modestbranding:1,controls:1,disablekb:1,playsinline:1,origin:(location.origin||undefined)},
     events:{
       onReady:(ev)=>{
         try{ev.target.unMute();ev.target.setVolume(100);}catch(_){}
         const startAt=Math.min(store.t||0,store.allow||0);
         if(startAt>1){ try{ev.target.seekTo(startAt,true);}catch(_){ } }
-        if (autoplay) { try{ ev.target.playVideo(); }catch(_){ } } // ▶️ iniciar tras clic
         startTick();
       },
       onStateChange:(ev)=>{
@@ -395,6 +358,7 @@ function createPlayer(cfg){
           store.allow=store.dur||store.allow; store.t=store.allow;
           throttleSaveProgress();
 
+          // desbloquear siguiente
           const nextLock=document.getElementById(`lock-${moduleId}-${index+1}`);
           if(nextLock) nextLock.style.display='none';
 
@@ -443,17 +407,23 @@ function queueLazy(cfg){
         if(!e.isIntersecting) return;
         const el=e.target; const pid=el.id;
         const cfg=toCreate.get(pid); if(!cfg) return;
-        // Si la API está lista, crea y saca de la cola
-        if(ytApiReady){
-          toCreate.delete(pid);
-          createPlayer(cfg);
-        }
+        toCreate.delete(pid);
+        if(ytApiReady) createPlayer(cfg);
       });
     },{root:null,rootMargin:"200px 0px",threshold:0.01});
   }
   const el=document.getElementById(pid);
   if(el) io.observe(el);
 }
+
+function clickToLoad(pid){
+  const cfg=toCreate.get(pid);
+  if(cfg){ toCreate.delete(pid); if(ytApiReady) createPlayer(cfg); }
+}
+
+window.onYouTubeIframeAPIReady=function(){ ytApiReady=true; // autocargar visibles
+  for(const [pid,cfg] of [...toCreate]){ const el=document.getElementById(pid); if(el && el.getBoundingClientRect().top<window.innerHeight+200){ toCreate.delete(pid); createPlayer(cfg); } }
+};
 
 /* ================================================================
    Auth + UI
@@ -580,6 +550,7 @@ function showCourse(){
   if(profileComplete()){ setProfileReadonly(true); $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.'; }
   else{ setProfileReadonly(false); $('#pf-help').textContent='Completa todos los campos para habilitar los módulos.'; }
 
+  // pintar inputs con el estado local YA
   $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
   $('#pf-id').value=state.profile?.iddoc||'';
   $('#pf-spec').value=state.profile?.spec||'';
@@ -588,6 +559,7 @@ function showCourse(){
   updateGlobalProgress();
   startProfileRealtime();
 
+  // trae nube y actualiza si hay cambios
   loadProfile().then(()=>{
     renderAllBySpecialty(getSpecialty());
     updateGlobalProgress();
@@ -659,6 +631,7 @@ async function saveProfile(){
 
   state.profile={name,iddoc,spec}; saveState(CURRENT_UID,state);
 
+  // render inmediato
   renderAllBySpecialty(spec);
   updateGlobalProgress();
   document.getElementById('modules')?.scrollIntoView({behavior:'smooth',block:'start'});
@@ -702,7 +675,7 @@ function pickModulesFor(spec){
 
 function renderAllBySpecialty(spec){
   const useSpec=spec||'MEDICINA INTERNA';
-  // destruir players existentes
+  // destruir players
   Object.keys(players).forEach(k=>{ try{ players[k]?.player?.stopVideo?.(); players[k]?.player?.destroy?.(); }catch(_){ } delete players[k]; });
   if(io) { io.disconnect(); io=null; }
   toCreate.clear();
