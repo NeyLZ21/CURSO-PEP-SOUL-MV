@@ -331,7 +331,7 @@ function ensureStoreFor(mid,vid){
 }
 function throttleSaveProgress(){ saveState(CURRENT_UID||null,state); }
 
-/* ⛔️ Sin autoplay: el embed temporal nunca auto-reproduce */
+/* Iframe temporal sin autoplay */
 function tempEmbed(pid, videoId){
   const holder=document.getElementById(pid);
   if(!holder) return;
@@ -351,21 +351,31 @@ function removeTempEmbed(pid){
   if(tmp&&tmp.parentElement) tmp.parentElement.removeChild(tmp);
 }
 
-/* Cargar player al hacer click en el poster, pero sin autoplay */
+/* Cargar player solo al hacer click (sin reproducir) */
 function clickToLoad(pid){
   const cfg=toCreate.get(pid);
   if(!cfg) return;
-  cfg.force=true; // crear ya, pero sin autoplay
+
+  // Si está bloqueado por módulo previo, avisar y no cargar
+  if(cfg.index===0 && !cfg.prevModulePassed){
+    const w=document.getElementById(`warn-${pid}`);
+    if(w){ w.textContent='🔒 Debes concluir el módulo anterior.'; w.style.display='block'; setTimeout(()=>w.style.display='none',2000); }
+    return;
+  }
+
+  cfg.force=true; // crear ya
   const tryCreate=()=>{
     if(ytApiReady && window.YT && YT.Player){
       toCreate.delete(pid);
       removeTempEmbed(pid);
-      createPlayer(cfg); // createPlayer ya no auto-reproduce
+      createPlayer(cfg); // NO autoplay
       return true;
     }
     return false;
   };
   if(tryCreate()) return;
+
+  // Si aún no está la API, inserta un embed temporal (sin autoplay)
   tempEmbed(pid, cfg.videoId);
   let ticks=0;
   const h=setInterval(()=>{
@@ -383,19 +393,13 @@ window.onYouTubeIframeAPIReady=function(){
     if(cfg.force || inViewport){
       toCreate.delete(pid);
       removeTempEmbed(pid);
-      createPlayer(cfg);
+      createPlayer(cfg); // NO autoplay
+    }else{
+      // Si todavía no, deja un embed temporal sin autoplay
+      tempEmbed(pid, cfg.videoId);
     }
   }
 };
-
-/* Helper: ¿módulo anterior aprobado? */
-function prevModulePassedFor(moduleId){
-  const mods = state.course?.modules || [];
-  const idx = mods.findIndex(m=>m.id===moduleId);
-  if(idx<=0) return true; // primer módulo no requiere previo
-  const prevId = mods[idx-1]?.id;
-  return !!(state.quizzes?.[prevId]?.passed);
-}
 
 function createPlayer(cfg){
   const {pid,videoId,moduleId,index}=cfg;
@@ -408,37 +412,34 @@ function createPlayer(cfg){
   players[pid]={player:null,meta};
 
   const lockEl=document.getElementById(`lock-${moduleId}-${index}`);
-  const prevVideoDone = index===0 ? true : !!(state.videosDone?.[moduleId]?.[cfg.prevId]);
-  const prevModuleOk  = index===0 ? prevModulePassedFor(moduleId) : true;
-  if(lockEl) lockEl.style.display = (prevVideoDone && prevModuleOk) ? 'none':'grid';
+  const prevDoneWithin = index===0 ? true : !!(state.videosDone?.[moduleId]?.[cfg.prevId]);
+  const canStartNow = (index===0 ? !!cfg.prevModulePassed : prevDoneWithin);
+  if(lockEl) lockEl.style.display = canStartNow ? 'none':'grid';
 
   players[pid].player=new YT.Player(pid,{
     height:'360',width:'640',videoId,host:'https://www.youtube.com',
     playerVars:{rel:0,modestbranding:1,controls:1,disablekb:1,playsinline:1},
     events:{
       onReady:(ev)=>{
+        // NO autoplay. Solo preparar posición sin reproducir.
         try{ ev.target.unMute(); ev.target.setVolume(100);}catch(_){}
         const startAt=Math.min(store.t||0,store.allow||0);
         if(startAt>1){ try{ev.target.seekTo(startAt,true);}catch(_){ } }
-        /* ⛔️ No autoplay: el usuario debe presionar Play */
       },
       onStateChange:(ev)=>{
         const p=ev.target, st=ev.data;
+
         if(st===YT.PlayerState.PLAYING){
           lastPlayingPid=pid;
 
-          /* Bloqueo por orden: video previo + módulo previo aprobado */
-          if(index>0 && !(state.videosDone?.[moduleId]?.[cfg.prevId])){
-            showWarn(pid, '🔒 Debes terminar el video anterior.');
+          // Bloqueos: 1) módulo previo no aprobado en primer video; 2) dentro del módulo, video anterior no visto.
+          const prevModuleGate = (index===0 && !cfg.prevModulePassed);
+          const prevVideoGate  = (index>0  && !(state.videosDone?.[moduleId]?.[cfg.prevId]));
+          if(prevModuleGate || prevVideoGate){
+            showWarn(pid, prevModuleGate ? '🔒 Debes concluir el módulo anterior.' : '🔒 Debes terminar el video anterior.');
             try{ p.pauseVideo(); }catch(_){}
             return;
           }
-          if(index===0 && !prevModulePassedFor(moduleId)){
-            showWarn(pid, '🔒 Primero aprueba el módulo anterior.');
-            try{ p.pauseVideo(); }catch(_){}
-            return;
-          }
-
           startTick();
         } else if(st===YT.PlayerState.PAUSED){
           throttleSaveProgress();
@@ -452,13 +453,13 @@ function createPlayer(cfg){
           store.t=store.allow;
           throttleSaveProgress();
 
-          // Desbloquear siguiente video
+          // Desbloquear siguiente video del mismo módulo
           const nextLock=document.getElementById(`lock-${moduleId}-${index+1}`);
           if(nextLock) nextLock.style.display='none';
           updateGlobalProgress();
-          maybeEnableQuiz({id: moduleId, videos: (state.course?.modules||[]).find(mm=>mm.id===moduleId)?.videos || []});
 
-          /* ⛔️ No autoplay del siguiente video */
+          // NO reproducir automáticamente el siguiente video (el usuario debe dar Play).
+          maybeEnableQuiz({id: moduleId, videos: (state.course?.modules||[]).find(mm=>mm.id===moduleId)?.videos || []});
         }
       },
       onError:()=>{
@@ -513,11 +514,10 @@ function createPlayer(cfg){
       }
     },500);
   }
-  function stopTick(){
-    if(meta.tick){ clearInterval(meta.tick); meta.tick=null; }
-  }
+  function stopTick(){ if(meta.tick){ clearInterval(meta.tick); meta.tick=null; } }
 }
 
+/* Encola para lazy (sin autoplay) */
 function queueLazy(cfg){
   const {pid}=cfg;
   toCreate.set(pid,cfg);
@@ -532,10 +532,9 @@ function queueLazy(cfg){
         if(ytApiReady){
           toCreate.delete(pid);
           removeTempEmbed(pid);
-          createPlayer(cfg);
+          createPlayer(cfg); // NO autoplay
         }else{
-          // Embed temporal sin autoplay
-          tempEmbed(pid, cfg.videoId);
+          tempEmbed(pid, cfg.videoId); // embed temporal, sin autoplay
         }
       });
     },{root:null,rootMargin:"200px 0px",threshold:0.01});
@@ -834,7 +833,7 @@ async function saveProfile(){
     if(name){ try{ await auth.currentUser.updateProfile({displayName:name}); }catch(_){} }
     const uid=auth.currentUser?.uid; if(!uid) throw new Error('Sin UID');
     const ref=db.collection('users').doc(uid).collection('profile').doc('main');
-    const payload={...state.profile,updatedAt:firebase.firestore.Timestamp.now()};
+    const payload={...state.profile,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
     const write=ref.set(payload,{merge:true});
     write.then(()=>{}).catch(()=>{
       savingProfile=false; pfMsg.classList.remove('saving');
@@ -886,12 +885,14 @@ function renderAllBySpecialty(spec){
   renderModules(modulesDef);
   updateGlobalProgress();
 
-  // Preparar lazy (sin autoplay)
-  modulesDef.forEach(m=>{
+  // Preparar lazy sin autoplay
+  modulesDef.forEach((m,midIdx)=>{
+    const prevModule = modulesDef[midIdx-1];
+    const prevModulePassed = midIdx===0 ? true : !!(state.quizzes?.[prevModule.id]?.passed);
     m.videos.forEach((v,idx)=>{
       const pid=`player-${m.id}-${idx}`;
       const prevId = idx===0 ? null : m.videos[idx-1].yt;
-      const cfg={pid,videoId:v.yt,moduleId:m.id,index:idx,prevId}; // sin autoplay
+      const cfg={pid,videoId:v.yt,moduleId:m.id,index:idx,prevId,prevModulePassed}; // NO autoplay
       queueLazy(cfg);
     });
   });
@@ -900,25 +901,26 @@ function renderAllBySpecialty(spec){
 function renderModules(modulesDef){
   const wrap=document.getElementById('modules');
   wrap.innerHTML='';
-  modulesDef.forEach((m,modIdx)=>{
+  modulesDef.forEach((m,idx)=>{
     const doneVideos=(state.videosDone?.[m.id]||{});
-    const prevModulePassed = modIdx===0 ? true : !!(state.quizzes?.[modulesDef[modIdx-1].id]?.passed);
+    const prevModule = modulesDef[idx-1];
+    const prevModulePassed = idx===0 ? true : !!(state.quizzes?.[prevModule.id]?.passed);
 
     const videosHtml = m.videos.map((v,i)=>{
       const lockId = `lock-${m.id}-${i}`;
       const pid    = `player-${m.id}-${i}`;
-      // para el primero: también evaluar si módulo anterior está aprobado
-      const prevDone = (i===0) ? prevModulePassed : !!doneVideos[m.videos[i-1].yt];
+      const prevDoneWithin = (i===0) ? true : !!doneVideos[m.videos[i-1].yt];
+      const canStart = (i===0 ? prevModulePassed : prevDoneWithin);
       return `
         <div class="yt-wrap" style="margin-top:8px">
           <div id="${pid}"></div>
           ${makePoster(pid, v.yt)}
-          <div class="lock" id="${lockId}" style="display:${prevDone?'none':'grid'}">🔒 ${i===0 && !prevModulePassed ? 'Primero aprueba el módulo anterior' : 'Termina el video anterior'}</div>
+          <div class="lock" id="${lockId}" style="display:${canStart?'none':'grid'}">${i===0 && !prevModulePassed ? '🔒 Concluye el módulo anterior' : '🔒 Termina el video anterior'}</div>
         </div>`;
     }).join('');
 
-    const canStartAll = m.videos.every(v=>doneVideos[v.yt]);
     const passed = state.quizzes?.[m.id]?.passed;
+    const canStartAll = m.videos.every(v=>doneVideos[v.yt]);
     const quizBtnLabel = passed?'Aprobado ✓':'Comenzar evaluación';
     const quizBtnClass = passed?'btn-success':'btn-primary';
     const quizDisabled = canStartAll?'':'disabled';
@@ -927,7 +929,7 @@ function renderModules(modulesDef){
     const card=document.createElement('article');
     card.className='card module';
     card.innerHTML=`
-      <div class="num">${modIdx+1}</div>
+      <div class="num">${idx+1}</div>
       <div class="meta">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
           <h3 style="margin:0">${m.titulo}</h3>
@@ -947,7 +949,7 @@ function renderModules(modulesDef){
     `;
     wrap.appendChild(card);
 
-    // Click-to-load en cada poster (sin autoplay)
+    // Click-to-load en cada poster (bloquea si primer video y módulo previo no aprobado)
     m.videos.forEach((v,i)=>{
       const pid = `player-${m.id}-${i}`;
       const poster = card.querySelector(`[data-load="${pid}"]`);
@@ -1074,21 +1076,18 @@ async function syncToCloud(){
 /* ========================= Entradas / inicialización ========================= */
 document.getElementById('year').textContent=new Date().getFullYear();
 
-/* Pausar cuando sale de la pestaña y reanudar al volver (sin adelantar) */
+// Pausar cuando sale de la pestaña y reanudar al volver
 window.addEventListener('visibilitychange', ()=>{
   if(document.hidden){
     Object.values(players).forEach(({player})=>{ try{ player.pauseVideo(); }catch(_){ } });
     throttleSaveProgress();
   }else{
-    if(lastPlayingPid && players[lastPlayingPid]?.player){
-      try{ players[lastPlayingPid].player.playVideo(); }catch(_){}
-    }
+    // NO autoplay al volver; el usuario decide dar Play.
   }
 });
 window.addEventListener('pagehide', throttleSaveProgress);
 window.addEventListener('beforeunload', throttleSaveProgress);
 
-/* showLogin duplicado protegido (no borrar si ya existe) */
 function showLogin(){
   document.getElementById('step-welcome').style.display='block';
   document.getElementById('profile').style.display='none';
