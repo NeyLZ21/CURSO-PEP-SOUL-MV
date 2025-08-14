@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
-<!-- Prefetch YouTube -->
+<!-- 🔥 Acelera YouTube -->
 <link rel="preconnect" href="https://www.youtube.com">
 <link rel="preconnect" href="https://i.ytimg.com">
 <link rel="dns-prefetch" href="https://www.youtube.com">
@@ -48,9 +48,9 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .input-wrap{position:relative} .input-wrap input, .input-wrap select, input, select {width:100%;padding:12px 40px 12px 12px;border-radius:12px;border:1px solid #e5e7eb}
 .eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;border:0;background:transparent;font-size:16px}
 /* Avisos */
-.alert{border-radius:12px;padding:12px; font-size:14px}
+.alert{border-radius:12px;padding:12px 14px;font-size:14px}
 .alert-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
-/* Spinner */
+/* Spinner “Guardando…” */
 .saving::after{content:'';display:inline-block;width:14px;height:14px;margin-left:8px;border:2px solid #9ca3af;border-top-color:transparent;border-radius:999px;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* Combo */
@@ -61,7 +61,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 /* Quiz */
 .quiz-wrap{margin-top:12px;border-top:1px solid #e5e7eb;padding-top:12px}
 .quiz-hint{font-size:13px}
-/* Poster */
+/* Lazy poster */
 .poster{position:absolute;inset:0;background:#000;display:grid;place-items:center;cursor:pointer}
 .poster img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.8)}
 .poster button{position:relative;z-index:2;padding:10px 14px;border-radius:999px;background:#ffffffd9;font-weight:800;border:0}
@@ -200,7 +200,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
   <!-- Módulos -->
   <section id="modules" class="grid no-print" style="display:none"></section>
 
-  <!-- Certificado -->
+  <!-- Certificado imprimible -->
   <section id="certificado" class="container">
     <div class="cert-card">
       <div class="cert-title">Certificado de participación</div>
@@ -235,8 +235,8 @@ const ESPEC_MODS={
   "ACUPUNTURA": BASE_MEDICA, "ALERGOLOGIA": BASE_MEDICA, "ANESTESIOLOGIA": [M.G,M.AN],
   "CARDIOLOGIA": BASE_MEDICA, "CARDIOLOGIA HEMODINAMIA": BASE_MEDICA, "CARDIOLOGIA INTERVENCIONISTA": BASE_MEDICA, "CARDIOLOGIA PEDIATRICA": BASE_MEDICA,
   "CIR. GENERAL-COLOPROCTOLOGIA": BASE_QUIR, "CIR. MANO/MUÑE-NERVIO PERI/BRA": BASE_QUIR, "CIRUGIA CARDIACA": BASE_QUIR, "CIRUGIA DE CABEZA Y CUELLO": BASE_QUIR,
-  "CIRUGIA DE COLUMNA": BASE_QUIR, "CIRUGIA DE HOMBRO Y CODO": BASE_QUIR, "CIRUGIA GENERAL": BASE_QUIR, "CIRUGIA ONCOLOGICA": BASE_QUIR, "CIRUGIA PEDIATRICA": BASE_QUIR,
-  "CIRUGIA PLASTICA": BASE_QUIR, "CIRUGIA TORACICA": BASE_QUIR, "CIRUGIA VASCULAR": BASE_QUIR, "COLOPROCTOLOGIA": BASE_QUIR,
+  "CIRUGIA DE COLUMNA": BASE_QUIR, "CIRUGIA DE HOMBRO Y CODO": BASE_QUIR, "CIRUGIA GENERAL": BASE_QUIR, "CIRUGIA ONCOCOLOGICA": BASE_QUIR,
+  "CIRUGIA PEDIATRICA": BASE_QUIR, "CIRUGIA PLASTICA": BASE_QUIR, "CIRUGIA TORACICA": BASE_QUIR, "CIRUGIA VASCULAR": BASE_QUIR, "COLOPROCTOLOGIA": BASE_QUIR,
   "CUIDADOS PALIATIVOS": BASE_MEDICA, "DERMATOLOGIA": BASE_MEDICA, "DIABETOLOGIA": BASE_MEDICA,
   "EMERGENCIAS Y DESASTRES": [M.G,M.EM],
   "ENDOCRINO PEDIATRA": BASE_MEDICA, "ENDOCRINOLOGIA": BASE_MEDICA, "ENFERMEDADES AUTOINMUNES": BASE_MEDICA,
@@ -267,8 +267,6 @@ const ESPEC_MODS={
   "TRAUMATOLOGIA PEDIATRICA": BASE_QUIR, "TRAUMATOLOGIA Y ORTOPEDIA": BASE_QUIR,
   "UROLOGIA": BASE_QUIR, "UROLOGIA PEDIATRICA": BASE_QUIR
 };
-
-/* Videos por módulo (reemplaza IDs problemáticos si alguno da error) */
 const VIDEO_DEFAULTS={
   "GENERALIDADES":["dQw4w9WgXcQ","l482T0yNkeo","QH2-TGUlwu4"],
   "HOSPITALIZACIÓN-HDD":["eY52Zsg-KVI","fJ9rUzIMcZQ","L_jWHffIx5E"],
@@ -277,8 +275,6 @@ const VIDEO_DEFAULTS={
   "ANESTESIOLOGÍA":["60ItHLz5WEA","CevxZvSJLk8","ktvTqknDobU"],
   "EMERGENCIAS":["lWA2pjMjpBs","hTWKbfoikeg","eY52Zsg-KVI"]
 };
-/* Respaldo si un video no permite embed (100/101/150) */
-const FALLBACKS=["dQw4w9WgXcQ","kXYiU_JCYtU","3JZ_D3ELwOQ"];
 const DEFAULT_VIDEOS=["dQw4w9WgXcQ"];
 
 /* ================================================================
@@ -305,13 +301,13 @@ let state=loadState(null);
 let unsubProfile=null,savingProfile=false;
 
 /* ================================================================
-   YouTube: control total (sin iframe temporal)
+   YouTube: lazy + autoplay + anti-seek + bloqueo por orden
 ================================================================= */
-let ytApiReady=false;
 const players={};         // pid -> {player, meta}
 const toCreate=new Map();  // pid -> cfg pendiente
-let io=null;
+let io=null, ytApiReady=false;
 
+// poster
 function makePoster(pid, videoId){
   const thumb=`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
   return `
@@ -330,44 +326,67 @@ function ensureStoreFor(mid,vid){
 }
 function throttleSaveProgress(){ saveState(CURRENT_UID||null,state); }
 
-// ¿terminó el anterior?
+// No permitir cargar si el anterior no está terminado
 function isPrevDone(moduleId, index, prevVideoId){
   if(index===0) return true;
   return !!(state.videosDone?.[moduleId]?.[prevVideoId]);
 }
 
-/* Click-to-load: todo por YT.Player */
+/* === FAST PATH temporal mientras llega la API (para autoplay inmediato) === */
+function tempEmbed(pid, videoId){
+  const holder = document.getElementById(pid);
+  if (!holder) return;
+  const poster = holder.parentElement.querySelector(`[data-load="${pid}"]`);
+  if (poster) poster.remove();
+  const src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&controls=1&playsinline=1&enablejsapi=1`;
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute('id', pid + '-temp');
+  iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
+  iframe.setAttribute('allowfullscreen', '');
+  iframe.src = src;
+  Object.assign(iframe.style, {position:'absolute',inset:'0',width:'100%',height:'100%',border:'0'});
+  holder.replaceChildren(iframe);
+}
+function removeTempEmbed(pid){
+  const tmp = document.getElementById(pid + '-temp');
+  if (tmp && tmp.parentElement) tmp.parentElement.removeChild(tmp);
+}
+
+/* Clic del usuario para cargar (resuelve políticas de autoplay) */
 function clickToLoad(pid){
   const cfg = toCreate.get(pid);
   if (!cfg) return;
 
+  // Si no está habilitado por orden, no cargar
   if(!isPrevDone(cfg.moduleId, cfg.index, cfg.prevId)){
     const errEl=document.getElementById(`err-${pid}`);
     if(errEl){ errEl.style.display='block'; errEl.textContent='🔒 Termina el video anterior para continuar.'; }
     return;
   }
 
-  cfg.autoplay = true;   // reproducir tras crear
-  cfg.force = true;      // creación inmediata si la API ya está
-
+  cfg.autoplay = true;   // reproducir tras clic
+  cfg.force = true;      // asegurar creación
   const tryCreate = () => {
     if (ytApiReady && window.YT && YT.Player) {
       toCreate.delete(pid);
+      removeTempEmbed(pid);
       createPlayer(cfg);
       return true;
     }
     return false;
   };
 
-  if (tryCreate()) return;
+  if (tryCreate()) return;        // API ya lista
+  tempEmbed(pid, cfg.videoId);    // API no lista → embed temporal con autoplay
   let ticks = 0;
   const h = setInterval(() => {
     ticks++;
-    if (tryCreate() || ticks > 40) clearInterval(h); // ~10s máx
+    if (tryCreate()) clearInterval(h);
+    else if (ticks > 12) clearInterval(h); // 3s máx
   }, 250);
 }
 
-/* API lista → crear players visibles/forzados, respetando orden */
+/* API lista → crear los visibles o forzados */
 window.onYouTubeIframeAPIReady=function(){
   ytApiReady=true;
   for(const [pid,cfg] of [...toCreate]){
@@ -376,14 +395,14 @@ window.onYouTubeIframeAPIReady=function(){
     const okOrder = isPrevDone(cfg.moduleId, cfg.index, cfg.prevId);
     if ((cfg.force || inViewport) && okOrder) {
       toCreate.delete(pid);
+      removeTempEmbed(pid);
       createPlayer(cfg);
     }
   }
 };
 
 function createPlayer(cfg){
-  const {pid,moduleId,index,autoplay}=cfg;
-  let videoId = cfg.videoId;
+  const {pid,videoId,moduleId,index,autoplay}=cfg;
   if(players[pid]) return;
   const holder=document.getElementById(pid);
   if(!holder) return;
@@ -406,12 +425,13 @@ function createPlayer(cfg){
         const startAt=Math.min(store.t||0,store.allow||0);
         if(startAt>1){ try{ev.target.seekTo(startAt,true);}catch(_){ } }
 
+        // Si el anterior no está completo, pausar y no permitir
         if(!prevDone){
           try{ ev.target.pauseVideo(); }catch(_){}
           const errEl=document.getElementById(`err-${pid}`);
           if(errEl){ errEl.style.display='block'; errEl.textContent='🔒 Termina el video anterior para continuar.'; }
         }else{
-          // Intento de autoplay (puede requerir gesto del usuario)
+          // Intentar autoplay
           if (autoplay || startAt>0) { try{ ev.target.playVideo(); }catch(_){ } }
         }
         startTick();
@@ -424,7 +444,7 @@ function createPlayer(cfg){
           stopTick();
           state.videosDone=state.videosDone||{};
           state.videosDone[moduleId]=state.videosDone[moduleId]||{};
-          state.videosDone[moduleId][meta.videoId]=true;
+          state.videosDone[moduleId][videoId]=true;
           store.allow=store.dur||store.allow; store.t=store.allow;
           throttleSaveProgress();
           const nextLock=document.getElementById(`lock-${moduleId}-${index+1}`);
@@ -433,25 +453,18 @@ function createPlayer(cfg){
           maybeEnableQuiz({id: moduleId, videos: (state.course?.modules||[]).find(mm=>mm.id===moduleId)?.videos || []});
         }
       },
-      onError:(e)=>{
-        const code=e?.data;
+      onError:()=>{
         const errEl=document.getElementById(`err-${pid}`);
-        // 100/101/150: no embebible o eliminado → usar fallback
-        if([100,101,150].includes(code) && meta.retries<FALLBACKS.length){
-          const fb=FALLBACKS[meta.retries];
+        if(meta.retries<3){
           meta.retries++;
-          try{ players[pid]?.player?.destroy?.(); }catch(_){}
-          // Reiniciar con nuevo ID
-          meta.videoId = fb;
-          cfg.videoId = fb;
-          ensureStoreFor(moduleId, fb);
-          createPlayer(cfg);
-          if(errEl){ errEl.style.display='block'; errEl.textContent='El video original no permite incrustar. Cargando respaldo…'; }
-          return;
-        }
-        if(errEl){
-          errEl.style.display='block';
-          errEl.textContent='No se pudo cargar el video. Intenta recargar la página.';
+          if(errEl){ errEl.style.display='block'; errEl.textContent='Reintentando cargar el video…'; }
+          setTimeout(()=>{
+            try{ players[pid]?.player?.destroy?.(); }catch(_){}
+            delete players[pid];
+            createPlayer(cfg);
+          }, 700*meta.retries);
+        }else{
+          if(errEl){ errEl.style.display='block'; errEl.textContent='No se pudo cargar el video. Recarga la página.'; }
         }
       }
     }
@@ -463,12 +476,11 @@ function createPlayer(cfg){
       const p=players[pid]?.player; if(!p) return;
       const cur=p.getCurrentTime?.()||0;
       const dur=p.getDuration?.()||0;
-      const storeNow=ensureStoreFor(moduleId,meta.videoId);
-      if(dur && (!storeNow.dur || Math.abs(storeNow.dur-dur)>0.5)){ storeNow.dur=dur; throttleSaveProgress(); }
-      // Anti-seek
-      if(cur>(storeNow.allow+1)){ try{ p.seekTo(storeNow.allow,true); }catch(_){ } return; }
+      if(dur && (!store.dur || Math.abs(store.dur-dur)>0.5)){ store.dur=dur; throttleSaveProgress(); }
+      // Anti-seek: si adelanta, volver a último permitido
+      if(cur>(store.allow+1)){ try{ p.seekTo(store.allow,true); }catch(_){ } return; }
       const ps=p.getPlayerState?.();
-      if(ps===YT.PlayerState.PLAYING){ if(cur>storeNow.allow) storeNow.allow=cur; storeNow.t=cur; } else { storeNow.t=cur; }
+      if(ps===YT.PlayerState.PLAYING){ if(cur>store.allow) store.allow=cur; store.t=cur; } else { store.t=cur; }
     },500);
   }
   function stopTick(){ if(meta.tick){ clearInterval(meta.tick); meta.tick=null; } }
@@ -482,10 +494,13 @@ function queueLazy(cfg){
         if(!e.isIntersecting) return;
         const el=e.target; const pid=el.id;
         const cfg=toCreate.get(pid); if(!cfg) return;
+
+        // Intentar autoplay del primer video pendiente al volverse visible
         const okOrder = isPrevDone(cfg.moduleId, cfg.index, cfg.prevId);
         if(ytApiReady && okOrder){
-          cfg.autoplay = true; // intentar reproducir al ser visible
+          cfg.autoplay = true;
           toCreate.delete(pid);
+          removeTempEmbed(pid);
           createPlayer(cfg);
         }
       });
@@ -561,9 +576,6 @@ document.querySelectorAll('.eye').forEach(btn=>{
   render(filtered);
 })();
 
-/* ================================================================
-   Sesión
-================================================================= */
 auth.onAuthStateChanged(async (user)=>{
   if(!user){
     CURRENT_UID=null; state={}; $('#auth-user').textContent='';
@@ -779,7 +791,6 @@ function pickModulesFor(spec){
 
 function renderAllBySpecialty(spec){
   const useSpec=spec||'MEDICINA INTERNA';
-
   // destruir players existentes
   Object.keys(players).forEach(k=>{ try{ players[k]?.player?.stopVideo?.(); players[k]?.player?.destroy?.(); }catch(_){ } delete players[k]; });
   if(io) { io.disconnect(); io=null; }
@@ -920,7 +931,6 @@ function gradeQuizModule(m){
     if(btn){ btn.textContent='Aprobado ✓'; btn.classList.remove('btn-primary'); btn.classList.add('btn-success'); }
     setTimeout(syncToCloud,300);
   }
-  updateGlobalProgress();
 }
 function updateGlobalProgress(){
   const spec=getSpecialty()||'MEDICINA INTERNA';
@@ -946,7 +956,7 @@ function updateGlobalProgress(){
 }
 
 /* ================================================================
-   Cloud sync (ligero)
+   Cloud sync ligero
 ================================================================= */
 async function userDoc(){ const uid=auth.currentUser?.uid; if(!uid) return null; return db.collection('users').doc(uid).collection('courses').doc('soulmv'); }
 async function syncFromCloud(user){
@@ -982,6 +992,9 @@ async function syncToCloud(){
 /* ================================================================
    Entradas / inicialización
 ================================================================= */
+document.getElementById('year').textContent=new Date().getFullYear();
+
+// Pausar y guardar al salir de la página/ventana
 window.addEventListener('visibilitychange', ()=>{
   if(document.hidden){
     Object.values(players).forEach(({player})=>{ try{ player.pauseVideo(); }catch(_){ } });
@@ -992,7 +1005,6 @@ window.addEventListener('pagehide', throttleSaveProgress);
 window.addEventListener('beforeunload', throttleSaveProgress);
 
 function showLogin(){ document.getElementById('step-welcome').style.display='block'; document.getElementById('profile').style.display='none'; document.getElementById('progress').style.display='none'; document.getElementById('modules').style.display='none'; }
-document.getElementById('year').textContent=new Date().getFullYear();
 </script>
 </body>
 </html>
