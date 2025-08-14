@@ -248,6 +248,7 @@ const ESPEC_MODS={
   "TRATAMIENTO DEL DOLOR":BASE_QUIR,"TRAUMATO PEDIATRICA DE COLUMNA":BASE_QUIR,"TRAUMATOLOGIA DEL COLUMNA":BASE_QUIR,"TRAUMATOLOGIA ONCOLOGICA":BASE_QUIR,"TRAUMATOLOGIA PEDIATRICA":BASE_QUIR,"TRAUMATOLOGIA Y ORTOPEDIA":BASE_QUIR,
   "UROLOGIA":BASE_QUIR,"UROLOGIA PEDIATRICA":BASE_QUIR
 };
+const M={ CE:"CONSULTA EXTERNA", H:"HOSPITALIZACIÓN-HDD", CQ:"CENTRO QUIRÚRGICO", G:"GENERALIDADES", AN:"ANESTESIOLOGÍA", EM:"EMERGENCIAS" };
 const VIDEO_DEFAULTS={
   "GENERALIDADES":["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0"],
   "HOSPITALIZACIÓN-HDD":["eY52Zsg-KVI","fJ9rUzIMcZQ","L_jWHffIx5E"],
@@ -290,10 +291,13 @@ let state=loadState(null);
 let unsubProfile=null;
 let savingProfile=false;
 
+/* ¿Se puede abrir el combo de especialidad? */
+let allowEditSpec=false;
+
 /* ======================== YouTube control ======================== */
 let ytApiReady=false;
-const players={}; // pid -> {player,meta}
-const cfgByPid=new Map(); // para cargar bajo demanda
+const players={};                 // pid -> {player,meta}
+const cfgByPid=new Map();         // pid -> cfg para carga bajo demanda
 let lastPlayingPid=null;
 
 /* --- Póster y locks --- */
@@ -305,21 +309,34 @@ function makePoster(pid, videoId, lockedMsg){
       <div id="${pid}"></div>
       <div class="poster" data-load="${pid}">
         <img src="${ytThumb(videoId)}" alt="">
-        <button type="button">Cargar video ▶</button>
+        <button type="button">Ver video ▶</button>
       </div>
       ${lockLayer}
       <div class="warnmsg" id="warn-${pid}"></div>
     </div>`;
 }
 
+function moduleConcluded(moduleId){
+  const m=(state.course?.modules||[]).find(x=>x.id===moduleId);
+  if(!m) return false;
+  const passed=!!(state.quizzes?.[moduleId]?.passed);
+  const allVideosDone=m.videos.every(v=>(state.videosDone?.[moduleId]||{})[v.yt]);
+  return passed || allVideosDone;
+}
 function prevModuleConcluded(moduleId){
   const mods = state.course?.modules || [];
   const idx = mods.findIndex(m=>m.id===moduleId);
   if(idx<=0) return true;
-  const prev = mods[idx-1];
-  const passed = !!(state.quizzes?.[prev.id]?.passed);
-  const allVideosDone = prev.videos.every(v => (state.videosDone?.[prev.id]||{})[v.yt]);
-  return passed || allVideosDone;
+  return moduleConcluded(mods[idx-1].id);
+}
+function unlockNextModuleFirstVideo(moduleId){
+  if(!moduleConcluded(moduleId)) return;
+  const mods=state.course?.modules||[];
+  const idx=mods.findIndex(m=>m.id===moduleId);
+  const next=mods[idx+1]; if(!next) return;
+  const nextPid=`player-${next.id}-0`;
+  const lock=document.getElementById(`lock-${nextPid}`);
+  if(lock) lock.remove();
 }
 
 function ensureStoreFor(mid,vid){
@@ -330,16 +347,6 @@ function ensureStoreFor(mid,vid){
 }
 function persist(){ saveStateLocal(CURRENT_UID,state); }
 
-/* --- Crear player al clicar el póster (SIN autoplay) --- */
-function clickToLoad(pid){
-  const cfg=cfgByPid.get(pid); if(!cfg) return;
-  if(isLocked(cfg)){ showWarn(pid, lockReason(cfg)); return; }
-  if(players[pid]) return; // ya creado
-  actuallyCreatePlayer(cfg);
-  // Quitar póster cuando el player esté listo
-  const poster = document.querySelector(`.poster[data-load="${pid}"]`);
-  if(poster) poster.remove();
-}
 function isLocked({moduleId,index}){
   if(index===0 && !prevModuleConcluded(moduleId)) return true;
   if(index>0){
@@ -358,6 +365,16 @@ function showWarn(pid, text){
   if(!w) return;
   w.textContent=text; w.style.display='block';
   setTimeout(()=>{ if(w) w.style.display='none'; },1800);
+}
+
+/* --- Crear player al clicar el póster (SIN autoplay) --- */
+function clickToLoad(pid){
+  const cfg=cfgByPid.get(pid); if(!cfg) return;
+  if(isLocked(cfg)){ showWarn(pid, lockReason(cfg)); return; }
+  if(players[pid]) return; // ya creado
+  actuallyCreatePlayer(cfg);
+  const poster = document.querySelector(`.poster[data-load="${pid}"]`);
+  if(poster) poster.remove();
 }
 
 function actuallyCreatePlayer({pid,videoId,moduleId,index}){
@@ -387,14 +404,11 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
         const p=ev.target, st=ev.data;
         if(st===YT.PlayerState.PLAYING){
           lastPlayingPid=pid;
-
-          // Chequeos de lock al tiempo de reproducción
           if(isLocked(meta)){
             showWarn(pid, lockReason(meta));
             try{ p.pauseVideo(); }catch(_){}
             return;
           }
-
           startTick();
         }else if(st===YT.PlayerState.PAUSED){
           persist();
@@ -408,13 +422,16 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
           store.allow=store.dur||store.allow; store.t=store.allow;
           persist();
 
-          // desbloquear siguiente visualmente (si existe)
-          const m = (state.course?.modules||[]).find(mm=>mm.id===moduleId);
+          // desbloquear siguiente video del mismo módulo
           const nextPid = `player-${moduleId}-${index+1}`;
           const nextLock = document.getElementById(`lock-${nextPid}`);
           if(nextLock) nextLock.remove();
 
+          // si con esto se concluye el módulo, desbloquear el primer video del siguiente
+          unlockNextModuleFirstVideo(moduleId);
+
           updateGlobalProgress();
+          const m = (state.course?.modules||[]).find(mm=>mm.id===moduleId);
           maybeEnableQuiz({id: moduleId, videos: m?.videos || []});
         }
       },
@@ -460,7 +477,7 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
   function stopTick(){ if(meta.tick){ clearInterval(meta.tick); meta.tick=null; } }
 }
 
-/* Pausar cuando sale de la pestaña y reanudar (sin adelantar) */
+/* Pausar cuando sale de la pestaña y guardar */
 document.addEventListener('visibilitychange', ()=>{
   if(document.hidden){
     Object.values(players).forEach(({player})=>{ try{player.pauseVideo();}catch(_){ } });
@@ -476,7 +493,53 @@ window.addEventListener('beforeunload', persist);
 
 window.onYouTubeIframeAPIReady=()=>{ ytApiReady=true; };
 
-/* ======================== Auth + UI (igual a tu versión) ======================== */
+/* ======================== Combo de Especialidad ======================== */
+(function setupSpecCombo(){
+  const wrap=document.getElementById('spec-combo');
+  if(!wrap) return;
+  const input=document.getElementById('pf-spec');
+  const panel=document.getElementById('spec-panel');
+  let filtered=ESPECIALIDADES.slice(), open=false;
+
+  function render(list){
+    panel.innerHTML='';
+    list.forEach(name=>{
+      const div=document.createElement('div');
+      div.className='opt';
+      div.textContent=name;
+      div.addEventListener('mousedown',(e)=>{
+        if(!allowEditSpec){ e.preventDefault(); return; }
+        e.preventDefault(); e.stopPropagation();
+        input.value=name; hide(); input.readOnly=true; input.blur();
+      });
+      panel.appendChild(div);
+    });
+  }
+  function show(){ if(!allowEditSpec) return; wrap.classList.add('show'); open=true; }
+  function hide(){ wrap.classList.remove('show'); open=false; }
+
+  wrap.addEventListener('mousedown',(e)=>{
+    if(!allowEditSpec){ e.preventDefault(); return; }
+    if(!open){ input.readOnly=false; input.focus(); filtered=ESPECIALIDADES.slice(); render(filtered); show(); }
+  });
+  input.addEventListener('input',()=>{
+    if(input.readOnly||!allowEditSpec) return;
+    const q=input.value.trim().toLowerCase();
+    filtered=ESPECIALIDADES.filter(e=>e.toLowerCase().includes(q));
+    render(filtered); show();
+  });
+  input.addEventListener('keydown',(e)=>{
+    if(!allowEditSpec) return;
+    if(e.key==='Enter'){
+      if(filtered.length>0){ input.value=filtered[0]; hide(); input.readOnly=true; input.blur(); e.preventDefault(); }
+    }else if(e.key==='Escape'){ hide(); input.readOnly=true; input.blur(); }
+  });
+  document.addEventListener('mousedown',(e)=>{ if(!wrap.contains(e.target)){ hide(); input.readOnly=true; } });
+  input.addEventListener('change',()=>{ const v=input.value.trim(); if(v && !ESPECIALIDADES.includes(v)) input.value=''; });
+  render(filtered);
+})();
+
+/* ======================== Auth + UI ======================== */
 document.querySelectorAll('.eye').forEach(btn=>{
   btn.addEventListener('click',()=>{ const inp=document.querySelector(btn.dataset.eye); if(!inp) return; inp.type=inp.type==='password'?'text':'password'; });
 });
@@ -520,8 +583,8 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
     const {user}=await auth.createUserWithEmailAndPassword(email,pass);
     if(auth.currentUser?.uid!==user.uid) await auth.updateCurrentUser(user);
     db.collection('users').doc(user.uid).collection('courses').doc('soulmv').set({}, {merge:true}).catch(()=>{});
-    const actionCodeSettings={url:location.href.split('?')[0]+'?verified=1',handleCodeInApp:false};
-    try{ await auth.currentUser.sendEmailVerification(actionCodeSettings); msg('Te enviamos el correo de verificación (revisa Spam).'); }
+    const acs={url:location.href.split('?')[0]+'?verified=1',handleCodeInApp:false};
+    try{ await auth.currentUser.sendEmailVerification(acs); msg('Te enviamos el correo de verificación (revisa Spam).'); }
     catch(_){ msg('No se pudo enviar automáticamente. Usa “Reenviar verificación”.'); }
     $('#verify-box').style.display='block'; setTab('login'); $('#login-email').value=email;
   }catch(e){ msg(MSGS[e.code]||'Ocurrió un error. Intenta nuevamente.'); }
@@ -601,13 +664,18 @@ function profileComplete(){ const p=state.profile||{}; return !!(p.name&&p.iddoc
 function setProfileReadonly(ro){
   ['pf-name','pf-id','pf-spec'].forEach(id=>{
     const el=document.getElementById(id);
-    if(id==='pf-spec'){ el.readOnly = ro ? true : false; el.style.background = ro ? '#eef2ff' : '#fff'; }
-    else{ el.readOnly = ro; el.style.background = ro ? '#eef2ff' : '#fff'; }
+    if(id==='pf-spec'){ el.readOnly = ro; }
+    else{ el.readOnly = ro; }
+    el.style.background = ro ? '#eef2ff' : '#fff';
   });
+  allowEditSpec = !ro; // <- habilita/inhabilita el combo
   $('#btn-edit-profile').style.display=ro?'inline-flex':'none';
   $('#btn-save-profile').style.display=ro?'none':'inline-flex';
 }
-document.getElementById('btn-edit-profile').addEventListener('click',()=>{ setProfileReadonly(false); $('#pf-help').textContent='Edita tus datos y guarda los cambios.'; });
+document.getElementById('btn-edit-profile').addEventListener('click',()=>{
+  setProfileReadonly(false);
+  $('#pf-help').textContent='Edita tus datos y guarda los cambios.';
+});
 function getSpecialty(){ return (state.profile?.spec||'').trim(); }
 function startProfileRealtime(){
   if (unsubProfile) { try{unsubProfile();}catch(_){ } unsubProfile=null; }
@@ -714,7 +782,6 @@ function renderModules(modulesDef){
       const pid = `player-${m.id}-${i}`;
       const locked = (i===0) ? !!firstLockedMsg : !doneVideos[m.videos[i-1].yt];
       const lockedMsg = locked ? ((i===0 && firstLockedMsg)?firstLockedMsg:'Termina el video anterior') : null;
-      // guardar config para carga bajo demanda
       cfgByPid.set(pid,{pid,videoId:v.yt,moduleId:m.id,index:i});
       return makePoster(pid, v.yt, lockedMsg);
     }).join('');
@@ -793,6 +860,8 @@ function gradeQuizModule(m){
   if(state.quizzes[m.id].passed){
     const btn=document.querySelector(`#btn-${m.id}`);
     if(btn){ btn.textContent='Aprobado ✓'; btn.classList.remove('btn-primary'); btn.classList.add('btn-success'); }
+    // Al aprobar evaluación, desbloquear primer video del siguiente módulo
+    unlockNextModuleFirstVideo(m.id);
     setTimeout(syncToCloud,300);
   }
 }
