@@ -302,6 +302,18 @@ const loadState=(uid)=>{try{return JSON.parse(localStorage.getItem(keyFor(uid))|
 const saveStateLocal=(uid,st)=>localStorage.setItem(keyFor(uid),JSON.stringify(st));
 let state=loadState(null);
 
+// META por sección para resolver conflictos por recencia
+const nowTs = ()=> Date.now();
+function ensureMeta(){
+  state.meta = state.meta || {
+    profileUpdatedAt: 0,
+    videosDoneUpdatedAt: 0,
+    quizzesUpdatedAt: 0,
+    playUpdatedAt: 0
+  };
+}
+ensureMeta();
+
 // listeners en vivo
 let unsubProfile=null;
 let unsubCourse=null;
@@ -321,7 +333,7 @@ function markDirty(){
   document.addEventListener('input',(e)=>{ if(e.target && e.target.id===id) markDirty(); });
 });
 
-/* ======================== YouTube control (igual base) ======================== */
+/* ======================== YouTube control ======================== */
 let ytApiReady=false;
 const players={};
 const cfgByPid=new Map();
@@ -391,7 +403,7 @@ function showWarn(pid, text){
 function actuallyCreatePlayer({pid,videoId,moduleId,index}){
   if(players[pid]) return;
   const store=ensureStoreFor(moduleId,videoId);
-  const meta={pid,videoId,moduleId,index,tick:null,retries:0};
+  const meta={pid,videoId,moduleId,index,tick:null,retries:0,lastBump:0};
   players[pid]={player:null,meta};
 
   const holder=document.getElementById(pid);
@@ -424,8 +436,8 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
           state.videosDone[moduleId]=state.videosDone[moduleId]||{};
           state.videosDone[moduleId][videoId]=true;
           store.allow=store.dur||store.allow; store.t=store.allow;
-          persist();
-          queueSync(); // sincroniza rápido al terminar
+          ensureMeta(); state.meta.videosDoneUpdatedAt = nowTs();
+          persist(); queueSync();
           const m=(state.course?.modules||[]).find(mm=>mm.id===moduleId);
           const nextPid=`player-${moduleId}-${index+1}`;
           const nextLock=document.getElementById(`lock-${nextPid}`);
@@ -465,6 +477,13 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
       }else{
         store.t=cur;
       }
+      // marca actividad (cada 4s) para sincronización suave
+      const now=nowTs();
+      if(!meta.lastBump || now - meta.lastBump > 4000){
+        meta.lastBump = now;
+        ensureMeta(); state.meta.playUpdatedAt = now;
+        persist(); queueSync();
+      }
     },500);
   }
   function stopTick(){ if(meta.tick){ clearInterval(meta.tick); meta.tick=null; } }
@@ -502,22 +521,43 @@ $('#tab-login').addEventListener('click',()=>setTab('login'));
 $('#tab-register').addEventListener('click',()=>setTab('reg'));
 setTab('login');
 
+/* ============ ARRANQUE CONTROLADO (evita parpadeo y divergencias) ============ */
 auth.onAuthStateChanged(async (user)=>{
   if(!user){
-    CURRENT_UID=null; state={}; $('#auth-user').textContent=''; $('#btn-logout').style.display='none'; $('#verify-box').style.display='none'; setTab('login'); showLogin();
+    CURRENT_UID=null; state={}; $('#auth-user').textContent='';
+    $('#btn-logout').style.display='none'; $('#verify-box').style.display='none';
+    setTab('login'); showLogin();
     if (unsubProfile) { try{unsubProfile();}catch(_){ } unsubProfile=null; }
     if (unsubCourse)  { try{unsubCourse(); }catch(_){ } unsubCourse=null;  }
     return;
   }
-  CURRENT_UID=user.uid; state=loadState(CURRENT_UID)||{}; $('#auth-user').textContent=user.email||'';
+
+  CURRENT_UID=user.uid; state=loadState(CURRENT_UID)||{}; ensureMeta();
+  $('#auth-user').textContent=user.email||'';
   await user.reload().catch(()=>{});
-  if(!user.emailVerified){ showLogin(); $('#verify-box').style.display='block'; startProfileRealtime(); startCourseRealtime(); return; }
-  $('#verify-box').style.display='none';
-  showCourse();
-  startProfileRealtime();
-  startCourseRealtime();
-  // pull inicial por si hay diferencia
+
+  // listeners en tiempo real
+  const profFirst = startProfileRealtime();
+  const courseFirst = startCourseRealtime();
+
+  // pull de seguridad
   await syncFromCloud(user).catch(()=>{});
+
+  // espera primer snapshot o 1.2s (lo que ocurra primero)
+  await Promise.race([
+    Promise.allSettled([profFirst, courseFirst]),
+    new Promise(r=>setTimeout(r,1200))
+  ]);
+
+  if(!user.emailVerified){
+    showLogin(); $('#verify-box').style.display='block';
+    return;
+  }
+
+  // Render estable
+  showCourse();
+  renderAllBySpecialty(getSpecialty());
+  updateGlobalProgress();
 });
 
 document.getElementById('btn-register-2').addEventListener('click', async ()=>{
@@ -560,7 +600,6 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
     const u=cred.user||auth.currentUser; await u.reload().catch(()=>{});
     if(!u.emailVerified){ msg('Debes verificar tu correo antes de continuar.'); $('#verify-box').style.display='block'; return; }
     msg('Sesión iniciada.'); $('#verify-box').style.display='none';
-    showCourse(); startProfileRealtime(); startCourseRealtime(); syncFromCloud(u).catch(()=>{});
   }catch(e){
     let methods=[]; try{methods=await auth.fetchSignInMethodsForEmail(email);}catch(_){}
     if(!methods||methods.length===0){ msg('Correo no registrado.'); setTab('reg'); $('#reg-email').value=email; }
@@ -603,9 +642,6 @@ function showCourse(){
   $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
   $('#pf-id').value=state.profile?.iddoc||'';
   $('#pf-spec').value=state.profile?.spec||'';
-
-  renderAllBySpecialty(getSpecialty());
-  updateGlobalProgress();
 }
 function showLogin(){ $('#step-welcome').style.display='block'; $('#profile').style.display='none'; $('#progress').style.display='none'; $('#modules').style.display='none'; }
 function profileComplete(){ const p=state.profile||{}; return !!(p.name&&p.iddoc&&p.spec&&ESPECIALIDADES.includes(p.spec)); }
@@ -625,46 +661,45 @@ document.getElementById('btn-edit-profile').addEventListener('click',()=>{
 });
 function getSpecialty(){ return (state.profile?.spec||'').trim(); }
 
-/* ===== Realtime PROFILE */
+/* ===== Realtime PROFILE (promesa primer snapshot) */
 function startProfileRealtime(){
   if (unsubProfile) { try{unsubProfile();}catch(_){ } unsubProfile=null; }
-  const uid=auth.currentUser?.uid; if(!uid) return;
+  const uid=auth.currentUser?.uid; if(!uid) return Promise.resolve();
+
   const ref=db.collection('users').doc(uid).collection('profile').doc('main');
+  let resolveFirst, rejectFirst;
+  const first = new Promise((res,rej)=>{ resolveFirst=res; rejectFirst=rej; });
+  let gotFirst=false;
+
   unsubProfile=ref.onSnapshot((snap)=>{
-    if(!snap.exists) return;
-    const cloud=snap.data()||{};
-    const prevSpec=state.profile?.spec;
-    state.profile={...state.profile,...cloud}; persist();
-    if(document.getElementById('pf-name').readOnly){
-      $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
-      $('#pf-id').value=state.profile?.iddoc||'';
-      $('#pf-spec').value=state.profile?.spec||'';
-    }
-    if(prevSpec!==state.profile?.spec && ESPECIALIDADES.includes(state.profile?.spec||'')){
-      renderAllBySpecialty(state.profile.spec); updateGlobalProgress();
-    }
-    if(savingProfile){
-      savingProfile=false;
-      const pfMsg=$('#pf-msg'); pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Perfil guardado.';
-      setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; },3000);
-      setProfileReadonly(true);
-    }
+    try{
+      if(snap.exists){
+        const cloud=snap.data()||{};
+        // adopta si es más reciente
+        const cAt = cloud._meta?.profileUpdatedAt || 0;
+        if(cAt >= (state.meta?.profileUpdatedAt||0)){
+          state.profile={...state.profile,...cloud};
+          // evita traer _meta a inputs
+          delete state.profile._meta;
+          persist();
+          // refresca inputs solo si están en readonly (evita romper edición)
+          if(document.getElementById('pf-name').readOnly){
+            $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
+            $('#pf-id').value=state.profile?.iddoc||'';
+            $('#pf-spec').value=state.profile?.spec||'';
+          }
+          if(ESPECIALIDADES.includes(state.profile?.spec||'')){
+            renderAllBySpecialty(state.profile.spec); updateGlobalProgress();
+          }
+        }
+      }
+      if(!gotFirst){ gotFirst=true; resolveFirst(); }
+    }catch(e){ if(!gotFirst){ rejectFirst(e); } }
   });
-}
-async function loadProfile(){
-  try{
-    const uid=auth.currentUser?.uid; if(!uid) return;
-    const s=await db.collection('users').doc(uid).collection('profile').doc('main').get();
-    if(s.exists){
-      state.profile=s.data(); persist();
-      $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
-      $('#pf-id').value=state.profile?.iddoc||'';
-      $('#pf-spec').value=state.profile?.spec||'';
-    }
-  }catch(e){ console.warn('Perfil no disponible',e); }
+
+  return first;
 }
 
-/* ===== Guardado robusto perfil */
 async function saveProfile(){
   const name=($('#pf-name').value||'').trim();
   const iddoc=($('#pf-id').value||'').trim();
@@ -674,7 +709,10 @@ async function saveProfile(){
   if(!name||!iddoc||!spec){ pfMsg.textContent='Completa nombre, cédula/pasaporte y especialidad.'; return; }
   if(!ESPECIALIDADES.includes(spec)){ pfMsg.textContent='Selecciona una especialidad válida de la lista.'; return; }
 
-  state.profile={name,iddoc,spec}; persist();
+  state.profile={name,iddoc,spec};
+  ensureMeta(); state.meta.profileUpdatedAt = nowTs();
+  persist();
+
   renderAllBySpecialty(spec); updateGlobalProgress();
   document.getElementById('modules')?.scrollIntoView({behavior:'smooth',block:'start'});
   pfMsg.classList.add('saving'); pfMsg.textContent='Guardando…'; btn.disabled=true; savingProfile=true;
@@ -684,9 +722,10 @@ async function saveProfile(){
   try{
     const uid=auth.currentUser?.uid; if(!uid) throw new Error('Sin UID');
     const ref=db.collection('users').doc(uid).collection('profile').doc('main');
-    const payload={...state.profile,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+    const payload={...state.profile,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+                   _meta:{profileUpdatedAt: state.meta.profileUpdatedAt}};
     await ref.set(payload,{merge:true});
-    // realtime listener marcará “✅”
+    // El onSnapshot marca "✅"
   }catch(e){
     savingProfile=false; pfMsg.classList.remove('saving');
     if(!navigator.onLine){
@@ -694,8 +733,7 @@ async function saveProfile(){
       setProfileReadonly(true);
     }else{
       pfMsg.textContent='No se pudo guardar en la nube; tus datos quedan localmente.';
-      setProfileReadonly(false);
-      markDirty();
+      setProfileReadonly(false); markDirty();
     }
   }
 }
@@ -875,16 +913,19 @@ function renderQuizForModule(m){
 function gradeQuizModule(m){
   let correct=0; m.quiz.forEach(q=>{ const c=document.querySelector(`input[name="${q.id}"]:checked`); if(c && c.value===q.correct) correct++; });
   const PASS_PCT=80; const scorePct=Math.round((correct/m.quiz.length)*100);
+  const prev=state.quizzes?.[m.id];
+
   state.quizzes=state.quizzes||{}; 
-  const prev=state.quizzes[m.id];
   state.quizzes[m.id]={
     correct: Math.max(correct, prev?.correct||0),
     total: m.quiz.length,
     scorePct: Math.max(scorePct, prev?.scorePct||0),
     passed: (prev?.passed||false) || (scorePct>=PASS_PCT),
-    updatedAt: Date.now()
+    updatedAt: Math.max(nowTs(), prev?.updatedAt||0)
   };
+  ensureMeta(); state.meta.quizzesUpdatedAt = nowTs();
   persist();
+
   const res=document.querySelector(`#res-${m.id}`); res.style.display='block';
   res.textContent=`Resultado: ${correct}/${m.quiz.length} (${scorePct}%). ${state.quizzes[m.id].passed?'✅ Aprobado':'❌ No aprobado'}.`;
   if(state.quizzes[m.id].passed){
@@ -915,72 +956,107 @@ function updateGlobalProgress(){
   }
 }
 
-/* ======================== Cloud sync — Progreso ======================== */
+/* ======================== Cloud sync — Progreso (realtime) ======================== */
 const COURSE_PATH = ()=> db.collection('users').doc(auth.currentUser.uid).collection('courses').doc('soulmv');
 
-// Merge inteligente (gana lo más completo)
+// Fusiona nube -> local: gana lo más reciente y/o lo más avanzado
 function applyCloudState(cloud){
   if(!cloud) return;
-  // videosDone: OR lógico
-  state.videosDone = state.videosDone || {};
-  Object.entries(cloud.videosDone||{}).forEach(([mid, vids])=>{
-    state.videosDone[mid]=state.videosDone[mid]||{};
-    Object.entries(vids).forEach(([yt, val])=>{
-      state.videosDone[mid][yt] = (state.videosDone[mid][yt]||false) || !!val;
+
+  ensureMeta();
+
+  // VIDEOS DONE
+  const cVD = cloud.videosDone||{}, cVDat = cloud._meta?.videosDoneUpdatedAt||0;
+  if(cVDat >= (state.meta.videosDoneUpdatedAt||0)){
+    state.videosDone = state.videosDone || {};
+    Object.entries(cVD).forEach(([mid, vids])=>{
+      state.videosDone[mid]=state.videosDone[mid]||{};
+      Object.entries(vids).forEach(([yt, val])=>{
+        state.videosDone[mid][yt] = (state.videosDone[mid][yt]||false) || !!val; // OR lógico
+      });
     });
-  });
-  // quizzes: mejor resultado
-  state.quizzes = state.quizzes || {};
-  Object.entries(cloud.quizzes||{}).forEach(([mid, q])=>{
-    const prev=state.quizzes[mid]||{};
-    state.quizzes[mid]={
-      correct: Math.max(prev.correct||0, q.correct||0),
-      total: Math.max(prev.total||0, q.total||0),
-      scorePct: Math.max(prev.scorePct||0, q.scorePct||0),
-      passed: (prev.passed||false) || !!q.passed,
-      updatedAt: Math.max(prev.updatedAt||0, q.updatedAt||0)
-    };
-  });
-  // play: conservar mayores allow/t/dur por video
-  state.play = state.play || {};
-  Object.entries(cloud.play||{}).forEach(([mid, videos])=>{
-    state.play[mid]=state.play[mid]||{};
-    Object.entries(videos).forEach(([yt, pv])=>{
-      const cur=state.play[mid][yt]||{t:0,allow:0,dur:0};
-      state.play[mid][yt]={
-        t: Math.max(cur.t||0, pv.t||0),
-        allow: Math.max(cur.allow||0, pv.allow||0),
-        dur: Math.max(cur.dur||0, pv.dur||0)
+    state.meta.videosDoneUpdatedAt = cVDat;
+  }
+
+  // QUIZZES
+  const cQ = cloud.quizzes||{}, cQat = cloud._meta?.quizzesUpdatedAt||0;
+  if(cQat >= (state.meta.quizzesUpdatedAt||0)){
+    state.quizzes = state.quizzes || {};
+    Object.entries(cQ).forEach(([mid, q])=>{
+      const prev=state.quizzes[mid]||{};
+      state.quizzes[mid]={
+        correct: Math.max(prev.correct||0, q.correct||0),
+        total: Math.max(prev.total||0, q.total||0),
+        scorePct: Math.max(prev.scorePct||0, q.scorePct||0),
+        passed: (prev.passed||false) || !!q.passed,
+        updatedAt: Math.max(prev.updatedAt||0, q.updatedAt||0)
       };
     });
-  });
+    state.meta.quizzesUpdatedAt = cQat;
+  }
+
+  // PLAY (t/allow/dur por video -> max)
+  const cP = cloud.play||{}, cPat = cloud._meta?.playUpdatedAt||0;
+  if(cPat >= (state.meta.playUpdatedAt||0)){
+    state.play = state.play || {};
+    Object.entries(cP).forEach(([mid, videos])=>{
+      state.play[mid]=state.play[mid]||{};
+      Object.entries(videos).forEach(([yt, pv])=>{
+        const cur=state.play[mid][yt]||{t:0,allow:0,dur:0};
+        state.play[mid][yt]={
+          t: Math.max(cur.t||0, pv.t||0),
+          allow: Math.max(cur.allow||0, pv.allow||0),
+          dur: Math.max(cur.dur||0, pv.dur||0)
+        };
+      });
+    });
+    state.meta.playUpdatedAt = cPat;
+  }
+
   persist();
 }
 
-// listener realtime del documento de curso
 function startCourseRealtime(){
   if (unsubCourse) { try{unsubCourse();}catch(_){ } unsubCourse=null; }
-  const u=auth.currentUser; if(!u) return;
+
+  const u=auth.currentUser; if(!u) return Promise.resolve();
   const ref=COURSE_PATH();
+
+  let resolveFirst, rejectFirst;
+  const first = new Promise((res,rej)=>{ resolveFirst=res; rejectFirst=rej; });
+  let gotFirst=false;
+
   unsubCourse=ref.onSnapshot((snap)=>{
-    if(!snap.exists) return;
-    const cloud=snap.data()||{};
-    applyCloudState(cloud);
-    // refrescar UI por si habilitó algo en otro dispositivo
-    updateGlobalProgress();
-    if(state.profile?.spec) renderAllBySpecialty(state.profile.spec);
+    try{
+      if(snap.exists){
+        const cloud=snap.data()||{};
+        applyCloudState(cloud);
+        updateGlobalProgress();
+        if(state.profile?.spec) renderAllBySpecialty(state.profile.spec);
+      }
+      if(!gotFirst){ gotFirst=true; resolveFirst(); }
+    }catch(e){ if(!gotFirst){ rejectFirst(e); } }
   });
+
+  return first;
 }
 
-// Pull inicial por si no llega el snapshot aún
+// Pull inicial de seguridad (por si el snapshot tarda)
 async function syncFromCloud(user){
   try{
     const ref=COURSE_PATH();
     const snap=await ref.get();
     if(snap.exists){ applyCloudState(snap.data()); }
-    // perfil también (pull único; realtime ya corre)
+
+    // Perfil (pull único aquí; realtime ya corre)
     const psnap=await db.collection('users').doc(user.uid).collection('profile').doc('main').get();
-    if(psnap.exists){ state.profile={...(state.profile||{}),...(psnap.data()||{})}; persist(); }
+    if(psnap.exists){
+      const cloud=psnap.data()||{};
+      const cAt=cloud._meta?.profileUpdatedAt||0;
+      if(cAt >= (state.meta?.profileUpdatedAt||0)){
+        state.profile={...(state.profile||{}),...cloud}; delete state.profile._meta; persist();
+      }
+    }
   }catch(e){ console.warn('No se pudo leer progreso/perfil',e); }
 }
 
@@ -1000,12 +1076,16 @@ async function flushSyncNow(){
       videosDone: state.videosDone||{},
       quizzes: state.quizzes||{},
       play: state.play||{},
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      _meta:{
+        videosDoneUpdatedAt: state.meta?.videosDoneUpdatedAt||0,
+        quizzesUpdatedAt: state.meta?.quizzesUpdatedAt||0,
+        playUpdatedAt: state.meta?.playUpdatedAt||0
+      }
     };
     await COURSE_PATH().set(payload,{merge:true});
   }catch(e){
     console.warn('No se pudo guardar en la nube',e);
-    // Si falla, reintenta en 2s
     pending=true;
     setTimeout(()=>{ syncing=false; flushSyncNow(); }, 2000);
     return;
@@ -1019,6 +1099,19 @@ document.getElementById('year').textContent=new Date().getFullYear();
 /* ===== Botón Guardar perfil ===== */
 document.getElementById('btn-save-profile').addEventListener('click',saveProfile);
 
+/* ===== Secciones de UI habilitadas tras render estable ===== */
+function afterStableRender(){
+  if(profileComplete()){
+    setProfileReadonly(true);
+    $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.';
+  } else {
+    setProfileReadonly(false);
+    $('#pf-help').textContent='Completa todos los campos para habilitar los módulos.';
+  }
+  const sp=getSpecialty();
+  if(sp){ renderAllBySpecialty(sp); } else { renderAllBySpecialty('MEDICINA INTERNA'); }
+  updateGlobalProgress();
+}
 </script>
 </body>
 </html>
