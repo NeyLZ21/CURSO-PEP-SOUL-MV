@@ -235,7 +235,7 @@ const ESPEC_MODS={
   "ENFERMEDADES AUTOINMUNES":BASE_MEDICA,"FISIATRIA":BASE_MEDICA,"FONOAUDIOLOGIA":BASE_MEDICA,
   "GASTROENTEROLOGIA":BASE_QUIR,"GASTROENTEROLOGIA PEDIATRICA":BASE_QUIR,"GENETICA MEDICA":BASE_MEDICA,"GERIATRIA":BASE_MEDICA,
   "GINECOLOGIA INFANTO JUVENIL":BASE_QUIR,"GINECOLOGIA ONCOLOGICA":BASE_QUIR,"GINECOLOGIA Y OBSTETRICIA":BASE_QUIR,
-  "HEMATOLOGIA":BASE_QUIR,"HEMATOLOGO ONCOLOGO PEDIATRIA":BASE_QUIR,"HEPATOLOGIA":BASE_MEDICA,
+  "HEMATOLOGIA":BASE_QUIR,"HEMATOLOGO ONCOCOLOGO PEDIATRIA":BASE_QUIR,"HEPATOLOGIA":BASE_MEDICA,
   "INFECTOLOGIA":BASE_MEDICA,"INFECTOLOGIA PEDIATRICA":BASE_MEDICA,"INTERVENCIONISMO":BASE_QUIR,"MASTOLOGIA":BASE_QUIR,"MAXILO FACIAL":BASE_QUIR,
   "MEDICINA CRITICA":BASE_MEDICA,"MEDICINA CRITICA PEDIATRICA":BASE_MEDICA,"MEDICINA DEL DEPORTE":BASE_MEDICA,"MEDICINA FAMILIAR":[M.G,M.CE],"MEDICINA FAMILIAR EMERGENCIA":[M.G,M.EM],
   "MEDICINA GENERAL":BASE_MEDICA,"MEDICINA INTERNA":BASE_MEDICA,"MEDICINA MATERNO FETAL":BASE_MEDICA,"MEDICINA PALIATIVA":BASE_MEDICA,"MICROBIOLOGIA":BASE_MEDICA,
@@ -311,19 +311,17 @@ function markDirty(){
   document.addEventListener('input', (e)=>{ if(e.target && e.target.id===id) markDirty(); });
 });
 
-/* ======================== YouTube control (anti-pausa tras volver) ======================== */
+/* ======================== YouTube control (sin pausa por visibilidad + anti-pausa) ======================== */
 let ytApiReady=false;
 const players={};           // pid -> { player, meta }
 const cfgByPid=new Map();   // pid -> {pid, videoId, moduleId, index}
 let lastPlayingPid=null;
 
 // tolerancias/config
-const SEEK_TOLERANCE=1.5;        // s permitidos por delante del "allow"
-const SEEK_COOLDOWN=900;         // ms entre correcciones de seek
-const ANTI_ZERO_GUARD=5;         // si allow>5s y current~0, corrige
+const SEEK_TOLERANCE=1.5;   // s permitidos por delante del "allow"
+const SEEK_COOLDOWN=900;    // ms entre correcciones de seek
+const ANTI_ZERO_GUARD=5;    // si allow>5s y current~0, corrige
 const TICK_MS=500;
-const HIDE_PAUSE_THRESHOLD=2000; // solo pausamos si está oculta >2s
-const VISIBILITY_GRACE_MS=3000;  // ventana de gracia al volver: ignorar pausas automáticas
 
 // Heurística: detectar intención de usuario (para no reanudar si pausó a propósito)
 let lastUserInput=0;
@@ -331,12 +329,9 @@ let lastUserInput=0;
   document.addEventListener(evt,()=>{ lastUserInput=Date.now(); },{passive:true});
 });
 
-// Marca cuándo regresamos a la pestaña
-let lastVisibilityBackAt=0;
-
 function ytThumb(id){ return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`; }
 function makePoster(pid, videoId, lockedMsg){
-  const lockLayer=lockedMsg?`<div class="lock" id="lock-${pid}">🔒 ${lockedMsg}</div>`:'';
+  const lockLayer = lockedMsg ? `<div class="lock" id="lock-${pid}">🔒 ${lockedMsg}</div>` : '';
   return `
     <div class="yt-wrap" style="margin-top:8px">
       <div id="${pid}"></div>
@@ -350,20 +345,30 @@ function makePoster(pid, videoId, lockedMsg){
 }
 
 function prevModuleConcluded(moduleId){
-  const mods=state.course?.modules||[];
-  const idx=mods.findIndex(m=>m.id===moduleId);
+  const mods = state.course?.modules || [];
+  const idx = mods.findIndex(m=>m.id===moduleId);
   if(idx<=0) return true;
-  const prev=mods[idx-1];
-  const passed=!!(state.quizzes?.[prev.id]?.passed);
-  const allVideosDone=prev.videos.every(v => (state.videosDone?.[prev.id]||{})[v.yt]);
-  return passed||allVideosDone;
+  const prev = mods[idx-1];
+  const passed = !!(state.quizzes?.[prev.id]?.passed);
+  const allVideosDone = prev.videos.every(v => (state.videosDone?.[prev.id]||{})[v.yt]);
+  return passed || allVideosDone;
 }
+
 function ensureStoreFor(mid,vid){
-  state.play=state.play||{}; state.play[mid]=state.play[mid]||{};
+  state.play=state.play||{};
+  state.play[mid]=state.play[mid]||{};
   state.play[mid][vid]=state.play[mid][vid]||{t:0,allow:0,dur:0};
   return state.play[mid][vid];
 }
 
+function clickToLoad(pid){
+  const cfg=cfgByPid.get(pid); if(!cfg) return;
+  if(isLocked(cfg)){ showWarn(pid, lockReason(cfg)); return; }
+  if(players[pid]) return;
+  actuallyCreatePlayer(cfg, /*autoplay=*/false);
+  const poster=document.querySelector(`.poster[data-load="${pid}"]`);
+  if(poster) poster.remove();
+}
 function isLocked({moduleId,index}){
   if(index===0 && !prevModuleConcluded(moduleId)) return true;
   if(index>0){
@@ -377,31 +382,21 @@ function lockReason({moduleId,index}){
   if(index===0 && !prevModuleConcluded(moduleId)) return 'Primero concluye el módulo anterior';
   return 'Termina el video anterior';
 }
-function showWarn(pid,text){
-  const w=document.getElementById(`warn-${pid}`); if(!w) return;
+function showWarn(pid, text){
+  const w=document.getElementById(`warn-${pid}`);
+  if(!w) return;
   w.textContent=text; w.style.display='block';
   setTimeout(()=>{ if(w) w.style.display='none'; },1800);
-}
-
-function clickToLoad(pid){
-  const cfg=cfgByPid.get(pid); if(!cfg) return;
-  if(isLocked(cfg)){ showWarn(pid,lockReason(cfg)); return; }
-  if(players[pid]) return;
-  actuallyCreatePlayer(cfg,false);
-  document.querySelector(`.poster[data-load="${pid}"]`)?.remove();
 }
 
 function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
   if(players[pid]) return;
   const store=ensureStoreFor(moduleId,videoId);
-  const meta={
-    pid,videoId,moduleId,index,
-    tick:null,retries:0,lastSeekFix:0,
-    pausedByVisibility:false, hideTimer:null
-  };
+  const meta={pid,videoId,moduleId,index,tick:null,retries:0,lastSeekFix:0, resumeTimer:null};
   players[pid]={player:null,meta};
 
-  const holder=document.getElementById(pid); if(!holder) return;
+  const holder=document.getElementById(pid);
+  if(!holder) return;
 
   players[pid].player=new YT.Player(pid,{
     height:'360',width:'640',videoId,
@@ -413,17 +408,16 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
           if(ifr) ifr.setAttribute('allow','autoplay; fullscreen; encrypted-media; picture-in-picture');
           ev.target.unMute(); ev.target.setVolume(100);
         }catch(_){}
-        // restaurar tiempo
-        const startAt=Math.max(0,Math.min(store.allow||0,store.dur||1));
-        if(startAt>0.5){ try{ ev.target.seekTo(startAt,true); }catch(_){ } }
-        if(autoplay){ try{ ev.target.playVideo(); }catch(_){ } }
+        // restaura tiempo sin auto reproducir
+        const startAt=Math.max(0, Math.min(store.allow||0, store.dur||1));
+        if(startAt>0.5){ try{ ev.target.seekTo(startAt,true); }catch(_){} }
+        if(autoplay){ try{ ev.target.playVideo(); }catch(_){} }
       },
       onStateChange:(ev)=>{
         const p=ev.target, st=ev.data;
-
         if(st===YT.PlayerState.PLAYING){
           lastPlayingPid=pid;
-          meta.pausedByVisibility=false;
+          if(meta.resumeTimer){ clearTimeout(meta.resumeTimer); meta.resumeTimer=null; }
           startTick();
           return;
         }
@@ -432,19 +426,22 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
           persist();
         }
 
+        // Anti-pausa: si quedó en PAUSED (no al final), reanudar
         if(st===YT.PlayerState.PAUSED){
-          // No reanudar si terminó
           let cur=0,dur=0;
           try{ cur=p.getCurrentTime?.()||0; dur=p.getDuration?.()||0; }catch(_){}
           const nearEnd = dur>0 && (dur-cur)<=1.0;
-
-          // Si estamos dentro de la ventana de gracia tras volver, o si fue pausa "silenciosa", reanudar
-          const withinGrace = (Date.now()-lastVisibilityBackAt) < VISIBILITY_GRACE_MS;
-          const userLikelyPaused = (Date.now()-lastUserInput)<600;
-          const becauseHidden = meta.pausedByVisibility || document.hidden;
-
-          if(!nearEnd && !becauseHidden && (!userLikelyPaused && withinGrace)){
-            setTimeout(()=>{ try{ p.playVideo(); }catch(_){} }, 250);
+          const userLikelyPaused = (Date.now()-lastUserInput)<700;
+          // Solo reanuda si está visible y no parece intención del usuario
+          if(!nearEnd && !userLikelyPaused && !document.hidden){
+            if(meta.resumeTimer) clearTimeout(meta.resumeTimer);
+            meta.resumeTimer=setTimeout(()=>{
+              try{
+                if(!document.hidden && p.getPlayerState?.()===YT.PlayerState.PAUSED){
+                  p.playVideo();
+                }
+              }catch(_){}
+            }, 1200);
           }
         }
 
@@ -456,21 +453,24 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
           store.allow=store.dur||store.allow; store.t=store.allow;
           persist();
           const m=(state.course?.modules||[]).find(mm=>mm.id===moduleId);
-          document.getElementById(`lock-player-${moduleId}-${index+1}`)?.remove();
+          const nextPid=`player-${moduleId}-${index+1}`;
+          const nextLock=document.getElementById(`lock-${nextPid}`);
+          if(nextLock) nextLock.remove();
           updateGlobalProgress();
           maybeEnableQuiz({id:moduleId, videos:m?.videos||[]});
         }
       },
       onError:()=>{
-        const s=ensureStoreFor(moduleId,videoId);
         if(meta.retries<3){
           meta.retries++;
           setTimeout(()=>{
-            try{ players[pid]?.player?.destroy?.(); }catch(_){}
+            try{players[pid]?.player?.destroy?.();}catch(_){}
             delete players[pid];
-            actuallyCreatePlayer({pid,videoId,moduleId,index}, true);
+            actuallyCreatePlayer({pid,videoId,moduleId,index}, /*autoplay=*/true);
             try{
-              const inst=players[pid]?.player; const startAt=Math.max(0,s.t||s.allow||0);
+              const inst = players[pid]?.player;
+              const s=ensureStoreFor(moduleId,videoId);
+              const startAt = Math.max(0, s.t || s.allow || 0);
               if(inst && startAt>0.5){ inst.loadVideoById({videoId,startSeconds:startAt,suggestedQuality:'large'}); }
             }catch(_){}
           }, 600*meta.retries);
@@ -486,62 +486,42 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
     stopTick();
     meta.tick=setInterval(()=>{
       const inst=players[pid]; if(!inst) return;
-      const p=inst.player; const store=ensureStoreFor(moduleId,videoId);
+      const p=inst.player;
+      const store=ensureStoreFor(moduleId,videoId);
       let cur=0,dur=0,st=-1;
       try{ cur=p.getCurrentTime?.()||0; dur=p.getDuration?.()||0; st=p.getPlayerState?.(); }catch(_){}
-      if(dur && (!store.dur || Math.abs(store.dur-dur)>0.5)) store.dur=dur;
-
-      // Anti-0: si reporta ~0s pero ya hay progreso, volver a allow-1
-      if(cur<0.4 && (store.allow||0)>ANTI_ZERO_GUARD){
-        throttledSeek(Math.max(0,(store.allow||0)-1));
-        cur=(store.allow||0)-1;
+      if(dur && (!store.dur || Math.abs(store.dur-dur)>0.5)){ store.dur=dur; }
+      // Anti-0: si YouTube reporta ~0 pero ya había progreso significativo
+      if(cur<0.4 && (store.allow||0) > ANTI_ZERO_GUARD){
+        throttledSeek(Math.max(0, (store.allow||0)-1));
+        cur = (store.allow||0)-1;
       }
       // Anti-adelanto con tolerancia
-      if(cur>(store.allow||0)+SEEK_TOLERANCE){
-        throttledSeek(Math.max(0,(store.allow||0)-0.3));
+      if(cur > (store.allow||0) + SEEK_TOLERANCE){
+        throttledSeek(Math.max(0, (store.allow||0) - 0.3));
       }else{
         if(st===YT.PlayerState.PLAYING){
-          if(cur>(store.allow||0)) store.allow=cur;
+          if(cur>store.allow) store.allow=cur;
           store.t=cur;
         }else{
           store.t=cur;
         }
       }
-      if(Math.random()<0.25) persist();
+      if(Math.random()<0.2) persist();
     }, TICK_MS);
   }
   function stopTick(){ if(meta.tick){ clearInterval(meta.tick); meta.tick=null; } }
   function throttledSeek(sec){
     const now=Date.now();
-    if(now-(meta.lastSeekFix||0)<SEEK_COOLDOWN) return;
+    if(now - (meta.lastSeekFix||0) < SEEK_COOLDOWN) return;
     meta.lastSeekFix=now;
-    try{ players[pid]?.player?.seekTo(sec,true); }catch(_){}
+    try{ players[pid]?.player?.seekTo(sec, true); }catch(_){}
   }
 }
 
-/* Visibilidad: pausar solo si está oculta >2s; al volver, abrir ventana de gracia para evitar pausas fantasma */
-let hideTimer=null;
-document.addEventListener('visibilitychange', ()=>{
-  if(document.hidden){
-    if(hideTimer) clearTimeout(hideTimer);
-    hideTimer=setTimeout(()=>{
-      Object.values(players).forEach(({player,meta})=>{
-        try{
-          const st=player.getPlayerState?.();
-          if(st===YT.PlayerState.PLAYING){ meta.pausedByVisibility=true; player.pauseVideo(); }
-        }catch(_){}
-      });
-      persist();
-    }, HIDE_PAUSE_THRESHOLD);
-  }else{
-    if(hideTimer) clearTimeout(hideTimer);
-    lastVisibilityBackAt=Date.now();
-    Object.values(players).forEach(({meta})=>{ meta.pausedByVisibility=false; });
-  }
-});
-// También considerar enfoque de ventana (algunas plataformas no disparan visibilitychange bien)
-window.addEventListener('focus', ()=>{ lastVisibilityBackAt=Date.now(); });
-
+/* (IMPORTANTE) — Eliminado: NO pausamos por visibilitychange.
+   De este modo, si sales y regresas a la pestaña, el video NO será pausado por nuestra lógica.
+*/
 window.addEventListener('pagehide', persist);
 window.addEventListener('beforeunload', persist);
 window.onYouTubeIframeAPIReady=()=>{ ytApiReady=true; };
@@ -987,7 +967,7 @@ async function syncFromCloud(user){
     const ref=await userDoc(); if(!ref) return;
     const snap=await ref.get();
     if(snap.exists){
-      const cloud=snap.data()||{};
+      const cloud=snap.data()||({});
       state.videosDone={...(state.videosDone||{}),...(cloud.videosDone||{})};
       state.quizzes={...(state.quizzes||{}),...(cloud.quizzes||{})};
       state.play={...(state.play||{}),...(cloud.play||{})};
