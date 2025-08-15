@@ -294,37 +294,32 @@ let unsubProfile=null;
 let savingProfile=false;
 function persist(){ saveStateLocal(CURRENT_UID,state); }
 
-/* ======================== YouTube control (Chrome-friendly) ======================== */
+/* ======================== YouTube control ======================== */
 let ytApiReady=false;
-const players={};         // pid -> { player, meta }
-const cfgByPid=new Map(); // pid -> {pid, videoId, moduleId, index}
+const players={};
+const cfgByPid=new Map();
 let lastPlayingPid=null;
 
 /* Tunables */
-const SEEK_TOLERANCE=1.5;        // s tolerados por delante del "allow"
-const SEEK_COOLDOWN=900;         // ms entre correcciones de seek
-const ANTI_ZERO_GUARD=5;         // si allow>5s y current~0, corrige
+const SEEK_TOLERANCE=1.5;
+const SEEK_COOLDOWN=900;
+const ANTI_ZERO_GUARD=5;
 const TICK_MS=500;
+const HIDE_PAUSE_THRESHOLD=1000;
+const GRACE_AFTER_BACK_MS=5000;
+const GRACE_AFTER_PLAY_MS=5000;
+const MAX_AUTORETRY=3;
 
-const HIDE_PAUSE_THRESHOLD=1000; // pausa solo si está oculta >1s
-const GRACE_AFTER_BACK_MS=5000;  // 5s de “gracia” al volver
-const GRACE_AFTER_PLAY_MS=5000;  // 5s de gracia tras un Play del usuario
-const MAX_AUTORETRY=3;           // reintentos de auto-reanudar
-
-/* Señales de intención del usuario */
+/* Señales de intención */
 let lastUserInput=0;
 ['pointerdown','keydown','touchstart'].forEach(evt=>{
   document.addEventListener(evt,()=>{ lastUserInput=Date.now(); },{passive:true});
 });
-
-/* Ventanas de gracia */
 let lastVisibilityBackAt=0;
 let lastUserPlayAt=0;
-
-/* Detectar “Play” positivo del usuario */
 function markUserPlayIntent(){ lastUserPlayAt=Date.now(); }
 
-/* Helpers UI/lock */
+/* Helpers UI */
 function ytThumb(id){ return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`; }
 function makePoster(pid, videoId, lockedMsg){
   const lockLayer=lockedMsg?`<div class="lock" id="lock-${pid}">🔒 ${lockedMsg}</div>`:'';
@@ -363,8 +358,6 @@ function lockReason({moduleId,index}){
   if(index===0 && !prevModuleConcluded(moduleId)) return 'Primero concluye el módulo anterior';
   return 'Termina el video anterior';
 }
-
-/* Estado por video */
 function ensureStoreFor(mid,vid){
   state.play=state.play||{}; state.play[mid]=state.play[mid]||{};
   state.play[mid][vid]=state.play[mid][vid]||{t:0,allow:0,dur:0};
@@ -380,7 +373,7 @@ function clickToLoad(pid){
   document.querySelector(`.poster[data-load="${pid}"]`)?.remove();
 }
 
-/* ======================== Cloud sync helpers (NUEVO) ======================== */
+/* ======================== Cloud sync helpers ======================== */
 let _syncTimer=null, _lastQueued=0;
 function queueCloudSync(delay=800){
   clearTimeout(_syncTimer);
@@ -394,19 +387,17 @@ function maybeQueueCloudSync(intervalMs=12000){
   }
 }
 
-/* Crear player + lógica de anti-pausa */
+/* Crear player + lógica */
 function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
   if(players[pid]) return;
   const store=ensureStoreFor(moduleId,videoId);
   const meta={
     pid,videoId,moduleId,index,
     tick:null,retries:0,lastSeekFix:0,
-    pausedByVisibility:false,
-    wasPlayingBeforeHide:false,
+    pausedByVisibility:false,wasPlayingBeforeHide:false,
     autoResumeCount:0, autoResumeTimer:null
   };
   players[pid]={player:null,meta};
-
   const holder=document.getElementById(pid); if(!holder) return;
 
   players[pid].player=new YT.Player(pid,{
@@ -427,19 +418,16 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
         const p=ev.target, st=ev.data;
 
         if(st===YT.PlayerState.PLAYING){
-          lastPlayingPid=pid;
-          markUserPlayIntent();
+          lastPlayingPid=pid; markUserPlayIntent();
           meta.autoResumeCount=0; clearTimeout(meta.autoResumeTimer); meta.autoResumeTimer=null;
-          startTick();
-          return;
+          startTick(); return;
         }
 
         if(st===YT.PlayerState.PAUSED || st===YT.PlayerState.BUFFERING){ persist(); }
 
         if(st===YT.PlayerState.PAUSED){
           const userLikelyPaused=(Date.now()-lastUserInput)<600;
-          let cur=0,dur=0;
-          try{ cur=p.getCurrentTime?.()||0; dur=p.getDuration?.()||0; }catch(_){}
+          let cur=0,dur=0; try{ cur=p.getCurrentTime?.()||0; dur=p.getDuration?.()||0; }catch(_){}
           const nearEnd = dur>0 && (dur-cur)<=1.0;
           const inBackGrace = (Date.now()-lastVisibilityBackAt) < GRACE_AFTER_BACK_MS;
           const inPlayGrace = (Date.now()-lastUserPlayAt) < GRACE_AFTER_PLAY_MS;
@@ -455,8 +443,7 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
           state.videosDone[moduleId][videoId]=true;
           store.allow=store.dur||store.allow; store.t=store.allow;
           persist();
-          // Subir inmediatamente al terminar cada video
-          queueCloudSync(0);
+          queueCloudSync(0); // subir progreso
 
           const m=(state.course?.modules||[]).find(mm=>mm.id===moduleId);
           document.getElementById(`lock-player-${moduleId}-${index+1}`)?.remove();
@@ -494,20 +481,16 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
       try{ cur=p.getCurrentTime?.()||0; dur=p.getDuration?.()||0; st=p.getPlayerState?.(); }catch(_){}
       if(dur && (!store.dur || Math.abs(store.dur-dur)>0.5)) store.dur=dur;
 
-      // Anti-0
       if(cur<0.4 && (store.allow||0)>ANTI_ZERO_GUARD){
-        throttledSeek(Math.max(0,(store.allow||0)-1));
-        cur=(store.allow||0)-1;
+        throttledSeek(Math.max(0,(store.allow||0)-1)); cur=(store.allow||0)-1;
       }
-      // Anti-adelanto
       if(cur>(store.allow||0)+SEEK_TOLERANCE){
         throttledSeek(Math.max(0,(store.allow||0)-0.3));
       }else{
         if(st===YT.PlayerState.PLAYING){
           if(cur>(store.allow||0)) store.allow=cur;
           store.t=cur;
-          // Sincronizar cada ~12s mientras reproduce
-          maybeQueueCloudSync(12000);
+          maybeQueueCloudSync(12000); // sincronización periódica
         }else{
           store.t=cur;
         }
@@ -524,7 +507,7 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
   }
 }
 
-/* Auto-reanudar con límite de intentos */
+/* Auto-reanudar */
 function scheduleAutoResume(meta,p){
   if(meta.autoResumeCount>=MAX_AUTORETRY) return;
   clearTimeout(meta.autoResumeTimer);
@@ -548,10 +531,7 @@ document.addEventListener('visibilitychange', ()=>{
         try{
           const st=player.getPlayerState?.();
           meta.wasPlayingBeforeHide = (st===YT.PlayerState.PLAYING);
-          if(meta.wasPlayingBeforeHide){
-            meta.pausedByVisibility=true;
-            player.pauseVideo();
-          }
+          if(meta.wasPlayingBeforeHide){ meta.pausedByVisibility=true; player.pauseVideo(); }
         }catch(_){}
       });
       persist();
@@ -570,7 +550,7 @@ window.addEventListener('pagehide', persist);
 window.addEventListener('beforeunload', persist);
 window.onYouTubeIframeAPIReady=()=>{ ytApiReady=true; };
 
-/* ======================== Auth + UI ======================== */
+/* ======================== Auth + UI (pinta primero, sincroniza después) ======================== */
 document.querySelectorAll('.eye').forEach(btn=>{
   btn.addEventListener('click',()=>{ const inp=document.querySelector(btn.dataset.eye); if(!inp) return; inp.type=inp.type==='password'?'text':'password'; });
 });
@@ -587,28 +567,34 @@ $('#tab-login').addEventListener('click',()=>setTab('login'));
 $('#tab-register').addEventListener('click',()=>setTab('reg'));
 setTab('login');
 
-/* ========= FLUJO DE AUTENTICACIÓN — ahora espera la nube ANTES de renderizar ========= */
 auth.onAuthStateChanged(async (user)=>{
   if(!user){
-    CURRENT_UID=null; state={}; $('#auth-user').textContent=''; $('#btn-logout').style.display='none'; $('#verify-box').style.display='none'; setTab('login'); showLogin();
+    CURRENT_UID=null; state={}; $('#auth-user').textContent='';
+    $('#btn-logout').style.display='none'; $('#verify-box').style.display='none';
+    setTab('login'); showLogin();
     if (unsubProfile) { try{unsubProfile();}catch(_){ } unsubProfile=null; }
     return;
   }
   CURRENT_UID=user.uid;
-  // Carga local por si hay algo, pero se sobrescribirá con la nube
-  state=loadState(CURRENT_UID)||{}; $('#auth-user').textContent=user.email||'';
+  state=loadState(CURRENT_UID)||{};
+  $('#auth-user').textContent=user.email||'';
   await user.reload().catch(()=>{});
   if(!user.emailVerified){ showLogin(); $('#verify-box').style.display='block'; return; }
   $('#verify-box').style.display='none';
 
-  // === Esperar datos de Firestore primero ===
-  try{
-    await syncFromCloud(user); // baja perfil, videosDone, quizzes, play
-    persist();                 // guarda lo bajado en el local del nuevo navegador
-  }catch(e){ console.warn('Fallo al sincronizar desde la nube', e); }
-
-  // Render con datos ya sincronizados
+  // 👉 PINTA DE INMEDIATO
   showCourse();
+
+  // 👉 SINCRONIZA EN SEGUNDO PLANO CON TIMEOUT (no bloquea UI)
+  const SYNC_TIMEOUT_MS = 2500;
+  const timeout = new Promise((resolve)=>setTimeout(resolve, SYNC_TIMEOUT_MS));
+  try{
+    await Promise.race([syncFromCloud(user), timeout]);
+    persist();
+    // Re-render si llegaron datos nuevos
+    renderAllBySpecialty(getSpecialty());
+    updateGlobalProgress();
+  }catch(e){ console.warn('Fallo sync nube (no bloquea):', e); }
 });
 
 document.getElementById('btn-register-2').addEventListener('click', async ()=>{
@@ -631,7 +617,7 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
   }catch(e){ msg(MSGS[e.code]||'Ocurrió un error. Intenta nuevamente.'); }
 });
 document.getElementById('btn-check-verify').addEventListener('click', async ()=>{
-  if(auth.currentUser){ await auth.currentUser.reload(); if(auth.currentUser.emailVerified){ $('#verify-box').style.display='none'; /* showCourse se llamará por onAuthStateChanged */ } }
+  if(auth.currentUser){ await auth.currentUser.reload(); if(auth.currentUser.emailVerified){ $('#verify-box').style.display='none'; } }
 });
 document.getElementById('btn-resend-verify').addEventListener('click', async ()=>{
   try{
@@ -652,10 +638,15 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
     if(!u.emailVerified){ msg('Debes verificar tu correo antes de continuar.'); $('#verify-box').style.display='block'; return; }
     msg('Sesión iniciada.'); $('#verify-box').style.display='none';
 
-    // Baja nube -> persiste -> render
-    await syncFromCloud(u).catch(()=>{});
-    persist();
+    // 👉 PINTA PRIMERO
     showCourse();
+
+    // 👉 Y SINCRONIZA LUEGO (no bloquea)
+    syncFromCloud(u).then(()=>{
+      persist();
+      renderAllBySpecialty(getSpecialty());
+      updateGlobalProgress();
+    }).catch((e)=>console.warn('sync post-login:', e));
   }catch(e){
     let methods=[]; try{methods=await auth.fetchSignInMethodsForEmail(email);}catch(_){}
     if(!methods||methods.length===0){ msg('Correo no registrado.'); setTab('reg'); $('#reg-email').value=email; }
@@ -702,7 +693,6 @@ function showCourse(){
   renderAllBySpecialty(getSpecialty());
   updateGlobalProgress();
   startProfileRealtime();
-  // NO volvemos a llamar syncFromCloud aquí para evitar carreras; ya se llamó antes de showCourse()
 }
 function showLogin(){ $('#step-welcome').style.display='block'; $('#profile').style.display='none'; $('#progress').style.display='none'; $('#modules').style.display='none'; }
 function profileComplete(){ const p=state.profile||{}; return !!(p.name&&p.iddoc&&p.spec&&ESPECIALIDADES.includes(p.spec)); }
@@ -714,7 +704,7 @@ function setProfileReadonly(ro){
   document.getElementById('btn-edit-profile').style.display=ro?'inline-flex':'none';
   const btnSave=document.getElementById('btn-save-profile');
   btnSave.style.display=ro?'none':'inline-flex';
-  btnSave.disabled=true; // se habilita con markDirty()
+  btnSave.disabled=true;
 }
 document.getElementById('btn-edit-profile').addEventListener('click',()=>{
   setProfileReadonly(false);
@@ -748,24 +738,9 @@ function startProfileRealtime(){
     }
   });
 }
-async function loadProfile(){
-  try{
-    const uid=auth.currentUser?.uid; if(!uid) return;
-    const s=await db.collection('users').doc(uid).collection('profile').doc('main').get();
-    if(s.exists){
-      state.profile=s.data(); persist();
-      $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
-      $('#pf-id').value=state.profile?.iddoc||'';
-      $('#pf-spec').value=state.profile?.spec||'';
-    }
-  }catch(e){ console.warn('Perfil no disponible',e); }
-}
 
-/* ====== Guardado robusto (reintentos + offline) ====== */
-function markDirty(){
-  const btn=$('#btn-save-profile');
-  btn.disabled=false;
-}
+/* Guardado de perfil */
+function markDirty(){ const btn=$('#btn-save-profile'); btn.disabled=false; }
 async function saveProfile(){
   const name=($('#pf-name').value||'').trim();
   const iddoc=($('#pf-id').value||'').trim();
@@ -792,10 +767,7 @@ async function saveProfile(){
       catch(e){ lastErr=e; await new Promise(r=>setTimeout(r, 700*(i+1))); }
     }
     if(!ok) throw lastErr || new Error('No se pudo guardar');
-
-    // Empuja snapshot de progreso/estado para consistencia
     queueCloudSync(0);
-
     savingProfile=false; pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Perfil guardado.';
     setProfileReadonly(true);
     setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; },3000);
@@ -806,14 +778,13 @@ async function saveProfile(){
       setProfileReadonly(true);
     }else{
       pfMsg.textContent='No se pudo guardar en la nube; tus datos quedan localmente.';
-      setProfileReadonly(false);
-      markDirty();
+      setProfileReadonly(false); markDirty();
     }
   }
 }
 document.getElementById('btn-save-profile').addEventListener('click',saveProfile);
 
-/* ================= Combo de Especialidad — edición rápida ================= */
+/* Combo especialidad (edición rápida) */
 (function setupSpecCombo(){
   const wrap=document.getElementById('spec-combo');
   const input=document.getElementById('pf-spec');
@@ -880,7 +851,7 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
   render(filtered);
 })();
 
-/* ======================== Render módulos / progreso / sync ======================== */
+/* ======================== Render módulos / progreso ======================== */
 function mkModule(id,titulo,ytIds){
   const vids=(ytIds&&ytIds.length?ytIds:DEFAULT_VIDEOS).slice(0,5).map((v,i)=>({yt:v,dur:'08:00',n:i+1}));
   const quiz=[
@@ -993,7 +964,7 @@ function gradeQuizModule(m){
   if(state.quizzes[m.id].passed){
     const btn=document.querySelector(`#btn-${m.id}`);
     if(btn){ btn.textContent='Aprobado ✓'; btn.classList.remove('btn-primary'); btn.classList.add('btn-success'); }
-    queueCloudSync(0); // subir resultados de evaluación
+    queueCloudSync(0);
   }
 }
 function updateGlobalProgress(){
@@ -1025,15 +996,12 @@ async function syncFromCloud(user){
     const snap=await ref.get();
     if(snap.exists){
       const cloud=snap.data()||{};
-      // Preferimos la nube cuando exista
       state.videosDone = cloud.videosDone || state.videosDone || {};
       state.quizzes   = cloud.quizzes   || state.quizzes   || {};
       state.play      = cloud.play      || state.play      || {};
     }
     const psnap=await db.collection('users').doc(user.uid).collection('profile').doc('main').get();
-    if(psnap.exists){
-      state.profile = {...(state.profile||{}), ...(psnap.data()||{})};
-    }
+    if(psnap.exists){ state.profile = {...(state.profile||{}), ...(psnap.data()||{})}; }
     persist();
   }catch(e){ console.warn('No se pudo leer progreso/perfil',e); }
 }
