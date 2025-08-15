@@ -235,7 +235,7 @@ const ESPEC_MODS={
   "ENFERMEDADES AUTOINMUNES":BASE_MEDICA,"FISIATRIA":BASE_MEDICA,"FONOAUDIOLOGIA":BASE_MEDICA,
   "GASTROENTEROLOGIA":BASE_QUIR,"GASTROENTEROLOGIA PEDIATRICA":BASE_QUIR,"GENETICA MEDICA":BASE_MEDICA,"GERIATRIA":BASE_MEDICA,
   "GINECOLOGIA INFANTO JUVENIL":BASE_QUIR,"GINECOLOGIA ONCOLOGICA":BASE_QUIR,"GINECOLOGIA Y OBSTETRICIA":BASE_QUIR,
-  "HEMATOLOGIA":BASE_QUIR,"HEMATOLOGO ONCOLOGO PEDIATRIA":BASE_QUIR,"HEPATOLOGIA":BASE_MEDICA,
+  "HEMATOLOGIA":BASE_QUIR,"HEMATOLOGO ONCOCOLOGO PEDIATRIA":BASE_QUIR,"HEPATOLOGIA":BASE_MEDICA,
   "INFECTOLOGIA":BASE_MEDICA,"INFECTOLOGIA PEDIATRICA":BASE_MEDICA,"INTERVENCIONISMO":BASE_QUIR,"MASTOLOGIA":BASE_QUIR,"MAXILO FACIAL":BASE_QUIR,
   "MEDICINA CRITICA":BASE_MEDICA,"MEDICINA CRITICA PEDIATRICA":BASE_MEDICA,"MEDICINA DEL DEPORTE":BASE_MEDICA,"MEDICINA FAMILIAR":[M.G,M.CE],"MEDICINA FAMILIAR EMERGENCIA":[M.G,M.EM],
   "MEDICINA GENERAL":BASE_MEDICA,"MEDICINA INTERNA":BASE_MEDICA,"MEDICINA MATERNO FETAL":BASE_MEDICA,"MEDICINA PALIATIVA":BASE_MEDICA,"MICROBIOLOGIA":BASE_MEDICA,
@@ -312,11 +312,16 @@ function markDirty(){
   document.addEventListener('input', (e)=>{ if(e.target && e.target.id===id) markDirty(); });
 });
 
-/* ======================== YouTube control ======================== */
+/* ======================== YouTube control (parche estabilidad v2) ======================== */
 let ytApiReady=false;
 const players={};
 const cfgByPid=new Map();
 let lastPlayingPid=null;
+
+const ST = { UNSTARTED:-1, ENDED:0, PLAYING:1, PAUSED:2, BUFFERING:3, CUED:5 };
+const ANTI_SKIP_TOL=2.5;        // seg de tolerancia por delante del allow
+const SEEK_COOLDOWN_MS=800;     // enfriamiento entre seekTo
+const STATE_DEBOUNCE_MS=120;    // debouncer para cambios de estado rápidos
 
 function ytThumb(id){ return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`; }
 function makePoster(pid, videoId, lockedMsg){
@@ -379,11 +384,18 @@ function showWarn(pid, text){
   setTimeout(()=>{ if(w) w.style.display='none'; },1800);
 }
 
-/* ===== PARCHE: Player con tolerancia anti-saltos y control de reanudación ===== */
+function pauseOthers(exceptPid){
+  Object.entries(players).forEach(([k,inst])=>{
+    if(k!==exceptPid && inst?.player){
+      try{ inst.player.pauseVideo(); }catch(_){}
+    }
+  });
+}
+
 function actuallyCreatePlayer({pid,videoId,moduleId,index}){
   if(players[pid]) return;
   const store=ensureStoreFor(moduleId,videoId);
-  const meta={pid,videoId,moduleId,index,tick:null,retries:0,wasPlaying:false,hasEnded:false};
+  const meta={pid,videoId,moduleId,index,tick:null,retries:0,lastSeekMs:0,lastState:null,stateTimer:null};
   players[pid]={player:null,meta};
 
   const holder=document.getElementById(pid);
@@ -399,45 +411,27 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
           if(ifr) ifr.setAttribute('allow','autoplay; fullscreen; encrypted-media; picture-in-picture');
           ev.target.unMute(); ev.target.setVolume(100);
         }catch(_){}
-        // Arranca un poco antes del último punto válido para evitar rebotes a 0
-        const startAt=Math.max(0, Math.min(store.t||0, store.allow||0) - 0.25);
-        if(startAt>0.4){ try{ ev.target.seekTo(startAt,true); }catch(_){} }
+        // Espera a que YT calcule duración
+        const startAt=Math.min(store.t||0, store.allow||0);
+        let tries=0;
+        const seekWhenReady=setInterval(()=>{
+          let dur=0;
+          try{ dur=ev.target.getDuration?.()||0; }catch(_){}
+          if(dur>0 || tries>10){
+            clearInterval(seekWhenReady);
+            if(startAt>1){ safeSeek(ev.target, meta, startAt); }
+          }
+          tries++;
+        },150);
       },
       onStateChange:(ev)=>{
         const p=ev.target, st=ev.data;
-        const meta = players[pid]?.meta;
-        if(st===YT.PlayerState.PLAYING){
-          lastPlayingPid=pid;
-          meta.wasPlaying=true;
-          meta.hasEnded=false;
-          if(isLocked(meta)){ showWarn(pid, lockReason(meta)); try{p.pauseVideo();}catch(_){ } return; }
-          startTick(pid);
-        }else if(st===YT.PlayerState.PAUSED){
-          meta.wasPlaying=false;
-          persist();
-        }else if(st===YT.PlayerState.ENDED){
-          meta.wasPlaying=false;
-          meta.hasEnded=true;
-          stopTick(pid);
-          state.videosDone=state.videosDone||{};
-          state.videosDone[moduleId]=state.videosDone[moduleId]||{};
-          state.videosDone[moduleId][videoId]=true;
-          // asegurar barra completa
-          const dur = players[pid]?.player?.getDuration?.() || store.dur || 0;
-          store.allow = dur ? dur : (store.allow||0);
-          store.t = store.allow;
-          persist();
-          const m=(state.course?.modules||[]).find(mm=>mm.id===moduleId);
-          const nextPid=`player-${moduleId}-${index+1}`;
-          const nextLock=document.getElementById(`lock-${nextPid}`);
-          if(nextLock) nextLock.remove();
-          updateGlobalProgress();
-          maybeEnableQuiz({id:moduleId, videos:m?.videos||[]});
-        }
+        // Debounce de estado
+        if(meta.stateTimer){ clearTimeout(meta.stateTimer); meta.stateTimer=null; }
+        meta.stateTimer=setTimeout(()=>handleStateChange(p, meta, st), STATE_DEBOUNCE_MS);
       },
       onError:()=>{
-        const meta = players[pid]?.meta;
-        if(meta && meta.retries<3){
+        if(meta.retries<3){
           meta.retries++;
           setTimeout(()=>{
             try{players[pid]?.player?.destroy?.();}catch(_){}
@@ -451,81 +445,74 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
       }
     }
   });
-}
 
-function startTick(pid){
-  const inst=players[pid]; if(!inst) return;
-  const {player,meta}=inst;
-  stopTick(pid);
-
-  const DRIFT_BACK = 0.35;   // tolerancia hacia atrás
-  const AHEAD_OK   = 1.75;   // cuánto puede adelantarse antes de corregir
-  const END_PAD    = 1.0;    // considerar terminado si falta <1s
-
-  meta.tick=setInterval(()=>{
-    const store=ensureStoreFor(meta.moduleId, meta.videoId);
-    let cur=0,dur=0,st=undefined;
-    try{
-      cur = player.getCurrentTime?.() || 0;
-      dur = player.getDuration?.() || 0;
-      st  = player.getPlayerState?.();
-    }catch(_){}
-
-    if(dur && (!store.dur || Math.abs(store.dur-dur)>0.5)){ store.dur=dur; }
-
-    // Terminado suave al final, evita rebotes
-    if(dur && (dur - cur) <= END_PAD){
-      store.allow = dur;
-      store.t = dur;
-      try{ player.stopVideo?.(); }catch(_){}
-      clearInterval(meta.tick); meta.tick=null;
-      try{ player.pauseVideo?.(); }catch(_){}
-      return;
+  function handleStateChange(p, meta, st){
+    meta.lastState=st;
+    if(st===ST.PLAYING){
+      lastPlayingPid=pid;
+      pauseOthers(pid);
+      if(isLocked(meta)){ showWarn(pid, lockReason(meta)); try{p.pauseVideo();}catch(_){ } return; }
+      startTick();
+    }else if(st===ST.PAUSED){
+      // Solo persistimos; no forzamos acciones que generen pausas fantasma
+      persist();
+    }else if(st===ST.ENDED){
+      stopTick();
+      state.videosDone=state.videosDone||{};
+      state.videosDone[moduleId]=state.videosDone[moduleId]||{};
+      state.videosDone[moduleId][videoId]=true;
+      store.allow=store.dur||store.allow; store.t=store.allow;
+      persist();
+      const m=(state.course?.modules||[]).find(mm=>mm.id===moduleId);
+      const nextPid=`player-${moduleId}-${meta.index+1}`;
+      const nextLock=document.getElementById(`lock-${nextPid}`);
+      if(nextLock) nextLock.remove();
+      updateGlobalProgress();
+      maybeEnableQuiz({id:moduleId, videos:m?.videos||[]});
+    }else if(st===ST.UNSTARTED || st===ST.CUED){
+      // Re-anclaje suave si YT resetea a 0
+      const targetT = Math.min(store.t||0, store.allow||0);
+      if(targetT>1){ safeSeek(p, meta, targetT); }
+    }else if(st===ST.BUFFERING){
+      // Nada: evitar seeks durante buffering para no provocar pausar/reiniciar
     }
-
-    // Anti-adelanto suave
-    if(cur > (store.allow + AHEAD_OK)){
-      try{ player.seekTo(store.allow, true); }catch(_){}
-      return;
-    }
-
-    // Actualiza progreso si no hay retrocesos grandes
-    if(cur >= (store.allow - DRIFT_BACK)){
-      if(cur > store.allow) store.allow = cur;
-      store.t = cur;
-    } else {
-      store.t = cur; // no retrocedemos allow por glitches
-    }
-
-    persist();
-  }, 500);
-}
-function stopTick(pid){
-  const t=players[pid]?.meta?.tick;
-  if(t){ clearInterval(t); players[pid].meta.tick=null; }
-}
-
-/* Pausa/reanuda solo si estaba en PLAYING y no ha terminado */
-document.addEventListener('visibilitychange', ()=>{
-  if(document.hidden){
-    Object.values(players).forEach(({player,meta})=>{
-      try{
-        const st = player.getPlayerState?.();
-        meta.wasPlaying = (st === YT.PlayerState.PLAYING);
-        if(meta.wasPlaying){ player.pauseVideo?.(); }
-      }catch(_){}
-    });
-    persist();
-  }else{
-    Object.values(players).forEach(({player,meta})=>{
-      if(meta.wasPlaying && !meta.hasEnded){
-        try{ player.playVideo?.(); }catch(_){}
-      }
-      meta.wasPlaying=false;
-    });
   }
-});
 
+  function startTick(){
+    stopTick();
+    meta.tick=setInterval(()=>{
+      const inst=players[pid]; if(!inst) return;
+      const p=inst.player;
+      let cur=0,dur=0,st;
+      try{ cur=p.getCurrentTime?.()||0; dur=p.getDuration?.()||0; st=p.getPlayerState?.(); }catch(_){}
+      if(dur && (!store.dur || Math.abs(store.dur-dur)>0.5)){ store.dur=dur; persist(); }
+
+      // Anti-adelanto solo mientras está PLAYING
+      if(st===ST.PLAYING){
+        const allowed=store.allow||0;
+        if(cur>(allowed+ANTI_SKIP_TOL)){
+          safeSeek(p, meta, allowed);
+          return;
+        }
+        if(cur>allowed) store.allow=cur;
+      }
+      store.t=cur;
+    },500);
+  }
+  function stopTick(){ if(meta.tick){ clearInterval(meta.tick); meta.tick=null; } }
+}
+
+function safeSeek(player, meta, t){
+  const now=Date.now();
+  if(now - (meta.lastSeekMs||0) < SEEK_COOLDOWN_MS) return;
+  meta.lastSeekMs=now;
+  try{ player.seekTo(t,true); }catch(_){}
+}
+
+/* Sin auto-pause por visibilitychange (evita pausas fantasma). Solo persistimos. */
+document.addEventListener('visibilitychange', ()=>{
+  persist();
+});
 window.addEventListener('pagehide', persist);
 window.addEventListener('beforeunload', persist);
 window.onYouTubeIframeAPIReady=()=>{ ytApiReady=true; };
