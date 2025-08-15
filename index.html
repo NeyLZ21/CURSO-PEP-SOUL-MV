@@ -455,7 +455,7 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
           state.videosDone[moduleId][videoId]=true;
           store.allow=store.dur||store.allow; store.t=store.allow;
           persist();
-          // >>> NUEVO: subir inmediatamente al terminar cada video
+          // Subir inmediatamente al terminar cada video
           queueCloudSync(0);
 
           const m=(state.course?.modules||[]).find(mm=>mm.id===moduleId);
@@ -506,7 +506,7 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
         if(st===YT.PlayerState.PLAYING){
           if(cur>(store.allow||0)) store.allow=cur;
           store.t=cur;
-          // >>> NUEVO: sincronizar cada ~12s mientras reproduce
+          // Sincronizar cada ~12s mientras reproduce
           maybeQueueCloudSync(12000);
         }else{
           store.t=cur;
@@ -587,19 +587,28 @@ $('#tab-login').addEventListener('click',()=>setTab('login'));
 $('#tab-register').addEventListener('click',()=>setTab('reg'));
 setTab('login');
 
+/* ========= FLUJO DE AUTENTICACIÓN — ahora espera la nube ANTES de renderizar ========= */
 auth.onAuthStateChanged(async (user)=>{
   if(!user){
     CURRENT_UID=null; state={}; $('#auth-user').textContent=''; $('#btn-logout').style.display='none'; $('#verify-box').style.display='none'; setTab('login'); showLogin();
     if (unsubProfile) { try{unsubProfile();}catch(_){ } unsubProfile=null; }
     return;
   }
-  CURRENT_UID=user.uid; state=loadState(CURRENT_UID)||{}; $('#auth-user').textContent=user.email||'';
+  CURRENT_UID=user.uid;
+  // Carga local por si hay algo, pero se sobrescribirá con la nube
+  state=loadState(CURRENT_UID)||{}; $('#auth-user').textContent=user.email||'';
   await user.reload().catch(()=>{});
   if(!user.emailVerified){ showLogin(); $('#verify-box').style.display='block'; return; }
   $('#verify-box').style.display='none';
+
+  // === Esperar datos de Firestore primero ===
+  try{
+    await syncFromCloud(user); // baja perfil, videosDone, quizzes, play
+    persist();                 // guarda lo bajado en el local del nuevo navegador
+  }catch(e){ console.warn('Fallo al sincronizar desde la nube', e); }
+
+  // Render con datos ya sincronizados
   showCourse();
-  // Cargar de la nube y luego empujar cualquier cambio local pendiente
-  syncFromCloud(user).then(()=> queueCloudSync(0)).catch(()=>{});
 });
 
 document.getElementById('btn-register-2').addEventListener('click', async ()=>{
@@ -622,7 +631,7 @@ document.getElementById('btn-register-2').addEventListener('click', async ()=>{
   }catch(e){ msg(MSGS[e.code]||'Ocurrió un error. Intenta nuevamente.'); }
 });
 document.getElementById('btn-check-verify').addEventListener('click', async ()=>{
-  if(auth.currentUser){ await auth.currentUser.reload(); if(auth.currentUser.emailVerified){ $('#verify-box').style.display='none'; showCourse(); } }
+  if(auth.currentUser){ await auth.currentUser.reload(); if(auth.currentUser.emailVerified){ $('#verify-box').style.display='none'; /* showCourse se llamará por onAuthStateChanged */ } }
 });
 document.getElementById('btn-resend-verify').addEventListener('click', async ()=>{
   try{
@@ -642,7 +651,11 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
     const u=cred.user||auth.currentUser; await u.reload().catch(()=>{});
     if(!u.emailVerified){ msg('Debes verificar tu correo antes de continuar.'); $('#verify-box').style.display='block'; return; }
     msg('Sesión iniciada.'); $('#verify-box').style.display='none';
-    showCourse(); syncFromCloud(u).then(()=>queueCloudSync(0)).catch(()=>{});
+
+    // Baja nube -> persiste -> render
+    await syncFromCloud(u).catch(()=>{});
+    persist();
+    showCourse();
   }catch(e){
     let methods=[]; try{methods=await auth.fetchSignInMethodsForEmail(email);}catch(_){}
     if(!methods||methods.length===0){ msg('Correo no registrado.'); setTab('reg'); $('#reg-email').value=email; }
@@ -689,14 +702,7 @@ function showCourse(){
   renderAllBySpecialty(getSpecialty());
   updateGlobalProgress();
   startProfileRealtime();
-  loadProfile().then(()=>{
-    renderAllBySpecialty(getSpecialty());
-    updateGlobalProgress();
-    if(profileComplete()){
-      setProfileReadonly(true);
-      $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.';
-    }
-  }).catch(()=>{});
+  // NO volvemos a llamar syncFromCloud aquí para evitar carreras; ya se llamó antes de showCourse()
 }
 function showLogin(){ $('#step-welcome').style.display='block'; $('#profile').style.display='none'; $('#progress').style.display='none'; $('#modules').style.display='none'; }
 function profileComplete(){ const p=state.profile||{}; return !!(p.name&&p.iddoc&&p.spec&&ESPECIALIDADES.includes(p.spec)); }
@@ -787,7 +793,7 @@ async function saveProfile(){
     }
     if(!ok) throw lastErr || new Error('No se pudo guardar');
 
-    // Empuja también un snapshot de progreso para mantener consistencia
+    // Empuja snapshot de progreso/estado para consistencia
     queueCloudSync(0);
 
     savingProfile=false; pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Perfil guardado.';
@@ -1019,13 +1025,16 @@ async function syncFromCloud(user){
     const snap=await ref.get();
     if(snap.exists){
       const cloud=snap.data()||{};
-      state.videosDone={...(state.videosDone||{}),...(cloud.videosDone||{})};
-      state.quizzes={...(state.quizzes||{}),...(cloud.quizzes||{})};
-      state.play={...(state.play||{}),...(cloud.play||{})};
-      persist();
+      // Preferimos la nube cuando exista
+      state.videosDone = cloud.videosDone || state.videosDone || {};
+      state.quizzes   = cloud.quizzes   || state.quizzes   || {};
+      state.play      = cloud.play      || state.play      || {};
     }
     const psnap=await db.collection('users').doc(user.uid).collection('profile').doc('main').get();
-    if(psnap.exists){ state.profile={...(state.profile||{}),...(psnap.data()||{})}; persist(); }
+    if(psnap.exists){
+      state.profile = {...(state.profile||{}), ...(psnap.data()||{})};
+    }
+    persist();
   }catch(e){ console.warn('No se pudo leer progreso/perfil',e); }
 }
 async function syncToCloud(){
