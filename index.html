@@ -235,7 +235,7 @@ const ESPEC_MODS={
   "ENFERMEDADES AUTOINMUNES":BASE_MEDICA,"FISIATRIA":BASE_MEDICA,"FONOAUDIOLOGIA":BASE_MEDICA,
   "GASTROENTEROLOGIA":BASE_QUIR,"GASTROENTEROLOGIA PEDIATRICA":BASE_QUIR,"GENETICA MEDICA":BASE_MEDICA,"GERIATRIA":BASE_MEDICA,
   "GINECOLOGIA INFANTO JUVENIL":BASE_QUIR,"GINECOLOGIA ONCOLOGICA":BASE_QUIR,"GINECOLOGIA Y OBSTETRICIA":BASE_QUIR,
-  "HEMATOLOGIA":BASE_QUIR,"HEMATOLOGO ONCOCOLOGO PEDIATRIA":BASE_QUIR,"HEPATOLOGIA":BASE_MEDICA,
+  "HEMATOLOGIA":BASE_QUIR,"HEMATOLOGO ONCOLOGO PEDIATRIA":BASE_QUIR,"HEPATOLOGIA":BASE_MEDICA,
   "INFECTOLOGIA":BASE_MEDICA,"INFECTOLOGIA PEDIATRICA":BASE_MEDICA,"INTERVENCIONISMO":BASE_QUIR,"MASTOLOGIA":BASE_QUIR,"MAXILO FACIAL":BASE_QUIR,
   "MEDICINA CRITICA":BASE_MEDICA,"MEDICINA CRITICA PEDIATRICA":BASE_MEDICA,"MEDICINA DEL DEPORTE":BASE_MEDICA,"MEDICINA FAMILIAR":[M.G,M.CE],"MEDICINA FAMILIAR EMERGENCIA":[M.G,M.EM],
   "MEDICINA GENERAL":BASE_MEDICA,"MEDICINA INTERNA":BASE_MEDICA,"MEDICINA MATERNO FETAL":BASE_MEDICA,"MEDICINA PALIATIVA":BASE_MEDICA,"MICROBIOLOGIA":BASE_MEDICA,
@@ -312,16 +312,14 @@ function markDirty(){
   document.addEventListener('input', (e)=>{ if(e.target && e.target.id===id) markDirty(); });
 });
 
-/* ======================== YouTube control (parche estabilidad v2) ======================== */
+/* ======================== YouTube control (parche estabilidad) ======================== */
 let ytApiReady=false;
 const players={};
 const cfgByPid=new Map();
 let lastPlayingPid=null;
 
-const ST = { UNSTARTED:-1, ENDED:0, PLAYING:1, PAUSED:2, BUFFERING:3, CUED:5 };
-const ANTI_SKIP_TOL=2.5;        // seg de tolerancia por delante del allow
-const SEEK_COOLDOWN_MS=800;     // enfriamiento entre seekTo
-const STATE_DEBOUNCE_MS=120;    // debouncer para cambios de estado rápidos
+const ANTI_SKIP_TOL=2.5;       // segundos permitidos por delante antes de "re-anclar"
+const SEEK_COOLDOWN_MS=800;    // tiempo mínimo entre seekTo para evitar loops
 
 function ytThumb(id){ return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`; }
 function makePoster(pid, videoId, lockedMsg){
@@ -395,7 +393,7 @@ function pauseOthers(exceptPid){
 function actuallyCreatePlayer({pid,videoId,moduleId,index}){
   if(players[pid]) return;
   const store=ensureStoreFor(moduleId,videoId);
-  const meta={pid,videoId,moduleId,index,tick:null,retries:0,lastSeekMs:0,lastState:null,stateTimer:null};
+  const meta={pid,videoId,moduleId,index,tick:null,retries:0,lastSeekMs:0};
   players[pid]={player:null,meta};
 
   const holder=document.getElementById(pid);
@@ -411,10 +409,10 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
           if(ifr) ifr.setAttribute('allow','autoplay; fullscreen; encrypted-media; picture-in-picture');
           ev.target.unMute(); ev.target.setVolume(100);
         }catch(_){}
-        // Espera a que YT calcule duración
+        // Espera a que YT calcule duración antes de saltar
         const startAt=Math.min(store.t||0, store.allow||0);
         let tries=0;
-        const seekWhenReady=setInterval(()=>{
+        const seekWhenReady = setInterval(()=>{
           let dur=0;
           try{ dur=ev.target.getDuration?.()||0; }catch(_){}
           if(dur>0 || tries>10){
@@ -426,9 +424,31 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
       },
       onStateChange:(ev)=>{
         const p=ev.target, st=ev.data;
-        // Debounce de estado
-        if(meta.stateTimer){ clearTimeout(meta.stateTimer); meta.stateTimer=null; }
-        meta.stateTimer=setTimeout(()=>handleStateChange(p, meta, st), STATE_DEBOUNCE_MS);
+        if(st===YT.PlayerState.PLAYING){
+          lastPlayingPid=pid;
+          pauseOthers(pid);
+          if(isLocked(meta)){ showWarn(pid, lockReason(meta)); try{p.pauseVideo();}catch(_){ } return; }
+          startTick();
+        }else if(st===YT.PlayerState.PAUSED){
+          persist();
+        }else if(st===YT.PlayerState.ENDED){
+          stopTick();
+          state.videosDone=state.videosDone||{};
+          state.videosDone[moduleId]=state.videosDone[moduleId]||{};
+          state.videosDone[moduleId][videoId]=true;
+          store.allow=store.dur||store.allow; store.t=store.allow;
+          persist();
+          const m=(state.course?.modules||[]).find(mm=>mm.id===moduleId);
+          const nextPid=`player-${moduleId}-${index+1}`;
+          const nextLock=document.getElementById(`lock-${nextPid}`);
+          if(nextLock) nextLock.remove();
+          updateGlobalProgress();
+          maybeEnableQuiz({id:moduleId, videos:m?.videos||[]});
+        }else if(st===YT.PlayerState.UNSTARTED || st===YT.PlayerState.CUED){
+          // Re-anclaje suave cuando YT vuelve a 0
+          const targetT = Math.min(store.t||0, store.allow||0);
+          if(targetT>1){ safeSeek(p, meta, targetT); }
+        }
       },
       onError:()=>{
         if(meta.retries<3){
@@ -446,38 +466,6 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
     }
   });
 
-  function handleStateChange(p, meta, st){
-    meta.lastState=st;
-    if(st===ST.PLAYING){
-      lastPlayingPid=pid;
-      pauseOthers(pid);
-      if(isLocked(meta)){ showWarn(pid, lockReason(meta)); try{p.pauseVideo();}catch(_){ } return; }
-      startTick();
-    }else if(st===ST.PAUSED){
-      // Solo persistimos; no forzamos acciones que generen pausas fantasma
-      persist();
-    }else if(st===ST.ENDED){
-      stopTick();
-      state.videosDone=state.videosDone||{};
-      state.videosDone[moduleId]=state.videosDone[moduleId]||{};
-      state.videosDone[moduleId][videoId]=true;
-      store.allow=store.dur||store.allow; store.t=store.allow;
-      persist();
-      const m=(state.course?.modules||[]).find(mm=>mm.id===moduleId);
-      const nextPid=`player-${moduleId}-${meta.index+1}`;
-      const nextLock=document.getElementById(`lock-${nextPid}`);
-      if(nextLock) nextLock.remove();
-      updateGlobalProgress();
-      maybeEnableQuiz({id:moduleId, videos:m?.videos||[]});
-    }else if(st===ST.UNSTARTED || st===ST.CUED){
-      // Re-anclaje suave si YT resetea a 0
-      const targetT = Math.min(store.t||0, store.allow||0);
-      if(targetT>1){ safeSeek(p, meta, targetT); }
-    }else if(st===ST.BUFFERING){
-      // Nada: evitar seeks durante buffering para no provocar pausar/reiniciar
-    }
-  }
-
   function startTick(){
     stopTick();
     meta.tick=setInterval(()=>{
@@ -487,16 +475,19 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
       try{ cur=p.getCurrentTime?.()||0; dur=p.getDuration?.()||0; st=p.getPlayerState?.(); }catch(_){}
       if(dur && (!store.dur || Math.abs(store.dur-dur)>0.5)){ store.dur=dur; persist(); }
 
-      // Anti-adelanto solo mientras está PLAYING
-      if(st===ST.PLAYING){
-        const allowed=store.allow||0;
-        if(cur>(allowed+ANTI_SKIP_TOL)){
-          safeSeek(p, meta, allowed);
-          return;
-        }
-        if(cur>allowed) store.allow=cur;
+      // Anti-adelanto con tolerancia y cooldown
+      const allowed=store.allow||0;
+      if(cur>(allowed+ANTI_SKIP_TOL)){
+        safeSeek(p, meta, allowed);
+        return;
       }
-      store.t=cur;
+
+      if(st===YT.PlayerState.PLAYING){
+        if(cur>allowed) store.allow=cur;
+        store.t=cur;
+      }else{
+        store.t=cur;
+      }
     },500);
   }
   function stopTick(){ if(meta.tick){ clearInterval(meta.tick); meta.tick=null; } }
@@ -509,9 +500,20 @@ function safeSeek(player, meta, t){
   try{ player.seekTo(t,true); }catch(_){}
 }
 
-/* Sin auto-pause por visibilitychange (evita pausas fantasma). Solo persistimos. */
+/* Pausa al salir de la pestaña (sin auto-reproducir al volver) */
 document.addEventListener('visibilitychange', ()=>{
-  persist();
+  if(document.hidden){
+    Object.values(players).forEach(({player})=>{ try{player.pauseVideo();}catch(_){ } });
+    persist();
+  }else{
+    // No auto-play al volver: solo re-anclaje suave si YT quedó en 0
+    Object.values(players).forEach(({player,meta})=>{
+      let cur=0;
+      try{ cur=player.getCurrentTime?.()||0; }catch(_){}
+      const targetT=Math.min((state.play?.[meta.moduleId]?.[meta.videoId]?.t)||0,(state.play?.[meta.moduleId]?.[meta.videoId]?.allow)||0);
+      if(cur<1 && targetT>1){ safeSeek(player, meta, targetT); }
+    });
+  }
 });
 window.addEventListener('pagehide', persist);
 window.addEventListener('beforeunload', persist);
@@ -767,7 +769,7 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
         input.value=name;
         markDirty();
         hide();
-        input.focus();
+        input.focus(); // deja el foco para editar de inmediato
         input.select();
       });
       panel.appendChild(div);
@@ -776,6 +778,7 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
   function show(){ if(input.readOnly) return; wrap.classList.add('show'); open=true; }
   function hide(){ wrap.classList.remove('show'); open=false; hoverIndex=-1; }
 
+  // Abre al clic en todo el wrap (incluida flecha)
   wrap.addEventListener('mousedown',()=>{
     if(input.readOnly) return;
     if(!open){
@@ -785,6 +788,7 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
     }
   });
 
+  // Filtra en vivo
   input.addEventListener('input',()=>{
     if(input.readOnly) return;
     const q=input.value.trim().toLowerCase();
@@ -794,6 +798,7 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
     markDirty();
   });
 
+  // Teclado: Enter / ↑ / ↓ / Esc
   input.addEventListener('keydown',(e)=>{
     if(input.readOnly) return;
     if(!open && (e.key==='ArrowDown' || e.key==='Enter')){ filtered=ESPECIALIDADES.slice(); render(filtered); show(); return; }
@@ -804,8 +809,10 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
     }else if(e.key==='Escape'){ hide(); }
   });
 
+  // Clic fuera cierra
   document.addEventListener('mousedown',(e)=>{ if(!wrap.contains(e.target)) hide(); });
 
+  // Validación suave: borra si no existe al perder foco
   input.addEventListener('blur',()=>{
     const v=input.value.trim();
     if(v && !ESPECIALIDADES.includes(v)){ input.value=''; }
@@ -814,7 +821,7 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
   render(filtered);
 })();
 
-/* ======================== Render módulos / progreso / sync ======================== */
+/* ======================== Render módulos / progreso / sync (igual) ======================== */
 function mkModule(id,titulo,ytIds){
   const vids=(ytIds&&ytIds.length?ytIds:DEFAULT_VIDEOS).slice(0,5).map((v,i)=>({yt:v,dur:'08:00',n:i+1}));
   const quiz=[
