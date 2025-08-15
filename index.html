@@ -223,7 +223,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 
 <script>
 /* ======================== ESPECIALIDADES / MÓDULOS / VIDEOS ======================== */
-const ESPECIALIDADES=[ "ACUPUNTURA","ALERGOLOGIA","ANESTESIOLOGIA","CARDIOLOGIA","CARDIOLOGIA HEMODINAMIA","CARDIOLOGIA INTERVENCIONISTA","CARDIOLOGIA PEDIATRICA","CIR. GENERAL-COLOPROCTOLOGIA","CIR. MANO/MUÑE-NERVIO PERI/BRA","CIRUGIA CARDIACA","CIRUGIA DE CABEZA Y CUELLO","CIRUGIA DE COLUMNA","CIRUGIA DE HOMBRO Y CODO","CIRUGIA GENERAL","CIRUGIA ONCOCOLOGICA","CIRUGIA PEDIATRICA","CIRUGIA PLASTICA","CIRUGIA TORACICA","CIRUGIA VASCULAR","COLOPROCTOLOGIA","CUIDADOS PALIATIVOS","DERMATOLOGIA","DIABETOLOGIA","EMERGENCIAS Y DESASTRES","ENDOCRINO PEDIATRA","ENDOCRINOLOGIA","ENFERMEDADES AUTOINMUNES","FISIATRIA","FONOAUDIOLOGIA","GASTROENTEROLOGIA","GASTROENTEROLOGIA PEDIATRICA","GENETICA MEDICA","GERIATRIA","GINECOLOGIA INFANTO JUVENIL","GINECOLOGIA ONCOLOGICA","GINECOLOGIA Y OBSTETRICIA","HEMATOLOGIA","HEMATOLOGO ONCOLOGO PEDIATRIA","HEPATOLOGIA","INFECTOLOGIA","INFECTOLOGIA PEDIATRICA","INTERVENCIONISMO","MASTOLOGIA","MAXILO FACIAL","MEDICINA CRITICA","MEDICINA CRITICA PEDIATRICA","MEDICINA DEL DEPORTE","MEDICINA FAMILIAR","MEDICINA FAMILIAR EMERGENCIA","MEDICINA GENERAL","MEDICINA INTERNA","MEDICINA MATERNO FETAL","MEDICINA PALIATIVA","MICROBIOLOGIA","NEFROLOGIA","NEFROLOGIA PEDIATRICA","NEONATOLOGIA","NEUMOLOGIA","NEUMOLOGIA PEDIATRICA","NEUROCIRUGIA","NEUROFISIOLOGIA CLINICA","NEUROLOGIA","NEUROLOGIA PEDIATRICA","NEUROPSICOLOGIA","NEURORADIOL INTERVENCIONISTA","NEURORADIOLOGIA","NUTRICION","ODONTOLOGIA","ODONTOPEDIATRIA","OFTALMOLOGIA","OFTALMOLOGIA PEDIATRICA","ONCOLOGIA CLINICA","OTORRINOLARINGOLOGIA","PATOLOGIA","PEDIATRIA","PSICOLOGIA","PSIQUIATRIA","RADIOLOGIA","RADIOLOGIA INTERVENCIONISTA","RADIOTERAPIA","RESIDENTE/INTERNO","REUMATOLOGIA","REUMATOLOGIA PEDIATRICA","SEXOLOGIA","TRATAMIENTO DEL DOLOR","TRAUMATO PEDIATRICA DE COLUMNA","TRAUMATOLOGIA DEL COLUMNA","TRAUMATOLOGIA ONCOLOGICA","TRAUMATOLOGIA PEDIATRICA","TRAUMATOLOGIA Y ORTOPEDIA","UROLOGIA","UROLOGIA PEDIATRICA" ];
+const ESPECIALIDADES=[ "ACUPUNTURA","ALERGOLOGIA","ANESTESIOLOGIA","CARDIOLOGIA","CARDIOLOGIA HEMODINAMIA","CARDIOLOGIA INTERVENCIONISTA","CARDIOLOGIA PEDIATRICA","CIR. GENERAL-COLOPROCTOLOGIA","CIR. MANO/MUÑE-NERVIO PERI/BRA","CIRUGIA CARDIACA","CIRUGIA DE CABEZA Y CUELLO","CIRUGIA DE COLUMNA","CIRUGIA DE HOMBRO Y CODO","CIRUGIA GENERAL","CIRUGIA ONCOCOLOGICA","CIRUGIA PEDIATRICA","CIRUGIA PLASTICA","CIRUGIA TORACICA","CIRUGIA VASCULAR","COLOPROCTOLOGIA","CUIDADOS PALIATIVOS","DERMATOLOGIA","DIABETOLOGIA","EMERGENCIAS Y DESASTRES","ENDOCRINO PEDIATRA","ENDOCRINOLOGIA","ENFERMEDADES AUTOINMUNES","FISIATRIA","FONOAUDIOLOGIA","GASTROENTEROLOGIA","GASTROENTEROLOGIA PEDIATRICA","GENETICA MEDICA","GERIATRIA","GINECOLOGIA INFANTO JUVENIL","GINECOLOGIA ONCOLOGICA","GINECOLOGIA Y OBSTETRICIA","HEMATOLOGIA","HEMATOLOGO ONCOCOLOGO PEDIATRIA","HEPATOLOGIA","INFECTOLOGIA","INFECTOLOGIA PEDIATRICA","INTERVENCIONISMO","MASTOLOGIA","MAXILO FACIAL","MEDICINA CRITICA","MEDICINA CRITICA PEDIATRICA","MEDICINA DEL DEPORTE","MEDICINA FAMILIAR","MEDICINA FAMILIAR EMERGENCIA","MEDICINA GENERAL","MEDICINA INTERNA","MEDICINA MATERNO FETAL","MEDICINA PALIATIVA","MICROBIOLOGIA","NEFROLOGIA","NEFROLOGIA PEDIATRICA","NEONATOLOGIA","NEUMOLOGIA","NEUMOLOGIA PEDIATRICA","NEUROCIRUGIA","NEUROFISIOLOGIA CLINICA","NEUROLOGIA","NEUROLOGIA PEDIATRICA","NEUROPSICOLOGIA","NEURORADIOL INTERVENCIONISTA","NEURORADIOLOGIA","NUTRICION","ODONTOLOGIA","ODONTOPEDIATRIA","OFTALMOLOGIA","OFTALMOLOGIA PEDIATRICA","ONCOLOGIA CLINICA","OTORRINOLARINGOLOGIA","PATOLOGIA","PEDIATRIA","PSICOLOGIA","PSIQUIATRIA","RADIOLOGIA","RADIOLOGIA INTERVENCIONISTA","RADIOTERAPIA","RESIDENTE/INTERNO","REUMATOLOGIA","REUMATOLOGIA PEDIATRICA","SEXOLOGIA","TRATAMIENTO DEL DOLOR","TRAUMATO PEDIATRICA DE COLUMNA","TRAUMATOLOGIA DEL COLUMNA","TRAUMATOLOGIA ONCOLOGICA","TRAUMATOLOGIA PEDIATRICA","TRAUMATOLOGIA Y ORTOPEDIA","UROLOGIA","UROLOGIA PEDIATRICA" ];
 const M={ CE:"CONSULTA EXTERNA", H:"HOSPITALIZACIÓN-HDD", CQ:"CENTRO QUIRÚRGICO", G:"GENERALIDADES", AN:"ANESTESIOLOGÍA", EM:"EMERGENCIAS" };
 const BASE_MEDICA=[M.G,M.H,M.CE], BASE_QUIR=[M.G,M.H,M.CE,M.CQ];
 const ESPEC_MODS={
@@ -264,13 +264,7 @@ const DEFAULT_VIDEOS=["dQw4w9WgXcQ"];
 const firebaseConfig={apiKey:"AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",authDomain:"induccion-pep-hvq.firebaseapp.com",projectId:"induccion-pep-hvq",storageBucket:"induccion-pep-hvq.firebasestorage.app",messagingSenderId:"651724182766",appId:"1:651724182766:web:4eec9be43e9e8e60dc0fff",measurementId:"G-Z62L1CCYP1"};
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
-
-// Persistencia offline
-try{
-  firebase.firestore().enablePersistence({synchronizeTabs:true}).catch(err=>{
-    console.warn('Firestore persistence no habilitada:', err && err.code);
-  });
-}catch(e){ console.warn('Persistence error', e); }
+try{ firebase.firestore().enablePersistence({synchronizeTabs:true}).catch(err=>{ console.warn('Firestore persistence no habilitada:', err && err.code); }); }catch(e){ console.warn('Persistence error', e); }
 const db=firebase.firestore();
 
 /* ======================== Estado / helpers ======================== */
@@ -300,38 +294,40 @@ let unsubProfile=null;
 let savingProfile=false;
 function persist(){ saveStateLocal(CURRENT_UID,state); }
 
-/* ==== Habilitar/Deshabilitar Guardar cuando hay cambios ==== */
-function markDirty(){
-  const btn=$('#btn-save-profile');
-  if(btn){ btn.disabled=false; }
-  const pfMsg=$('#pf-msg');
-  if(pfMsg && /guardado|sin conexión|nube/i.test(pfMsg.textContent)) pfMsg.textContent='';
-}
-['pf-name','pf-id','pf-spec'].forEach(id=>{
-  document.addEventListener('input', (e)=>{ if(e.target && e.target.id===id) markDirty(); });
-});
-
-/* ======================== YouTube control (sin pausa por visibilidad + anti-pausa) ======================== */
+/* ======================== YouTube control (Chrome-friendly) ======================== */
 let ytApiReady=false;
-const players={};           // pid -> { player, meta }
-const cfgByPid=new Map();   // pid -> {pid, videoId, moduleId, index}
+const players={};         // pid -> { player, meta }
+const cfgByPid=new Map(); // pid -> {pid, videoId, moduleId, index}
 let lastPlayingPid=null;
 
-// tolerancias/config
-const SEEK_TOLERANCE=1.5;   // s permitidos por delante del "allow"
-const SEEK_COOLDOWN=900;    // ms entre correcciones de seek
-const ANTI_ZERO_GUARD=5;    // si allow>5s y current~0, corrige
+/* Tunables */
+const SEEK_TOLERANCE=1.5;        // s tolerados por delante del "allow"
+const SEEK_COOLDOWN=900;         // ms entre correcciones de seek
+const ANTI_ZERO_GUARD=5;         // si allow>5s y current~0, corrige
 const TICK_MS=500;
 
-// Heurística: detectar intención de usuario (para no reanudar si pausó a propósito)
+const HIDE_PAUSE_THRESHOLD=1000; // pausa solo si está oculta >1s
+const GRACE_AFTER_BACK_MS=5000;  // 5s de “gracia” al volver (ignorar pausas fantasma)
+const GRACE_AFTER_PLAY_MS=5000;  // 5s de gracia tras un Play del usuario
+const MAX_AUTORETRY=3;           // reintentos de auto-reanudar
+
+/* Señales de intención del usuario (para no pelear con su pausa) */
 let lastUserInput=0;
 ['pointerdown','keydown','touchstart'].forEach(evt=>{
   document.addEventListener(evt,()=>{ lastUserInput=Date.now(); },{passive:true});
 });
 
+/* Ventanas de gracia */
+let lastVisibilityBackAt=0;
+let lastUserPlayAt=0;
+
+/* Detectar “Play” positivo del usuario en el player (via onStateChange → PLAYING shortly after input) */
+function markUserPlayIntent(){ lastUserPlayAt=Date.now(); }
+
+/* Helpers UI/lock */
 function ytThumb(id){ return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`; }
 function makePoster(pid, videoId, lockedMsg){
-  const lockLayer = lockedMsg ? `<div class="lock" id="lock-${pid}">🔒 ${lockedMsg}</div>` : '';
+  const lockLayer=lockedMsg?`<div class="lock" id="lock-${pid}">🔒 ${lockedMsg}</div>`:'';
   return `
     <div class="yt-wrap" style="margin-top:8px">
       <div id="${pid}"></div>
@@ -343,31 +339,19 @@ function makePoster(pid, videoId, lockedMsg){
       <div class="warnmsg" id="warn-${pid}"></div>
     </div>`;
 }
-
+function showWarn(pid,text){
+  const w=document.getElementById(`warn-${pid}`); if(!w) return;
+  w.textContent=text; w.style.display='block';
+  setTimeout(()=>{ if(w) w.style.display='none'; },1800);
+}
 function prevModuleConcluded(moduleId){
-  const mods = state.course?.modules || [];
-  const idx = mods.findIndex(m=>m.id===moduleId);
+  const mods=state.course?.modules||[];
+  const idx=mods.findIndex(m=>m.id===moduleId);
   if(idx<=0) return true;
-  const prev = mods[idx-1];
-  const passed = !!(state.quizzes?.[prev.id]?.passed);
-  const allVideosDone = prev.videos.every(v => (state.videosDone?.[prev.id]||{})[v.yt]);
-  return passed || allVideosDone;
-}
-
-function ensureStoreFor(mid,vid){
-  state.play=state.play||{};
-  state.play[mid]=state.play[mid]||{};
-  state.play[mid][vid]=state.play[mid][vid]||{t:0,allow:0,dur:0};
-  return state.play[mid][vid];
-}
-
-function clickToLoad(pid){
-  const cfg=cfgByPid.get(pid); if(!cfg) return;
-  if(isLocked(cfg)){ showWarn(pid, lockReason(cfg)); return; }
-  if(players[pid]) return;
-  actuallyCreatePlayer(cfg, /*autoplay=*/false);
-  const poster=document.querySelector(`.poster[data-load="${pid}"]`);
-  if(poster) poster.remove();
+  const prev=mods[idx-1];
+  const passed=!!(state.quizzes?.[prev.id]?.passed);
+  const allVideosDone=prev.videos.every(v => (state.videosDone?.[prev.id]||{})[v.yt]);
+  return passed||allVideosDone;
 }
 function isLocked({moduleId,index}){
   if(index===0 && !prevModuleConcluded(moduleId)) return true;
@@ -382,21 +366,37 @@ function lockReason({moduleId,index}){
   if(index===0 && !prevModuleConcluded(moduleId)) return 'Primero concluye el módulo anterior';
   return 'Termina el video anterior';
 }
-function showWarn(pid, text){
-  const w=document.getElementById(`warn-${pid}`);
-  if(!w) return;
-  w.textContent=text; w.style.display='block';
-  setTimeout(()=>{ if(w) w.style.display='none'; },1800);
+
+/* Estado por video */
+function ensureStoreFor(mid,vid){
+  state.play=state.play||{}; state.play[mid]=state.play[mid]||{};
+  state.play[mid][vid]=state.play[mid][vid]||{t:0,allow:0,dur:0};
+  return state.play[mid][vid];
 }
 
+/* Cargar player al clic */
+function clickToLoad(pid){
+  const cfg=cfgByPid.get(pid); if(!cfg) return;
+  if(isLocked(cfg)){ showWarn(pid,lockReason(cfg)); return; }
+  if(players[pid]) return;
+  actuallyCreatePlayer(cfg,false);
+  document.querySelector(`.poster[data-load="${pid}"]`)?.remove();
+}
+
+/* Crear player + lógica de anti-pausa */
 function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
   if(players[pid]) return;
   const store=ensureStoreFor(moduleId,videoId);
-  const meta={pid,videoId,moduleId,index,tick:null,retries:0,lastSeekFix:0, resumeTimer:null};
+  const meta={
+    pid,videoId,moduleId,index,
+    tick:null,retries:0,lastSeekFix:0,
+    pausedByVisibility:false,
+    wasPlayingBeforeHide:false,
+    autoResumeCount:0, autoResumeTimer:null
+  };
   players[pid]={player:null,meta};
 
-  const holder=document.getElementById(pid);
-  if(!holder) return;
+  const holder=document.getElementById(pid); if(!holder) return;
 
   players[pid].player=new YT.Player(pid,{
     height:'360',width:'640',videoId,
@@ -408,40 +408,39 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
           if(ifr) ifr.setAttribute('allow','autoplay; fullscreen; encrypted-media; picture-in-picture');
           ev.target.unMute(); ev.target.setVolume(100);
         }catch(_){}
-        // restaura tiempo sin auto reproducir
         const startAt=Math.max(0, Math.min(store.allow||0, store.dur||1));
-        if(startAt>0.5){ try{ ev.target.seekTo(startAt,true); }catch(_){} }
-        if(autoplay){ try{ ev.target.playVideo(); }catch(_){} }
+        if(startAt>0.5){ try{ ev.target.seekTo(startAt,true); }catch(_){ } }
+        if(autoplay){ try{ ev.target.playVideo(); }catch(_){ } }
       },
       onStateChange:(ev)=>{
         const p=ev.target, st=ev.data;
+
         if(st===YT.PlayerState.PLAYING){
           lastPlayingPid=pid;
-          if(meta.resumeTimer){ clearTimeout(meta.resumeTimer); meta.resumeTimer=null; }
+          markUserPlayIntent(); // asumimos que usuario activó play o auto-reanudó
+          meta.autoResumeCount=0; clearTimeout(meta.autoResumeTimer); meta.autoResumeTimer=null;
           startTick();
           return;
         }
 
-        if(st===YT.PlayerState.PAUSED || st===YT.PlayerState.BUFFERING){
-          persist();
-        }
+        if(st===YT.PlayerState.PAUSED || st===YT.PlayerState.BUFFERING){ persist(); }
 
-        // Anti-pausa: si quedó en PAUSED (no al final), reanudar
         if(st===YT.PlayerState.PAUSED){
+          // Si el usuario pausó (click/tecla) en los últimos 600ms, no interferir
+          const userLikelyPaused=(Date.now()-lastUserInput)<600;
+
+          // No reanudar si casi termina
           let cur=0,dur=0;
           try{ cur=p.getCurrentTime?.()||0; dur=p.getDuration?.()||0; }catch(_){}
           const nearEnd = dur>0 && (dur-cur)<=1.0;
-          const userLikelyPaused = (Date.now()-lastUserInput)<700;
-          // Solo reanuda si está visible y no parece intención del usuario
-          if(!nearEnd && !userLikelyPaused && !document.hidden){
-            if(meta.resumeTimer) clearTimeout(meta.resumeTimer);
-            meta.resumeTimer=setTimeout(()=>{
-              try{
-                if(!document.hidden && p.getPlayerState?.()===YT.PlayerState.PAUSED){
-                  p.playVideo();
-                }
-              }catch(_){}
-            }, 1200);
+
+          // ¿Estamos en ventana de gracia al volver o tras un Play reciente?
+          const inBackGrace = (Date.now()-lastVisibilityBackAt) < GRACE_AFTER_BACK_MS;
+          const inPlayGrace = (Date.now()-lastUserPlayAt) < GRACE_AFTER_PLAY_MS;
+
+          // Si no es pausa del usuario, estamos visibles, y estamos en alguna gracia -> auto-reanudar
+          if(!nearEnd && !userLikelyPaused && !document.hidden && (inBackGrace || inPlayGrace)){
+            scheduleAutoResume(meta,p);
           }
         }
 
@@ -453,24 +452,21 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
           store.allow=store.dur||store.allow; store.t=store.allow;
           persist();
           const m=(state.course?.modules||[]).find(mm=>mm.id===moduleId);
-          const nextPid=`player-${moduleId}-${index+1}`;
-          const nextLock=document.getElementById(`lock-${nextPid}`);
-          if(nextLock) nextLock.remove();
+          document.getElementById(`lock-player-${moduleId}-${index+1}`)?.remove();
           updateGlobalProgress();
           maybeEnableQuiz({id:moduleId, videos:m?.videos||[]});
         }
       },
       onError:()=>{
+        const s=ensureStoreFor(moduleId,videoId);
         if(meta.retries<3){
           meta.retries++;
           setTimeout(()=>{
-            try{players[pid]?.player?.destroy?.();}catch(_){}
+            try{ players[pid]?.player?.destroy?.(); }catch(_){}
             delete players[pid];
-            actuallyCreatePlayer({pid,videoId,moduleId,index}, /*autoplay=*/true);
+            actuallyCreatePlayer({pid,videoId,moduleId,index}, true);
             try{
-              const inst = players[pid]?.player;
-              const s=ensureStoreFor(moduleId,videoId);
-              const startAt = Math.max(0, s.t || s.allow || 0);
+              const inst=players[pid]?.player; const startAt=Math.max(0,s.t||s.allow||0);
               if(inst && startAt>0.5){ inst.loadVideoById({videoId,startSeconds:startAt,suggestedQuality:'large'}); }
             }catch(_){}
           }, 600*meta.retries);
@@ -486,42 +482,81 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
     stopTick();
     meta.tick=setInterval(()=>{
       const inst=players[pid]; if(!inst) return;
-      const p=inst.player;
-      const store=ensureStoreFor(moduleId,videoId);
+      const p=inst.player; const store=ensureStoreFor(moduleId,videoId);
       let cur=0,dur=0,st=-1;
       try{ cur=p.getCurrentTime?.()||0; dur=p.getDuration?.()||0; st=p.getPlayerState?.(); }catch(_){}
-      if(dur && (!store.dur || Math.abs(store.dur-dur)>0.5)){ store.dur=dur; }
-      // Anti-0: si YouTube reporta ~0 pero ya había progreso significativo
-      if(cur<0.4 && (store.allow||0) > ANTI_ZERO_GUARD){
-        throttledSeek(Math.max(0, (store.allow||0)-1));
-        cur = (store.allow||0)-1;
+      if(dur && (!store.dur || Math.abs(store.dur-dur)>0.5)) store.dur=dur;
+
+      // Anti-0: si reporta ~0s pero ya había progreso
+      if(cur<0.4 && (store.allow||0)>ANTI_ZERO_GUARD){
+        throttledSeek(Math.max(0,(store.allow||0)-1));
+        cur=(store.allow||0)-1;
       }
       // Anti-adelanto con tolerancia
-      if(cur > (store.allow||0) + SEEK_TOLERANCE){
-        throttledSeek(Math.max(0, (store.allow||0) - 0.3));
+      if(cur>(store.allow||0)+SEEK_TOLERANCE){
+        throttledSeek(Math.max(0,(store.allow||0)-0.3));
       }else{
         if(st===YT.PlayerState.PLAYING){
-          if(cur>store.allow) store.allow=cur;
+          if(cur>(store.allow||0)) store.allow=cur;
           store.t=cur;
         }else{
           store.t=cur;
         }
       }
-      if(Math.random()<0.2) persist();
+      if(Math.random()<0.25) persist();
     }, TICK_MS);
   }
   function stopTick(){ if(meta.tick){ clearInterval(meta.tick); meta.tick=null; } }
   function throttledSeek(sec){
     const now=Date.now();
-    if(now - (meta.lastSeekFix||0) < SEEK_COOLDOWN) return;
+    if(now-(meta.lastSeekFix||0)<SEEK_COOLDOWN) return;
     meta.lastSeekFix=now;
-    try{ players[pid]?.player?.seekTo(sec, true); }catch(_){}
+    try{ players[pid]?.player?.seekTo(sec,true); }catch(_){}
   }
 }
 
-/* (IMPORTANTE) — Eliminado: NO pausamos por visibilitychange.
-   De este modo, si sales y regresas a la pestaña, el video NO será pausado por nuestra lógica.
-*/
+/* Auto-reanudar con límite de intentos */
+function scheduleAutoResume(meta,p){
+  if(meta.autoResumeCount>=MAX_AUTORETRY) return;
+  clearTimeout(meta.autoResumeTimer);
+  meta.autoResumeCount++;
+  meta.autoResumeTimer=setTimeout(()=>{
+    try{
+      if(!document.hidden && p.getPlayerState?.()===YT.PlayerState.PAUSED){
+        p.playVideo();
+      }
+    }catch(_){}
+  }, 700 + (meta.autoResumeCount-1)*350); // backoff suave
+}
+
+/* Visibilidad: pausar SOLO si oculta >1s; al volver, activar gracia anti-pausa */
+let hideTimer=null;
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden){
+    if(hideTimer) clearTimeout(hideTimer);
+    hideTimer=setTimeout(()=>{
+      Object.values(players).forEach(({player,meta})=>{
+        try{
+          const st=player.getPlayerState?.();
+          meta.wasPlayingBeforeHide = (st===YT.PlayerState.PLAYING);
+          if(meta.wasPlayingBeforeHide){
+            meta.pausedByVisibility=true;
+            player.pauseVideo();
+          }
+        }catch(_){}
+      });
+      persist();
+    }, HIDE_PAUSE_THRESHOLD);
+  }else{
+    if(hideTimer) clearTimeout(hideTimer);
+    lastVisibilityBackAt=Date.now();
+    Object.values(players).forEach(({meta})=>{
+      meta.pausedByVisibility=false;
+      meta.autoResumeCount=0; clearTimeout(meta.autoResumeTimer); meta.autoResumeTimer=null;
+    });
+  }
+});
+window.addEventListener('focus', ()=>{ lastVisibilityBackAt=Date.now(); });
 window.addEventListener('pagehide', persist);
 window.addEventListener('beforeunload', persist);
 window.onYouTubeIframeAPIReady=()=>{ ytApiReady=true; };
@@ -731,7 +766,6 @@ async function saveProfile(){
     const uid=auth.currentUser?.uid; if(!uid) throw new Error('Sin UID');
     const ref=db.collection('users').doc(uid).collection('profile').doc('main');
     const payload={...state.profile,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
-
     let ok=false, lastErr=null;
     for(let i=0;i<3 && !ok;i++){
       try{ await ref.set(payload,{merge:true}); ok=true; }
@@ -897,8 +931,8 @@ function renderModules(modulesDef){
     m.videos.forEach((v,i)=>{
       const pid = `player-${m.id}-${i}`;
       const poster = card.querySelector(`[data-load="${pid}"]`);
-      poster?.addEventListener('click',()=>clickToLoad(pid));
-      poster?.querySelector('button')?.addEventListener('click',(e)=>{ e.stopPropagation(); clickToLoad(pid); });
+      poster?.addEventListener('click',()=>{ lastUserInput=Date.now(); clickToLoad(pid); });
+      poster?.querySelector('button')?.addEventListener('click',(e)=>{ e.stopPropagation(); lastUserInput=Date.now(); clickToLoad(pid); });
     });
 
     document.getElementById(`btn-${m.id}`).addEventListener('click',()=>{
@@ -967,7 +1001,7 @@ async function syncFromCloud(user){
     const ref=await userDoc(); if(!ref) return;
     const snap=await ref.get();
     if(snap.exists){
-      const cloud=snap.data()||({});
+      const cloud=snap.data()||{};
       state.videosDone={...(state.videosDone||{}),...(cloud.videosDone||{})};
       state.quizzes={...(state.quizzes||{}),...(cloud.quizzes||{})};
       state.play={...(state.play||{}),...(cloud.play||{})};
