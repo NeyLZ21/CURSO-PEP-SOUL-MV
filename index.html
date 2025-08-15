@@ -312,14 +312,18 @@ function markDirty(){
   document.addEventListener('input', (e)=>{ if(e.target && e.target.id===id) markDirty(); });
 });
 
-/* ======================== YouTube control (parche estabilidad) ======================== */
+/* ======================== YouTube control (robusto) ======================== */
 let ytApiReady=false;
-const players={};
-const cfgByPid=new Map();
+const players={};           // pid -> { player, meta }
+const cfgByPid=new Map();   // pid -> {pid, videoId, moduleId, index}
 let lastPlayingPid=null;
+let wasPlayingBeforeHide=false;  // recuerda si estaba reproduciendo antes de ocultar
 
-const ANTI_SKIP_TOL=2.5;       // segundos permitidos por delante antes de "re-anclar"
-const SEEK_COOLDOWN_MS=800;    // tiempo mínimo entre seekTo para evitar loops
+// Tolerancias y cooldowns
+const SEEK_TOLERANCE = 1.5;    // segundos permitidos por delante de allow
+const SEEK_COOLDOWN = 900;     // ms entre correcciones de seek
+const ANTI_ZERO_GUARD = 5;     // si allow>5 y current ~0, corrige
+const TICK_MS = 500;
 
 function ytThumb(id){ return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`; }
 function makePoster(pid, videoId, lockedMsg){
@@ -353,12 +357,11 @@ function ensureStoreFor(mid,vid){
   return state.play[mid][vid];
 }
 
-/* Crear player al clicar el póster (sin autoplay) */
 function clickToLoad(pid){
   const cfg=cfgByPid.get(pid); if(!cfg) return;
   if(isLocked(cfg)){ showWarn(pid, lockReason(cfg)); return; }
   if(players[pid]) return;
-  actuallyCreatePlayer(cfg);
+  actuallyCreatePlayer(cfg, /*autoplay=*/false);
   const poster=document.querySelector(`.poster[data-load="${pid}"]`);
   if(poster) poster.remove();
 }
@@ -382,18 +385,10 @@ function showWarn(pid, text){
   setTimeout(()=>{ if(w) w.style.display='none'; },1800);
 }
 
-function pauseOthers(exceptPid){
-  Object.entries(players).forEach(([k,inst])=>{
-    if(k!==exceptPid && inst?.player){
-      try{ inst.player.pauseVideo(); }catch(_){}
-    }
-  });
-}
-
-function actuallyCreatePlayer({pid,videoId,moduleId,index}){
+function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
   if(players[pid]) return;
   const store=ensureStoreFor(moduleId,videoId);
-  const meta={pid,videoId,moduleId,index,tick:null,retries:0,lastSeekMs:0};
+  const meta={pid,videoId,moduleId,index,tick:null,retries:0,lastSeekFix:0};
   players[pid]={player:null,meta};
 
   const holder=document.getElementById(pid);
@@ -409,25 +404,17 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
           if(ifr) ifr.setAttribute('allow','autoplay; fullscreen; encrypted-media; picture-in-picture');
           ev.target.unMute(); ev.target.setVolume(100);
         }catch(_){}
-        // Espera a que YT calcule duración antes de saltar
-        const startAt=Math.min(store.t||0, store.allow||0);
-        let tries=0;
-        const seekWhenReady = setInterval(()=>{
-          let dur=0;
-          try{ dur=ev.target.getDuration?.()||0; }catch(_){}
-          if(dur>0 || tries>10){
-            clearInterval(seekWhenReady);
-            if(startAt>1){ safeSeek(ev.target, meta, startAt); }
-          }
-          tries++;
-        },150);
+        // restaura tiempo sin auto reproducir
+        const startAt = Math.max(0, Math.min(store.allow||0, store.dur||1));
+        if(startAt>0.5){ try{ ev.target.seekTo(startAt, true); }catch(_){} }
+        if(autoplay){ try{ ev.target.playVideo(); }catch(_){} }
       },
       onStateChange:(ev)=>{
         const p=ev.target, st=ev.data;
         if(st===YT.PlayerState.PLAYING){
           lastPlayingPid=pid;
-          pauseOthers(pid);
-          if(isLocked(meta)){ showWarn(pid, lockReason(meta)); try{p.pauseVideo();}catch(_){ } return; }
+          wasPlayingBeforeHide=true;
+          if(isLocked(meta)){ showWarn(pid, lockReason(meta)); safePause(p); return; }
           startTick();
         }else if(st===YT.PlayerState.PAUSED){
           persist();
@@ -444,20 +431,25 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
           if(nextLock) nextLock.remove();
           updateGlobalProgress();
           maybeEnableQuiz({id:moduleId, videos:m?.videos||[]});
-        }else if(st===YT.PlayerState.UNSTARTED || st===YT.PlayerState.CUED){
-          // Re-anclaje suave cuando YT vuelve a 0
-          const targetT = Math.min(store.t||0, store.allow||0);
-          if(targetT>1){ safeSeek(p, meta, targetT); }
         }
       },
       onError:()=>{
+        // recrea y arranca desde donde ibas
         if(meta.retries<3){
           meta.retries++;
           setTimeout(()=>{
             try{players[pid]?.player?.destroy?.();}catch(_){}
             delete players[pid];
-            actuallyCreatePlayer({pid,videoId,moduleId,index});
-          },600*meta.retries);
+            players[pid]=undefined;
+            const startAt = Math.max(0, ensureStoreFor(moduleId,videoId).t || ensureStoreFor(moduleId,videoId).allow || 0);
+            // recreate and request autoplay to snap back
+            actuallyCreatePlayer({pid,videoId,moduleId,index}, /*autoplay=*/true);
+            // seguridad extra: intentar cargar con startSeconds
+            try{
+              const inst = players[pid]?.player;
+              if(inst && startAt>0.5){ inst.loadVideoById({videoId,startSeconds:startAt,suggestedQuality:'large'}); }
+            }catch(_){}
+          }, 600*meta.retries);
         }else{
           const w=document.getElementById(`warn-${pid}`);
           if(w){ w.textContent='No se pudo cargar el video. Recarga la página.'; w.style.display='block'; }
@@ -471,49 +463,58 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
     meta.tick=setInterval(()=>{
       const inst=players[pid]; if(!inst) return;
       const p=inst.player;
-      let cur=0,dur=0,st;
+      let cur=0,dur=0,st=-1;
       try{ cur=p.getCurrentTime?.()||0; dur=p.getDuration?.()||0; st=p.getPlayerState?.(); }catch(_){}
-      if(dur && (!store.dur || Math.abs(store.dur-dur)>0.5)){ store.dur=dur; persist(); }
-
-      // Anti-adelanto con tolerancia y cooldown
-      const allowed=store.allow||0;
-      if(cur>(allowed+ANTI_SKIP_TOL)){
-        safeSeek(p, meta, allowed);
-        return;
+      if(dur && (!store.dur || Math.abs(store.dur-dur)>0.5)){ store.dur=dur; }
+      // Anti-0: si YouTube reporta ~0 pero ya había progreso significativo
+      if(cur<0.4 && (store.allow||0) > ANTI_ZERO_GUARD){
+        throttledSeek(Math.max(0, (store.allow||0)-1));
+        cur = (store.allow||0)-1;
       }
-
-      if(st===YT.PlayerState.PLAYING){
-        if(cur>allowed) store.allow=cur;
-        store.t=cur;
+      // Anti-adelanto con tolerancia
+      if(cur > (store.allow||0) + SEEK_TOLERANCE){
+        throttledSeek(Math.max(0, (store.allow||0) - 0.3));
       }else{
-        store.t=cur;
+        if(st===YT.PlayerState.PLAYING){
+          if(cur > (store.allow||0)) store.allow=cur;
+          store.t=cur;
+        }else{
+          store.t=cur;
+        }
       }
-    },500);
+      // guarda periódicamente
+      if(Math.random()<0.2) persist();
+    }, TICK_MS);
   }
   function stopTick(){ if(meta.tick){ clearInterval(meta.tick); meta.tick=null; } }
-}
-
-function safeSeek(player, meta, t){
-  const now=Date.now();
-  if(now - (meta.lastSeekMs||0) < SEEK_COOLDOWN_MS) return;
-  meta.lastSeekMs=now;
-  try{ player.seekTo(t,true); }catch(_){}
-}
-
-/* Pausa al salir de la pestaña (sin auto-reproducir al volver) */
-document.addEventListener('visibilitychange', ()=>{
-  if(document.hidden){
-    Object.values(players).forEach(({player})=>{ try{player.pauseVideo();}catch(_){ } });
-    persist();
-  }else{
-    // No auto-play al volver: solo re-anclaje suave si YT quedó en 0
-    Object.values(players).forEach(({player,meta})=>{
-      let cur=0;
-      try{ cur=player.getCurrentTime?.()||0; }catch(_){}
-      const targetT=Math.min((state.play?.[meta.moduleId]?.[meta.videoId]?.t)||0,(state.play?.[meta.moduleId]?.[meta.videoId]?.allow)||0);
-      if(cur<1 && targetT>1){ safeSeek(player, meta, targetT); }
-    });
+  function throttledSeek(sec){
+    const now=Date.now();
+    if(now - (meta.lastSeekFix||0) < SEEK_COOLDOWN) return;
+    meta.lastSeekFix=now;
+    try{ players[pid]?.player?.seekTo(sec, true); }catch(_){}
   }
+  function safePause(p){ try{ p.pauseVideo(); }catch(_){} }
+}
+
+/* Pausa/continuación al cambiar visibilidad (de-bounced) */
+let visTimer=null;
+document.addEventListener('visibilitychange', ()=>{
+  if(visTimer) clearTimeout(visTimer);
+  visTimer=setTimeout(()=>{
+    if(document.hidden){
+      wasPlayingBeforeHide=false;
+      if(lastPlayingPid && players[lastPlayingPid]?.player){
+        const st = players[lastPlayingPid].player.getPlayerState?.();
+        wasPlayingBeforeHide = (st===YT.PlayerState.PLAYING);
+      }
+      Object.values(players).forEach(({player})=>{ try{player.pauseVideo();}catch(_){ } });
+      persist();
+    }else{
+      if(wasPlayingBeforeHide && lastPlayingPid && players[lastPlayingPid]?.player){
+        try{ players[lastPlayingPid].player.playVideo(); }catch(_){}
+      }
+    }
+  }, 120); // pequeño debounce
 });
 window.addEventListener('pagehide', persist);
 window.addEventListener('beforeunload', persist);
@@ -743,7 +744,7 @@ async function saveProfile(){
     }else{
       pfMsg.textContent='No se pudo guardar en la nube; tus datos quedan localmente.';
       setProfileReadonly(false);
-      markDirty(); // vuelve a habilitar Guardar para reintentar
+      markDirty();
     }
   }
 }
@@ -764,12 +765,12 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
       if(idx===hoverIndex) div.style.background='#1f2937';
       div.textContent=name;
       div.addEventListener('mousedown',(e)=>{
-        if(input.readOnly) return; // respetar modo lectura global
+        if(input.readOnly) return;
         e.preventDefault();
         input.value=name;
         markDirty();
         hide();
-        input.focus(); // deja el foco para editar de inmediato
+        input.focus();
         input.select();
       });
       panel.appendChild(div);
@@ -778,7 +779,6 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
   function show(){ if(input.readOnly) return; wrap.classList.add('show'); open=true; }
   function hide(){ wrap.classList.remove('show'); open=false; hoverIndex=-1; }
 
-  // Abre al clic en todo el wrap (incluida flecha)
   wrap.addEventListener('mousedown',()=>{
     if(input.readOnly) return;
     if(!open){
@@ -788,7 +788,6 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
     }
   });
 
-  // Filtra en vivo
   input.addEventListener('input',()=>{
     if(input.readOnly) return;
     const q=input.value.trim().toLowerCase();
@@ -798,7 +797,6 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
     markDirty();
   });
 
-  // Teclado: Enter / ↑ / ↓ / Esc
   input.addEventListener('keydown',(e)=>{
     if(input.readOnly) return;
     if(!open && (e.key==='ArrowDown' || e.key==='Enter')){ filtered=ESPECIALIDADES.slice(); render(filtered); show(); return; }
@@ -809,10 +807,8 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
     }else if(e.key==='Escape'){ hide(); }
   });
 
-  // Clic fuera cierra
   document.addEventListener('mousedown',(e)=>{ if(!wrap.contains(e.target)) hide(); });
 
-  // Validación suave: borra si no existe al perder foco
   input.addEventListener('blur',()=>{
     const v=input.value.trim();
     if(v && !ESPECIALIDADES.includes(v)){ input.value=''; }
@@ -821,7 +817,7 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
   render(filtered);
 })();
 
-/* ======================== Render módulos / progreso / sync (igual) ======================== */
+/* ======================== Render módulos / progreso / sync ======================== */
 function mkModule(id,titulo,ytIds){
   const vids=(ytIds&&ytIds.length?ytIds:DEFAULT_VIDEOS).slice(0,5).map((v,i)=>({yt:v,dur:'08:00',n:i+1}));
   const quiz=[
