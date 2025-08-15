@@ -312,18 +312,11 @@ function markDirty(){
   document.addEventListener('input', (e)=>{ if(e.target && e.target.id===id) markDirty(); });
 });
 
-/* ======================== YouTube control (robusto) ======================== */
+/* ======================== YouTube control (mejorado) ======================== */
 let ytApiReady=false;
-const players={};           // pid -> { player, meta }
-const cfgByPid=new Map();   // pid -> {pid, videoId, moduleId, index}
+const players={};
+const cfgByPid=new Map();
 let lastPlayingPid=null;
-let wasPlayingBeforeHide=false;  // recuerda si estaba reproduciendo antes de ocultar
-
-// Tolerancias y cooldowns
-const SEEK_TOLERANCE = 1.5;    // segundos permitidos por delante de allow
-const SEEK_COOLDOWN = 900;     // ms entre correcciones de seek
-const ANTI_ZERO_GUARD = 5;     // si allow>5 y current ~0, corrige
-const TICK_MS = 500;
 
 function ytThumb(id){ return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`; }
 function makePoster(pid, videoId, lockedMsg){
@@ -354,14 +347,19 @@ function ensureStoreFor(mid,vid){
   state.play=state.play||{};
   state.play[mid]=state.play[mid]||{};
   state.play[mid][vid]=state.play[mid][vid]||{t:0,allow:0,dur:0};
+  // 🔧 Evita reanudar en 0 si t > 0
+  if(state.play[mid][vid].t>0 && state.play[mid][vid].allow===0){
+    state.play[mid][vid].allow=state.play[mid][vid].t;
+  }
   return state.play[mid][vid];
 }
 
+/* Crear player al clicar el póster (sin autoplay) */
 function clickToLoad(pid){
   const cfg=cfgByPid.get(pid); if(!cfg) return;
   if(isLocked(cfg)){ showWarn(pid, lockReason(cfg)); return; }
   if(players[pid]) return;
-  actuallyCreatePlayer(cfg, /*autoplay=*/false);
+  actuallyCreatePlayer(cfg);
   const poster=document.querySelector(`.poster[data-load="${pid}"]`);
   if(poster) poster.remove();
 }
@@ -385,10 +383,10 @@ function showWarn(pid, text){
   setTimeout(()=>{ if(w) w.style.display='none'; },1800);
 }
 
-function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
+function actuallyCreatePlayer({pid,videoId,moduleId,index}){
   if(players[pid]) return;
   const store=ensureStoreFor(moduleId,videoId);
-  const meta={pid,videoId,moduleId,index,tick:null,retries:0,lastSeekFix:0};
+  const meta={pid,videoId,moduleId,index,tick:null,retries:0,wasPlaying:false,lastTimeSample:0,lastAdvanceAt:0};
   players[pid]={player:null,meta};
 
   const holder=document.getElementById(pid);
@@ -404,19 +402,23 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
           if(ifr) ifr.setAttribute('allow','autoplay; fullscreen; encrypted-media; picture-in-picture');
           ev.target.unMute(); ev.target.setVolume(100);
         }catch(_){}
-        // restaura tiempo sin auto reproducir
-        const startAt = Math.max(0, Math.min(store.allow||0, store.dur||1));
-        if(startAt>0.5){ try{ ev.target.seekTo(startAt, true); }catch(_){} }
-        if(autoplay){ try{ ev.target.playVideo(); }catch(_){} }
+        // ✅ Reanuda donde ibas (sin regresarte a 0)
+        const resume = Number.isFinite(store.t) ? store.t : 0;
+        if(resume>1){
+          try{ ev.target.seekTo(resume,true); }catch(_){}
+        }
+        // Asegura coherencia anti-adelanto
+        if(store.allow < resume) store.allow = resume;
       },
       onStateChange:(ev)=>{
         const p=ev.target, st=ev.data;
         if(st===YT.PlayerState.PLAYING){
           lastPlayingPid=pid;
-          wasPlayingBeforeHide=true;
-          if(isLocked(meta)){ showWarn(pid, lockReason(meta)); safePause(p); return; }
+          meta.wasPlaying=true;
+          if(isLocked(meta)){ showWarn(pid, lockReason(meta)); try{p.pauseVideo();}catch(_){ } return; }
           startTick();
         }else if(st===YT.PlayerState.PAUSED){
+          meta.wasPlaying=false;
           persist();
         }else if(st===YT.PlayerState.ENDED){
           stopTick();
@@ -434,22 +436,15 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
         }
       },
       onError:()=>{
-        // recrea y arranca desde donde ibas
         if(meta.retries<3){
           meta.retries++;
+          const resume=store.t||0;
           setTimeout(()=>{
             try{players[pid]?.player?.destroy?.();}catch(_){}
             delete players[pid];
-            players[pid]=undefined;
-            const startAt = Math.max(0, ensureStoreFor(moduleId,videoId).t || ensureStoreFor(moduleId,videoId).allow || 0);
-            // recreate and request autoplay to snap back
-            actuallyCreatePlayer({pid,videoId,moduleId,index}, /*autoplay=*/true);
-            // seguridad extra: intentar cargar con startSeconds
-            try{
-              const inst = players[pid]?.player;
-              if(inst && startAt>0.5){ inst.loadVideoById({videoId,startSeconds:startAt,suggestedQuality:'large'}); }
-            }catch(_){}
-          }, 600*meta.retries);
+            actuallyCreatePlayer({pid,videoId,moduleId,index});
+            // Tras recrear, en onReady ya hacemos seekTo(resume)
+          },600*meta.retries);
         }else{
           const w=document.getElementById(`warn-${pid}`);
           if(w){ w.textContent='No se pudo cargar el video. Recarga la página.'; w.style.display='block'; }
@@ -463,58 +458,58 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
     meta.tick=setInterval(()=>{
       const inst=players[pid]; if(!inst) return;
       const p=inst.player;
-      let cur=0,dur=0,st=-1;
+      let cur=0,dur=0,st;
       try{ cur=p.getCurrentTime?.()||0; dur=p.getDuration?.()||0; st=p.getPlayerState?.(); }catch(_){}
-      if(dur && (!store.dur || Math.abs(store.dur-dur)>0.5)){ store.dur=dur; }
-      // Anti-0: si YouTube reporta ~0 pero ya había progreso significativo
-      if(cur<0.4 && (store.allow||0) > ANTI_ZERO_GUARD){
-        throttledSeek(Math.max(0, (store.allow||0)-1));
-        cur = (store.allow||0)-1;
+      if(dur && (!store.dur || Math.abs(store.dur-dur)>0.5)){ store.dur=dur; persist(); }
+
+      // ✅ Anti-salto más tolerante (solo si >5s por delante)
+      if(cur>(store.allow+5)){
+        try{ p.seekTo(Math.min(cur, store.allow+0.1), true); }catch(_){}
+        return;
       }
-      // Anti-adelanto con tolerancia
-      if(cur > (store.allow||0) + SEEK_TOLERANCE){
-        throttledSeek(Math.max(0, (store.allow||0) - 0.3));
-      }else{
-        if(st===YT.PlayerState.PLAYING){
-          if(cur > (store.allow||0)) store.allow=cur;
-          store.t=cur;
-        }else{
-          store.t=cur;
+
+      // Track progreso
+      if(st===YT.PlayerState.PLAYING){
+        if(cur>store.allow) store.allow=cur;
+        store.t=cur;
+
+        // 🔎 Watchdog: si está "PLAYING" pero no avanza por >2s, reintenta play()
+        const now = Date.now();
+        if(Math.abs(cur - meta.lastTimeSample) > 0.25){
+          meta.lastTimeSample = cur;
+          meta.lastAdvanceAt = now;
+        }else if(now - meta.lastAdvanceAt > 2000){
+          try{ p.playVideo(); }catch(_){}
+          meta.lastAdvanceAt = now;
         }
+
+      }else{
+        // En pausa/buffering seguimos guardando t
+        store.t=cur;
       }
-      // guarda periódicamente
-      if(Math.random()<0.2) persist();
-    }, TICK_MS);
+    },500);
   }
   function stopTick(){ if(meta.tick){ clearInterval(meta.tick); meta.tick=null; } }
-  function throttledSeek(sec){
-    const now=Date.now();
-    if(now - (meta.lastSeekFix||0) < SEEK_COOLDOWN) return;
-    meta.lastSeekFix=now;
-    try{ players[pid]?.player?.seekTo(sec, true); }catch(_){}
-  }
-  function safePause(p){ try{ p.pauseVideo(); }catch(_){} }
 }
 
-/* Pausa/continuación al cambiar visibilidad (de-bounced) */
-let visTimer=null;
+/* Pausa al salir de la pestaña y SOLO reanuda si venía reproduciendo */
 document.addEventListener('visibilitychange', ()=>{
-  if(visTimer) clearTimeout(visTimer);
-  visTimer=setTimeout(()=>{
-    if(document.hidden){
-      wasPlayingBeforeHide=false;
-      if(lastPlayingPid && players[lastPlayingPid]?.player){
-        const st = players[lastPlayingPid].player.getPlayerState?.();
-        wasPlayingBeforeHide = (st===YT.PlayerState.PLAYING);
+  const hidden = document.hidden;
+  Object.values(players).forEach(({player,meta})=>{
+    try{
+      const st = player.getPlayerState?.();
+      if(hidden){
+        meta.wasPlaying = (st===YT.PlayerState.PLAYING);
+        if(meta.wasPlaying) player.pauseVideo();
+      }else{
+        if(meta.wasPlaying){
+          player.playVideo();
+          meta.wasPlaying=false;
+        }
       }
-      Object.values(players).forEach(({player})=>{ try{player.pauseVideo();}catch(_){ } });
-      persist();
-    }else{
-      if(wasPlayingBeforeHide && lastPlayingPid && players[lastPlayingPid]?.player){
-        try{ players[lastPlayingPid].player.playVideo(); }catch(_){}
-      }
-    }
-  }, 120); // pequeño debounce
+    }catch(_){}
+  });
+  persist();
 });
 window.addEventListener('pagehide', persist);
 window.addEventListener('beforeunload', persist);
@@ -744,7 +739,7 @@ async function saveProfile(){
     }else{
       pfMsg.textContent='No se pudo guardar en la nube; tus datos quedan localmente.';
       setProfileReadonly(false);
-      markDirty();
+      markDirty(); // vuelve a habilitar Guardar para reintentar
     }
   }
 }
