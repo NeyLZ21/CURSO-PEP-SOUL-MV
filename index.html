@@ -223,7 +223,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 
 <script>
 /* ======================== ESPECIALIDADES / MÓDULOS / VIDEOS ======================== */
-const ESPECIALIDADES=[ "ACUPUNTURA","ALERGOLOGIA","ANESTESIOLOGIA","CARDIOLOGIA","CARDIOLOGIA HEMODINAMIA","CARDIOLOGIA INTERVENCIONISTA","CARDIOLOGIA PEDIATRICA","CIR. GENERAL-COLOPROCTOLOGIA","CIR. MANO/MUÑE-NERVIO PERI/BRA","CIRUGIA CARDIACA","CIRUGIA DE CABEZA Y CUELLO","CIRUGIA DE COLUMNA","CIRUGIA DE HOMBRO Y CODO","CIRUGIA GENERAL","CIRUGIA ONCOCOLOGICA","CIRUGIA PEDIATRICA","CIRUGIA PLASTICA","CIRUGIA TORACICA","CIRUGIA VASCULAR","COLOPROCTOLOGIA","CUIDADOS PALIATIVOS","DERMATOLOGIA","DIABETOLOGIA","EMERGENCIAS Y DESASTRES","ENDOCRINO PEDIATRA","ENDOCRINOLOGIA","ENFERMEDADES AUTOINMUNES","FISIATRIA","FONOAUDIOLOGIA","GASTROENTEROLOGIA","GASTROENTEROLOGIA PEDIATRICA","GENETICA MEDICA","GERIATRIA","GINECOLOGIA INFANTO JUVENIL","GINECOLOGIA ONCOLOGICA","GINECOLOGIA Y OBSTETRICIA","HEMATOLOGIA","HEMATOLOGO ONCOCOLOGO PEDIATRIA","HEPATOLOGIA","INFECTOLOGIA","INFECTOLOGIA PEDIATRICA","INTERVENCIONISMO","MASTOLOGIA","MAXILO FACIAL","MEDICINA CRITICA","MEDICINA CRITICA PEDIATRICA","MEDICINA DEL DEPORTE","MEDICINA FAMILIAR","MEDICINA FAMILIAR EMERGENCIA","MEDICINA GENERAL","MEDICINA INTERNA","MEDICINA MATERNO FETAL","MEDICINA PALIATIVA","MICROBIOLOGIA","NEFROLOGIA","NEFROLOGIA PEDIATRICA","NEONATOLOGIA","NEUMOLOGIA","NEUMOLOGIA PEDIATRICA","NEUROCIRUGIA","NEUROFISIOLOGIA CLINICA","NEUROLOGIA","NEUROLOGIA PEDIATRICA","NEUROPSICOLOGIA","NEURORADIOL INTERVENCIONISTA","NEURORADIOLOGIA","NUTRICION","ODONTOLOGIA","ODONTOPEDIATRIA","OFTALMOLOGIA","OFTALMOLOGIA PEDIATRICA","ONCOLOGIA CLINICA","OTORRINOLARINGOLOGIA","PATOLOGIA","PEDIATRIA","PSICOLOGIA","PSIQUIATRIA","RADIOLOGIA","RADIOLOGIA INTERVENCIONISTA","RADIOTERAPIA","RESIDENTE/INTERNO","REUMATOLOGIA","REUMATOLOGIA PEDIATRICA","SEXOLOGIA","TRATAMIENTO DEL DOLOR","TRAUMATO PEDIATRICA DE COLUMNA","TRAUMATOLOGIA DEL COLUMNA","TRAUMATOLOGIA ONCOLOGICA","TRAUMATOLOGIA PEDIATRICA","TRAUMATOLOGIA Y ORTOPEDIA","UROLOGIA","UROLOGIA PEDIATRICA" ];
+const ESPECIALIDADES=[ "ACUPUNTURA","ALERGOLOGIA","ANESTESIOLOGIA","CARDIOLOGIA","CARDIOLOGIA HEMODINAMIA","CARDIOLOGIA INTERVENCIONISTA","CARDIOLOGIA PEDIATRICA","CIR. GENERAL-COLOPROCTOLOGIA","CIR. MANO/MUÑE-NERVIO PERI/BRA","CIRUGIA CARDIACA","CIRUGIA DE CABEZA Y CUELLO","CIRUGIA DE COLUMNA","CIRUGIA DE HOMBRO Y CODO","CIRUGIA GENERAL","CIRUGIA ONCOCOLOGICA","CIRUGIA PEDIATRICA","CIRUGIA PLASTICA","CIRUGIA TORACICA","CIRUGIA VASCULAR","COLOPROCTOLOGIA","CUIDADOS PALIATIVOS","DERMATOLOGIA","DIABETOLOGIA","EMERGENCIAS Y DESASTRES","ENDOCRINO PEDIATRA","ENDOCRINOLOGIA","ENFERMEDADES AUTOINMUNES","FISIATRIA","FONOAUDIOLOGIA","GASTROENTEROLOGIA","GASTROENTEROLOGIA PEDIATRICA","GENETICA MEDICA","GERIATRIA","GINECOLOGIA INFANTO JUVENIL","GINECOLOGIA ONCOCOLOGICA","GINECOLOGIA Y OBSTETRICIA","HEMATOLOGIA","HEMATOLOGO ONCOCOLOGO PEDIATRIA","HEPATOLOGIA","INFECTOLOGIA","INFECTOLOGIA PEDIATRICA","INTERVENCIONISMO","MASTOLOGIA","MAXILO FACIAL","MEDICINA CRITICA","MEDICINA CRITICA PEDIATRICA","MEDICINA DEL DEPORTE","MEDICINA FAMILIAR","MEDICINA FAMILIAR EMERGENCIA","MEDICINA GENERAL","MEDICINA INTERNA","MEDICINA MATERNO FETAL","MEDICINA PALIATIVA","MICROBIOLOGIA","NEFROLOGIA","NEFROLOGIA PEDIATRICA","NEONATOLOGIA","NEUMOLOGIA","NEUMOLOGIA PEDIATRICA","NEUROCIRUGIA","NEUROFISIOLOGIA CLINICA","NEUROLOGIA","NEUROLOGIA PEDIATRICA","NEUROPSICOLOGIA","NEURORADIOL INTERVENCIONISTA","NEURORADIOLOGIA","NUTRICION","ODONTOLOGIA","ODONTOPEDIATRIA","OFTALMOLOGIA","OFTALMOLOGIA PEDIATRICA","ONCOLOGIA CLINICA","OTORRINOLARINGOLOGIA","PATOLOGIA","PEDIATRIA","PSICOLOGIA","PSIQUIATRIA","RADIOLOGIA","RADIOLOGIA INTERVENCIONISTA","RADIOTERAPIA","RESIDENTE/INTERNO","REUMATOLOGIA","REUMATOLOGIA PEDIATRICA","SEXOLOGIA","TRATAMIENTO DEL DOLOR","TRAUMATO PEDIATRICA DE COLUMNA","TRAUMATOLOGIA DEL COLUMNA","TRAUMATOLOGIA ONCOLOGICA","TRAUMATOLOGIA PEDIATRICA","TRAUMATOLOGIA Y ORTOPEDIA","UROLOGIA","UROLOGIA PEDIATRICA" ];
 const M={ CE:"CONSULTA EXTERNA", H:"HOSPITALIZACIÓN-HDD", CQ:"CENTRO QUIRÚRGICO", G:"GENERALIDADES", AN:"ANESTESIOLOGÍA", EM:"EMERGENCIAS" };
 const BASE_MEDICA=[M.G,M.H,M.CE], BASE_QUIR=[M.G,M.H,M.CE,M.CQ];
 const ESPEC_MODS={
@@ -307,11 +307,11 @@ const ANTI_ZERO_GUARD=5;         // si allow>5s y current~0, corrige
 const TICK_MS=500;
 
 const HIDE_PAUSE_THRESHOLD=1000; // pausa solo si está oculta >1s
-const GRACE_AFTER_BACK_MS=5000;  // 5s de “gracia” al volver (ignorar pausas fantasma)
+const GRACE_AFTER_BACK_MS=5000;  // 5s de “gracia” al volver
 const GRACE_AFTER_PLAY_MS=5000;  // 5s de gracia tras un Play del usuario
 const MAX_AUTORETRY=3;           // reintentos de auto-reanudar
 
-/* Señales de intención del usuario (para no pelear con su pausa) */
+/* Señales de intención del usuario */
 let lastUserInput=0;
 ['pointerdown','keydown','touchstart'].forEach(evt=>{
   document.addEventListener(evt,()=>{ lastUserInput=Date.now(); },{passive:true});
@@ -321,7 +321,7 @@ let lastUserInput=0;
 let lastVisibilityBackAt=0;
 let lastUserPlayAt=0;
 
-/* Detectar “Play” positivo del usuario en el player (via onStateChange → PLAYING shortly after input) */
+/* Detectar “Play” positivo del usuario */
 function markUserPlayIntent(){ lastUserPlayAt=Date.now(); }
 
 /* Helpers UI/lock */
@@ -331,10 +331,7 @@ function makePoster(pid, videoId, lockedMsg){
   return `
     <div class="yt-wrap" style="margin-top:8px">
       <div id="${pid}"></div>
-      <div class="poster" data-load="${pid}">
-        <img src="${ytThumb(videoId)}" alt="">
-        <button type="button">Ver video ▶</button>
-      </div>
+      <div class="poster" data-load="${pid}"><img src="${ytThumb(videoId)}" alt=""><button type="button">Ver video ▶</button></div>
       ${lockLayer}
       <div class="warnmsg" id="warn-${pid}"></div>
     </div>`;
@@ -383,6 +380,20 @@ function clickToLoad(pid){
   document.querySelector(`.poster[data-load="${pid}"]`)?.remove();
 }
 
+/* ======================== Cloud sync helpers (NUEVO) ======================== */
+let _syncTimer=null, _lastQueued=0;
+function queueCloudSync(delay=800){
+  clearTimeout(_syncTimer);
+  _syncTimer=setTimeout(()=>{ syncToCloud().catch(()=>{}); }, delay);
+}
+function maybeQueueCloudSync(intervalMs=12000){
+  const now=Date.now();
+  if(now - _lastQueued >= intervalMs){
+    _lastQueued = now;
+    queueCloudSync(0);
+  }
+}
+
 /* Crear player + lógica de anti-pausa */
 function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
   if(players[pid]) return;
@@ -417,7 +428,7 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
 
         if(st===YT.PlayerState.PLAYING){
           lastPlayingPid=pid;
-          markUserPlayIntent(); // asumimos que usuario activó play o auto-reanudó
+          markUserPlayIntent();
           meta.autoResumeCount=0; clearTimeout(meta.autoResumeTimer); meta.autoResumeTimer=null;
           startTick();
           return;
@@ -426,19 +437,12 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
         if(st===YT.PlayerState.PAUSED || st===YT.PlayerState.BUFFERING){ persist(); }
 
         if(st===YT.PlayerState.PAUSED){
-          // Si el usuario pausó (click/tecla) en los últimos 600ms, no interferir
           const userLikelyPaused=(Date.now()-lastUserInput)<600;
-
-          // No reanudar si casi termina
           let cur=0,dur=0;
           try{ cur=p.getCurrentTime?.()||0; dur=p.getDuration?.()||0; }catch(_){}
           const nearEnd = dur>0 && (dur-cur)<=1.0;
-
-          // ¿Estamos en ventana de gracia al volver o tras un Play reciente?
           const inBackGrace = (Date.now()-lastVisibilityBackAt) < GRACE_AFTER_BACK_MS;
           const inPlayGrace = (Date.now()-lastUserPlayAt) < GRACE_AFTER_PLAY_MS;
-
-          // Si no es pausa del usuario, estamos visibles, y estamos en alguna gracia -> auto-reanudar
           if(!nearEnd && !userLikelyPaused && !document.hidden && (inBackGrace || inPlayGrace)){
             scheduleAutoResume(meta,p);
           }
@@ -451,6 +455,9 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
           state.videosDone[moduleId][videoId]=true;
           store.allow=store.dur||store.allow; store.t=store.allow;
           persist();
+          // >>> NUEVO: subir inmediatamente al terminar cada video
+          queueCloudSync(0);
+
           const m=(state.course?.modules||[]).find(mm=>mm.id===moduleId);
           document.getElementById(`lock-player-${moduleId}-${index+1}`)?.remove();
           updateGlobalProgress();
@@ -487,18 +494,20 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}, autoplay){
       try{ cur=p.getCurrentTime?.()||0; dur=p.getDuration?.()||0; st=p.getPlayerState?.(); }catch(_){}
       if(dur && (!store.dur || Math.abs(store.dur-dur)>0.5)) store.dur=dur;
 
-      // Anti-0: si reporta ~0s pero ya había progreso
+      // Anti-0
       if(cur<0.4 && (store.allow||0)>ANTI_ZERO_GUARD){
         throttledSeek(Math.max(0,(store.allow||0)-1));
         cur=(store.allow||0)-1;
       }
-      // Anti-adelanto con tolerancia
+      // Anti-adelanto
       if(cur>(store.allow||0)+SEEK_TOLERANCE){
         throttledSeek(Math.max(0,(store.allow||0)-0.3));
       }else{
         if(st===YT.PlayerState.PLAYING){
           if(cur>(store.allow||0)) store.allow=cur;
           store.t=cur;
+          // >>> NUEVO: sincronizar cada ~12s mientras reproduce
+          maybeQueueCloudSync(12000);
         }else{
           store.t=cur;
         }
@@ -526,10 +535,10 @@ function scheduleAutoResume(meta,p){
         p.playVideo();
       }
     }catch(_){}
-  }, 700 + (meta.autoResumeCount-1)*350); // backoff suave
+  }, 700 + (meta.autoResumeCount-1)*350);
 }
 
-/* Visibilidad: pausar SOLO si oculta >1s; al volver, activar gracia anti-pausa */
+/* Visibilidad */
 let hideTimer=null;
 document.addEventListener('visibilitychange', ()=>{
   if(document.hidden){
@@ -589,7 +598,8 @@ auth.onAuthStateChanged(async (user)=>{
   if(!user.emailVerified){ showLogin(); $('#verify-box').style.display='block'; return; }
   $('#verify-box').style.display='none';
   showCourse();
-  syncFromCloud(user).catch(()=>{});
+  // Cargar de la nube y luego empujar cualquier cambio local pendiente
+  syncFromCloud(user).then(()=> queueCloudSync(0)).catch(()=>{});
 });
 
 document.getElementById('btn-register-2').addEventListener('click', async ()=>{
@@ -632,7 +642,7 @@ document.getElementById('btn-login').addEventListener('click', async ()=>{
     const u=cred.user||auth.currentUser; await u.reload().catch(()=>{});
     if(!u.emailVerified){ msg('Debes verificar tu correo antes de continuar.'); $('#verify-box').style.display='block'; return; }
     msg('Sesión iniciada.'); $('#verify-box').style.display='none';
-    showCourse(); syncFromCloud(u).catch(()=>{});
+    showCourse(); syncFromCloud(u).then(()=>queueCloudSync(0)).catch(()=>{});
   }catch(e){
     let methods=[]; try{methods=await auth.fetchSignInMethodsForEmail(email);}catch(_){}
     if(!methods||methods.length===0){ msg('Correo no registrado.'); setTab('reg'); $('#reg-email').value=email; }
@@ -746,6 +756,10 @@ async function loadProfile(){
 }
 
 /* ====== Guardado robusto (reintentos + offline) ====== */
+function markDirty(){
+  const btn=$('#btn-save-profile');
+  btn.disabled=false;
+}
 async function saveProfile(){
   const name=($('#pf-name').value||'').trim();
   const iddoc=($('#pf-id').value||'').trim();
@@ -772,6 +786,9 @@ async function saveProfile(){
       catch(e){ lastErr=e; await new Promise(r=>setTimeout(r, 700*(i+1))); }
     }
     if(!ok) throw lastErr || new Error('No se pudo guardar');
+
+    // Empuja también un snapshot de progreso para mantener consistencia
+    queueCloudSync(0);
 
     savingProfile=false; pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Perfil guardado.';
     setProfileReadonly(true);
@@ -970,7 +987,7 @@ function gradeQuizModule(m){
   if(state.quizzes[m.id].passed){
     const btn=document.querySelector(`#btn-${m.id}`);
     if(btn){ btn.textContent='Aprobado ✓'; btn.classList.remove('btn-primary'); btn.classList.add('btn-success'); }
-    setTimeout(syncToCloud,300);
+    queueCloudSync(0); // subir resultados de evaluación
   }
 }
 function updateGlobalProgress(){
