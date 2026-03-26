@@ -13,7 +13,7 @@
 body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
 .container{max-width:980px;margin:auto;padding:24px}
 header{display:flex;gap:16px;align-items:center;margin:12px 0 20px}
-header .logo{width:48px;height:48px;border-radius:12px;background:#781C38;display:grid;place-content:center;color:#fff;font-weight:800}
+header .logo{width:48px;height:48px;border-radius:12px;background:var(--brand);display:grid;place-content:center;color:#fff;font-weight:800}
 h1{font-size:clamp(22px,3.5vw,34px);margin:0}
 .subtitle{color:var(--muted);margin-top:4px}
 .card{background:var(--card);border-radius:18px;box-shadow:0 10px 24px rgba(0,0,0,.06);padding:20px}
@@ -23,6 +23,7 @@ h1{font-size:clamp(22px,3.5vw,34px);margin:0}
 button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor:pointer;font-weight:600}
 .btn-primary{background:var(--brand);color:#fff}
 .btn-muted{background:#e5e7eb;color:#111827}
+.btn-success{background:var(--ok);color:#fff}
 .btn[disabled],button[disabled]{opacity:.5;cursor:not-allowed}
 .badge{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:600;background:#eef2ff;color:#3730a3}
 .progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}
@@ -32,6 +33,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .module .meta{flex:1}
 .yt-wrap{position:relative;padding-top:56.25%;border-radius:16px;overflow:hidden;background:#000;margin-top:12px}
 .yt-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.lock{position:absolute;inset:0;display:grid;place-content:center;background:rgba(17,24,39,.65);color:#fff;text-align:center;padding:20px;font-weight:600}
 .small{font-size:12px;color:var(--muted)}
 .input,select{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #d1d5db;background:#fff;font:inherit}
 label{font-size:14px}
@@ -52,6 +54,7 @@ label{font-size:14px}
 #certificado{display:none}
 #certificado.show{display:block}
 .top-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+hr.sep{border:0;border-top:1px solid var(--line);margin:16px 0}
 </style>
 </head>
 <body>
@@ -165,7 +168,7 @@ label{font-size:14px}
         <div id="cert-fecha"></div>
         <div>Hospital Vozandes • Formación Interna</div>
       </div>
-      <div style="margin-top:16px"><button class="btn btn-primary" onclick="window.print()">Imprimir</button></div>
+      <div style="margin-top:16px"><button class="btn btn-primary no-print" onclick="window.print()">Imprimir</button></div>
     </div>
   </section>
 
@@ -177,19 +180,20 @@ label{font-size:14px}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
+/* ======================== CONFIGURACIÓN ======================== */
 const firebaseConfig = {
-  apiKey: "AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",
-  authDomain: "induccion-pep-hvq.firebaseapp.com",
-  projectId: "induccion-pep-hvq",
-  storageBucket: "induccion-pep-hvq.firebasestorage.app",
-  messagingSenderId: "651724182766",
-  appId: "1:651724182766:web:4eec9be43e9e8e60dc0fff"
+  apiKey: "REEMPLAZA_AQUI",
+  authDomain: "REEMPLAZA_AQUI",
+  projectId: "REEMPLAZA_AQUI",
+  storageBucket: "REEMPLAZA_AQUI",
+  messagingSenderId: "REEMPLAZA_AQUI",
+  appId: "REEMPLAZA_AQUI"
 };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.warn);
 const db = firebase.firestore();
 
+/* ======================== DATOS ======================== */
 const TIPOS_MODULO=[
   "ESTUDIANTES EN FORMACION",
   "CLÍNICO/QUIRÚRGICO",
@@ -198,7 +202,15 @@ const TIPOS_MODULO=[
   "SOLO EMERGENCIAS",
   "SOLO CONSULTA EXTERNA O RADIOLOGÍA"
 ];
-const M={G:"GENERALIDADES",H:"HOSPITALIZACIÓN",CQ:"CENTRO QUIRÚRGICO",CE:"CONSULTA EXTERNA",EM:"EMERGENCIAS",V:"VIVACE",A:"AUDITORÍA"};
+const M={
+  G:"GENERALIDADES",
+  H:"HOSPITALIZACIÓN",
+  CQ:"CENTRO QUIRÚRGICO",
+  CE:"CONSULTA EXTERNA",
+  EM:"EMERGENCIAS",
+  V:"VIVACE",
+  A:"AUDITORÍA"
+};
 const MODS_POR_TIPO={
   "ESTUDIANTES EN FORMACION":[M.G,M.H,M.CQ,M.CE,M.EM],
   "CLÍNICO/QUIRÚRGICO":[M.G,M.H,M.CQ,M.CE,M.V,M.A],
@@ -255,42 +267,47 @@ const QUIZ_BANK = {
   ]
 };
 
+/* ======================== ESTADO ======================== */
 let state = {};
 let CURRENT_UID = null;
 let unsubProfile = null;
+let savingProfile = false;
 let players = {};
 let ytReady = false;
 
+/* ======================== HELPERS ======================== */
 const $ = (s)=>document.querySelector(s);
-function msg(text,kind=''){ const el=$('#msg'); el.textContent=text||''; el.className=kind||'muted'; }
+function msg(text,kind=''){ const el=$('#msg'); el.textContent=text||''; el.className=(kind||''); }
 function nowTs(){ return Date.now(); }
 function emailOk(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v||''); }
-function setHidden(id,on){ const el=document.getElementById(id); if(el) el.classList.toggle('hidden', !!on); }
+function setHidden(id,on){ const el=document.getElementById(id); if(!el) return; el.classList.toggle('hidden',!!on); }
+function persist(){
+  if(!CURRENT_UID) return;
+  localStorage.setItem('pep_soul_mv_'+CURRENT_UID, JSON.stringify(state));
+}
+function loadState(uid){
+  try{ return JSON.parse(localStorage.getItem('pep_soul_mv_'+uid) || '{}') || {}; }catch(_){ return {}; }
+}
 function ensureState(){
   state.profile = state.profile || {};
   state.videosDone = state.videosDone || {};
   state.quizzes = state.quizzes || {};
   state.play = state.play || {};
 }
-function persist(){
-  if(!CURRENT_UID) return;
-  localStorage.setItem('pep_soul_mv_'+CURRENT_UID, JSON.stringify(state));
-}
-function loadState(uid){
-  try{ return JSON.parse(localStorage.getItem('pep_soul_mv_'+uid)||'{}') || {}; }catch(_){ return {}; }
-}
 function userProfileRef(){
-  const uid=auth.currentUser?.uid; if(!uid) return null;
+  const uid = auth.currentUser?.uid;
+  if(!uid) return null;
   return db.collection('users').doc(uid).collection('profile').doc('main');
 }
 function userCourseRef(){
-  const uid=auth.currentUser?.uid; if(!uid) return null;
+  const uid = auth.currentUser?.uid;
+  if(!uid) return null;
   return db.collection('users').doc(uid).collection('courses').doc('pep_soul_mv');
 }
 function stopAllPlayers(){
-  Object.values(players).forEach(({player})=>{
-    try{ player.stopVideo(); }catch(_){}
-    try{ player.destroy(); }catch(_){}
+  Object.values(players).forEach(item=>{
+    try{ item.player.stopVideo(); }catch(_){}
+    try{ item.player.destroy(); }catch(_){}
   });
   players = {};
   document.querySelectorAll('iframe').forEach(ifr=>{
@@ -303,20 +320,22 @@ function profileComplete(){
   return !!(p.name && p.spec && TIPOS_MODULO.includes(p.spec));
 }
 function setProfileReadonly(ro){
-  const name=$('#pf-name'), spec=$('#pf-spec'), btnSave=$('#btn-save-profile');
+  const name = $('#pf-name');
+  const spec = $('#pf-spec');
   name.readOnly = ro;
   spec.disabled = ro;
   name.style.background = ro ? '#eef2ff' : '#fff';
   spec.style.background = ro ? '#eef2ff' : '#fff';
   setHidden('btn-edit-profile', !ro);
+  const btnSave = $('#btn-save-profile');
   btnSave.classList.toggle('hidden', ro);
   btnSave.disabled = true;
 }
 function markDirty(){
-  const btn=$('#btn-save-profile');
-  if(btn) btn.disabled=false;
-  const pfMsg=$('#pf-msg');
-  if(pfMsg) pfMsg.textContent='';
+  const btn = $('#btn-save-profile');
+  if(btn) btn.disabled = false;
+  const pfMsg = $('#pf-msg');
+  if(pfMsg && /guardado|nube|error|sin conexión/i.test(pfMsg.textContent)) pfMsg.textContent='';
 }
 function hideCertificate(){ $('#certificado').classList.remove('show'); }
 function showLogin(){
@@ -326,13 +345,19 @@ function showLogin(){
   setHidden('modules', true);
   hideCertificate();
 }
+function getSelectedTrack(){ return (state.profile?.spec || '').trim(); }
 function fillTrackOptions(){
   const sel = $('#pf-spec');
   sel.innerHTML = '<option value="">Selecciona un módulo</option>' + TIPOS_MODULO.map(v=>`<option value="${v}">${v}</option>`).join('');
 }
-function getSelectedTrack(){ return (state.profile?.spec || '').trim(); }
+['pf-name','pf-spec'].forEach(id=>{
+  document.addEventListener(id==='pf-spec'?'change':'input', (e)=>{
+    if(e.target && e.target.id===id) markDirty();
+  });
+});
+
 function setTab(which){
-  const onLogin = which==='login';
+  const onLogin = which === 'login';
   setHidden('form-login', !onLogin);
   setHidden('form-register', onLogin);
   $('#tab-login').classList.toggle('btn-primary', onLogin);
@@ -341,25 +366,31 @@ function setTab(which){
   $('#tab-register').classList.toggle('btn-muted', onLogin);
 }
 
-document.addEventListener('input',(e)=>{ if(e.target?.id==='pf-name') markDirty(); });
-document.addEventListener('change',(e)=>{ if(e.target?.id==='pf-spec') markDirty(); });
-
+/* ======================== CURSO ======================== */
 function mkModule(id,titulo,ytIds){
-  return {id,titulo,videos:(ytIds&&ytIds.length?ytIds:DEFAULT_VIDEOS).slice(0,3).map((v,i)=>({yt:v,n:i+1})),quiz:(QUIZ_BANK[titulo]||QUIZ_BANK["GENERALIDADES"]).map(q=>({...q}))};
+  const videos=(ytIds && ytIds.length ? ytIds : DEFAULT_VIDEOS).slice(0,3).map((v,i)=>({yt:v,n:i+1}));
+  const quiz=(QUIZ_BANK[titulo] || QUIZ_BANK["GENERALIDADES"]).map(q=>({...q}));
+  return {id,titulo,videos,quiz};
 }
 function pickModulesFor(track){
-  const wanted=MODS_POR_TIPO[track]||[];
+  const wanted = MODS_POR_TIPO[track] || [];
   return wanted.map((titulo,idx)=>{
-    const ids=VIDEO_DEFAULTS[titulo]||DEFAULT_VIDEOS;
-    const safeId=titulo.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\w\s-]/g,"").replace(/\s+/g,"-");
-    return mkModule(`${safeId}-${idx+1}`,titulo,ids);
+    const ids = VIDEO_DEFAULTS[titulo] || DEFAULT_VIDEOS;
+    const safeId = titulo.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\w\s-]/g,"").replace(/\s+/g,"-");
+    return mkModule(`${safeId}-${idx+1}`, titulo, ids);
   });
 }
-function allVideosDone(module){ return (module.videos||[]).every(v=>!!state.videosDone?.[module.id]?.[v.yt]); }
-function quizPassed(module){ return state.quizzes?.[module.id]?.passed===true; }
-function getCourseModules(){ return pickModulesFor(getSelectedTrack()); }
+function allVideosDone(module){
+  return (module.videos||[]).every(v => !!state.videosDone?.[module.id]?.[v.yt]);
+}
+function quizPassed(module){
+  return state.quizzes?.[module.id]?.passed === true;
+}
+function getCourseModules(){
+  return pickModulesFor(getSelectedTrack());
+}
 function updateGlobalProgress(){
-  const modules=getCourseModules();
+  const modules = getCourseModules();
   if(!modules.length){
     setHidden('progress', true);
     setHidden('modules', true);
@@ -368,12 +399,17 @@ function updateGlobalProgress(){
   }
   setHidden('progress', false);
   setHidden('modules', false);
-  const total = modules.length * 2;
+
+  const total = modules.length * 2; // videos + quiz por módulo
   let done = 0;
-  modules.forEach(m=>{ if(allVideosDone(m)) done++; if(quizPassed(m)) done++; });
-  const pct = total ? Math.round(done/total*100) : 0;
+  modules.forEach(m=>{
+    if(allVideosDone(m)) done++;
+    if(quizPassed(m)) done++;
+  });
+  const pct = total ? Math.round((done/total)*100) : 0;
   $('#bar').style.width = pct + '%';
   $('#progress-label').textContent = `${pct}% completado`;
+
   const allPassed = modules.length>0 && modules.every(m=>allVideosDone(m) && quizPassed(m));
   if(allPassed){
     $('#cert-nombre').textContent = state.profile?.name || auth.currentUser?.displayName || '';
@@ -387,70 +423,71 @@ function updateGlobalProgress(){
 function savePlayPosition(moduleId, videoId, t){
   ensureState();
   state.play[moduleId] = state.play[moduleId] || {};
-  state.play[moduleId][videoId] = {t:Math.max(0, Math.floor(t||0))};
+  state.play[moduleId][videoId] = { t: Math.max(0, Math.floor(t||0)) };
   persist();
 }
 function renderQuiz(module){
-  const locked=!allVideosDone(module);
-  const prev=state.quizzes?.[module.id]||{};
-  const card=document.createElement('div');
-  card.className='quiz-card';
-  card.innerHTML=`
+  const locked = !allVideosDone(module);
+  const prev = state.quizzes?.[module.id] || {};
+  const card = document.createElement('div');
+  card.className = 'quiz-card';
+  const scoreText = prev.passed ? '<div class="ok small">Evaluación aprobada</div>' : (prev.attempted ? '<div class="small">Evaluación enviada. Revisa tus respuestas.</div>' : '');
+  card.innerHTML = `
     <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
       <strong>Evaluación</strong>
       <span class="badge">${module.quiz.length} preguntas</span>
     </div>
-    <div class="small" style="margin-top:6px">${locked?'Completa primero todos los videos para habilitar la evaluación.':'Responde y envía la evaluación del módulo.'}</div>
-    ${prev.passed?'<div class="ok small" style="margin-top:6px">Evaluación aprobada</div>':(prev.attempted?'<div class="small" style="margin-top:6px">Evaluación enviada. Revisa tus respuestas.</div>':'')}
+    <div class="small" style="margin-top:6px">${locked ? 'Completa primero todos los videos para habilitar la evaluación.' : 'Responde y envía la evaluación del módulo.'}</div>
+    ${scoreText}
   `;
   module.quiz.forEach((q, idx)=>{
-    const wrap=document.createElement('div');
-    wrap.style.marginTop='12px';
-    wrap.innerHTML=`<div><strong>${idx+1}. ${q.text}</strong></div>`;
-    const opts=document.createElement('div');
-    opts.className='quiz-options';
+    const wrap = document.createElement('div');
+    wrap.style.marginTop = '12px';
+    const disabled = locked || prev.passed ? 'disabled' : '';
+    wrap.innerHTML = `<div><strong>${idx+1}. ${q.text}</strong></div>`;
+    const opts = document.createElement('div');
+    opts.className = 'quiz-options';
     q.options.forEach((op, i)=>{
-      const checked = prev.answers?.[q.id]===i ? 'checked':'';
-      const disabled = (locked || prev.passed) ? 'disabled':'';
-      opts.innerHTML += `<label><input type="radio" name="${module.id}_${q.id}" value="${i}" ${checked} ${disabled}> ${op}</label>`;
+      const checked = prev.answers?.[q.id] === i ? 'checked' : '';
+      opts.innerHTML += `<label><input type="radio" name="${module.id}_${q.id}" value="${i}" ${disabled} ${checked}> ${op}</label>`;
     });
     wrap.appendChild(opts);
     card.appendChild(wrap);
   });
-  const actions=document.createElement('div');
-  actions.className='actions';
-  actions.style.marginTop='12px';
-  const btn=document.createElement('button');
-  btn.className='btn btn-primary';
+  const actions = document.createElement('div');
+  actions.className = 'actions';
+  actions.style.marginTop = '12px';
+  const btn = document.createElement('button');
+  btn.className = 'btn btn-primary';
   btn.textContent = prev.passed ? 'Aprobada' : 'Enviar evaluación';
   btn.disabled = locked || prev.passed;
   btn.addEventListener('click', async ()=>{
-    const answers={};
-    let ok=true;
+    const answers = {};
+    let ok = true;
     module.quiz.forEach(q=>{
-      const picked=document.querySelector(`input[name="${module.id}_${q.id}"]:checked`);
-      if(!picked) ok=false;
-      else answers[q.id]=Number(picked.value);
+      const picked = document.querySelector(`input[name="${module.id}_${q.id}"]:checked`);
+      if(!picked) ok = false;
+      else answers[q.id] = Number(picked.value);
     });
     if(!ok) return alert('Responde todas las preguntas.');
-    const passed = module.quiz.every(q=>answers[q.id]===q.correct);
+    const passed = module.quiz.every(q => answers[q.id] === q.correct);
     ensureState();
-    state.quizzes[module.id]={answers,attempted:true,passed,updatedAt:nowTs()};
+    state.quizzes[module.id] = { answers, attempted:true, passed, updatedAt: nowTs() };
     persist();
     await syncToCloud();
     renderAllByTrack(getSelectedTrack());
     updateGlobalProgress();
-    alert(passed?'Evaluación aprobada.':'Hay respuestas incorrectas. Puedes intentar nuevamente.');
+    alert(passed ? 'Evaluación aprobada.' : 'Hay respuestas incorrectas. Puedes intentar nuevamente.');
   });
   actions.appendChild(btn);
   card.appendChild(actions);
   return card;
 }
 function renderModule(module, idx){
-  const el=document.createElement('section');
-  el.className='card';
-  const videosDoneCount=(module.videos||[]).filter(v=>state.videosDone?.[module.id]?.[v.yt]).length;
-  el.innerHTML=`
+  const el = document.createElement('section');
+  el.className = 'card';
+  const videosDoneCount = (module.videos||[]).filter(v=>state.videosDone?.[module.id]?.[v.yt]).length;
+  el.innerHTML = `
     <div class="module">
       <div class="num">${idx+1}</div>
       <div class="meta">
@@ -465,26 +502,26 @@ function renderModule(module, idx){
       </div>
     </div>
   `;
-  module.videos.forEach((v,i)=>{
-    const done=!!state.videosDone?.[module.id]?.[v.yt];
-    const playerId=`player_${module.id}_${i}`;
-    const wrap=document.createElement('div');
-    wrap.className='yt-wrap';
-    wrap.innerHTML=`<div id="${playerId}"></div>`;
+  module.videos.forEach((v, i)=>{
+    const done = !!state.videosDone?.[module.id]?.[v.yt];
+    const playerId = `player_${module.id}_${i}`;
+    const wrap = document.createElement('div');
+    wrap.className = 'yt-wrap';
+    wrap.innerHTML = `<div id="${playerId}"></div>`;
     el.appendChild(wrap);
-    const txt=document.createElement('div');
-    txt.className='small';
-    txt.style.marginTop='6px';
-    txt.innerHTML=`Video ${i+1}: ${done?'<span class="ok">completado</span>':'pendiente'}`;
+    const txt = document.createElement('div');
+    txt.className = 'small';
+    txt.style.marginTop = '6px';
+    txt.innerHTML = `Video ${i+1}: ${done ? '<span class="ok">completado</span>' : 'pendiente'}`;
     el.appendChild(txt);
   });
   el.appendChild(renderQuiz(module));
   return el;
 }
 function renderAllByTrack(track){
-  const cont=$('#modules');
-  cont.innerHTML='';
-  const modules=pickModulesFor(track);
+  const cont = $('#modules');
+  cont.innerHTML = '';
+  const modules = pickModulesFor(track);
   stopAllPlayers();
   if(!track || !TIPOS_MODULO.includes(track) || !modules.length){
     setHidden('modules', true);
@@ -493,35 +530,45 @@ function renderAllByTrack(track){
     return;
   }
   setHidden('modules', false);
-  modules.forEach((m, idx)=>cont.appendChild(renderModule(m, idx)));
+  modules.forEach((m,idx)=>cont.appendChild(renderModule(m,idx)));
   setTimeout(()=>createAllPlayers(modules), 100);
 }
 function createAllPlayers(modules){
   if(!ytReady) return;
   modules.forEach(module=>{
-    module.videos.forEach((v,i)=>{
-      const holderId=`player_${module.id}_${i}`;
-      const holder=document.getElementById(holderId);
+    module.videos.forEach((v, i)=>{
+      const holderId = `player_${module.id}_${i}`;
+      const holder = document.getElementById(holderId);
       if(!holder) return;
       const startAt = state.play?.[module.id]?.[v.yt]?.t || 0;
-      players[holderId]={
-        player: new YT.Player(holderId,{
-          videoId:v.yt,
-          playerVars:{rel:0, modestbranding:1, autoplay:0, playsinline:1, start:startAt},
-          events:{
-            onReady:(ev)=>{ try{ ev.target.pauseVideo(); }catch(_){} },
-            onStateChange:(ev)=>{
-              if(ev.data===YT.PlayerState.PLAYING){
-                Object.entries(players).forEach(([pid,obj])=>{ if(pid!==holderId){ try{ obj.player.pauseVideo(); }catch(_){} } });
+      players[holderId] = {
+        player: new YT.Player(holderId, {
+          videoId: v.yt,
+          playerVars: { rel:0, modestbranding:1, autoplay:0, playsinline:1, start: startAt },
+          events: {
+            onReady: (ev)=>{
+              try{
+                ev.target.pauseVideo();
+                const ifr = holder.querySelector('iframe');
+                if(ifr) ifr.setAttribute('allow','fullscreen; encrypted-media; picture-in-picture');
+              }catch(_){}
+            },
+            onStateChange: (ev)=>{
+              if(ev.data === YT.PlayerState.PLAYING){
+                Object.entries(players).forEach(([pid,obj])=>{
+                  if(pid !== holderId){
+                    try{ obj.player.pauseVideo(); }catch(_){}
+                  }
+                });
               }
-              if(ev.data===YT.PlayerState.PAUSED){
+              if(ev.data === YT.PlayerState.PAUSED){
                 try{ savePlayPosition(module.id, v.yt, ev.target.getCurrentTime()); }catch(_){}
                 syncToCloud();
               }
-              if(ev.data===YT.PlayerState.ENDED){
+              if(ev.data === YT.PlayerState.ENDED){
                 ensureState();
-                state.videosDone[module.id]=state.videosDone[module.id]||{};
-                state.videosDone[module.id][v.yt]=true;
+                state.videosDone[module.id] = state.videosDone[module.id] || {};
+                state.videosDone[module.id][v.yt] = true;
                 savePlayPosition(module.id, v.yt, 0);
                 persist();
                 syncToCloud();
@@ -535,23 +582,24 @@ function createAllPlayers(modules){
     });
   });
 }
-function onYouTubeIframeAPIReady(){ ytReady=true; if(profileComplete()) renderAllByTrack(getSelectedTrack()); }
+function onYouTubeIframeAPIReady(){ ytReady = true; if(profileComplete()) renderAllByTrack(getSelectedTrack()); }
 
+/* ======================== PERFIL / FIREBASE ======================== */
 function applyCloudState(cloud){
   ensureState();
-  state.videosDone={...(state.videosDone||{}), ...(cloud.videosDone||{})};
-  state.quizzes={...(state.quizzes||{}), ...(cloud.quizzes||{})};
-  state.play={...(state.play||{}), ...(cloud.play||{})};
+  state.videosDone = { ...(state.videosDone||{}), ...(cloud.videosDone||{}) };
+  state.quizzes = { ...(state.quizzes||{}), ...(cloud.quizzes||{}) };
+  state.play = { ...(state.play||{}), ...(cloud.play||{}) };
   persist();
 }
 function startProfileRealtime(){
   if(unsubProfile){ try{unsubProfile();}catch(_){} unsubProfile=null; }
-  const ref=userProfileRef();
+  const ref = userProfileRef();
   if(!ref) return;
   unsubProfile = ref.onSnapshot((snap)=>{
     if(!snap.exists) return;
-    const cloud=snap.data()||{};
-    state.profile={...(state.profile||{}), ...cloud};
+    const cloud = snap.data() || {};
+    state.profile = { ...(state.profile||{}), ...cloud };
     if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec)) state.profile.spec='';
     persist();
     $('#pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
@@ -565,11 +613,11 @@ function startProfileRealtime(){
   });
 }
 async function loadProfile(){
-  const ref=userProfileRef();
+  const ref = userProfileRef();
   if(!ref) return;
-  const s=await ref.get();
+  const s = await ref.get();
   if(s.exists){
-    state.profile={...(state.profile||{}), ...(s.data()||{})};
+    state.profile = { ...(state.profile||{}), ...(s.data()||{}) };
     if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec)) state.profile.spec='';
     persist();
   }
@@ -577,144 +625,150 @@ async function loadProfile(){
   $('#pf-spec').value = state.profile?.spec || '';
 }
 async function saveProfile(){
-  const name=($('#pf-name').value||'').trim();
-  const spec=($('#pf-spec').value||'').trim();
-  const pfMsg=$('#pf-msg');
-  if(!name || !spec) return pfMsg.textContent='Completa nombre y módulo.';
-  if(!TIPOS_MODULO.includes(spec)) return pfMsg.textContent='Selecciona un módulo válido.';
+  const name = ($('#pf-name').value||'').trim();
+  const spec = ($('#pf-spec').value||'').trim();
+  const pfMsg = $('#pf-msg');
+  if(!name || !spec){
+    pfMsg.textContent = 'Completa nombre y módulo.';
+    return;
+  }
+  if(!TIPOS_MODULO.includes(spec)){
+    pfMsg.textContent = 'Selecciona un módulo válido.';
+    return;
+  }
   ensureState();
-  state.profile={...(state.profile||{}), name, spec, email:auth.currentUser?.email||''};
+  state.profile = {
+    ...(state.profile||{}),
+    name,
+    spec,
+    email: auth.currentUser?.email || ''
+  };
   persist();
   renderAllByTrack(spec);
   updateGlobalProgress();
-  pfMsg.textContent='Guardando…';
+  pfMsg.textContent = 'Guardando…';
+  savingProfile = true;
   try{
-    if(auth.currentUser && name){ try{ await auth.currentUser.updateProfile({displayName:name}); }catch(_){} }
-    const ref=userProfileRef();
+    if(auth.currentUser && name){
+      try{ await auth.currentUser.updateProfile({displayName:name}); }catch(_){}
+    }
+    const ref = userProfileRef();
     if(!ref) throw new Error('Sin usuario');
-    await ref.set({...state.profile, updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-    pfMsg.textContent='✅ Perfil guardado.';
+    await ref.set({
+      ...(state.profile||{}),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, {merge:true});
+    pfMsg.textContent = '✅ Perfil guardado.';
     setProfileReadonly(true);
-    setTimeout(()=>{ if($('#pf-msg').textContent.includes('✅')) $('#pf-msg').textContent=''; },3000);
+    setTimeout(()=>{ if($('#pf-msg').textContent.includes('✅')) $('#pf-msg').textContent=''; }, 3000);
     await syncToCloud();
   }catch(e){
     console.error(e);
-    pfMsg.textContent='No se pudo guardar en la nube.';
+    pfMsg.textContent = 'No se pudo guardar en la nube.';
+  }finally{
+    savingProfile = false;
   }
 }
-async function syncFromCloud(){
+async function syncFromCloud(user){
   try{
-    const courseRef=userCourseRef();
+    const courseRef = userCourseRef();
     if(courseRef){
-      const snap=await courseRef.get();
+      const snap = await courseRef.get();
       if(snap.exists) applyCloudState(snap.data()||{});
     }
-    const profRef=userProfileRef();
-    if(profRef){
-      const s=await profRef.get();
-      if(s.exists){
-        state.profile={...(state.profile||{}), ...(s.data()||{})};
-        if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec)) state.profile.spec='';
-      }
-    }
-    persist();
+    await loadProfile();
   }catch(e){
     console.warn('No se pudo leer progreso/perfil', e);
   }
 }
 async function syncToCloud(){
   try{
-    const courseRef=userCourseRef();
+    const courseRef = userCourseRef();
     if(courseRef){
       await courseRef.set({
-        videosDone:state.videosDone||{},
-        quizzes:state.quizzes||{},
-        play:state.play||{},
-        updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+        videosDone: state.videosDone || {},
+        quizzes: state.quizzes || {},
+        play: state.play || {},
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, {merge:true});
     }
-    const profRef=userProfileRef();
+    const profRef = userProfileRef();
     if(profRef && state.profile){
-      await profRef.set({...state.profile, updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+      await profRef.set({
+        ...(state.profile||{}),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, {merge:true});
     }
   }catch(e){
     console.warn('No se pudo guardar en la nube', e);
   }
 }
 
+/* ======================== AUTENTICACIÓN ======================== */
 const MSGS = {
   'auth/user-not-found':'Correo no registrado.',
   'auth/wrong-password':'Contraseña incorrecta.',
   'auth/invalid-credential':'Correo o contraseña incorrectos.',
-  'auth/invalid-login-credentials':'Correo o contraseña incorrectos.',
   'auth/email-already-in-use':'Ese correo ya tiene cuenta.',
   'auth/weak-password':'La contraseña debe tener al menos 6 caracteres.',
   'auth/invalid-email':'El formato del correo no es válido.',
-  'auth/too-many-requests':'Demasiados intentos. Intenta más tarde.',
-  'auth/network-request-failed':'No hay conexión a internet o Firebase rechazó la conexión.',
-  'auth/operation-not-allowed':'El método Email/Password no está habilitado en Firebase.'
+  'auth/too-many-requests':'Demasiados intentos. Intenta más tarde.'
 };
 
 $('#tab-login').addEventListener('click',()=>setTab('login'));
 $('#tab-register').addEventListener('click',()=>setTab('reg'));
 $('#btn-save-profile').addEventListener('click',saveProfile);
-$('#btn-edit-profile').addEventListener('click',()=>{ setProfileReadonly(false); $('#pf-help').textContent='Edita tus datos y guarda los cambios.'; markDirty(); });
+$('#btn-edit-profile').addEventListener('click',()=>{
+  setProfileReadonly(false);
+  $('#pf-help').textContent='Edita tus datos y guarda los cambios.';
+  markDirty();
+});
 
 $('#btn-login-2').addEventListener('click', async ()=>{
-  const email=($('#login-email').value||'').trim().toLowerCase();
-  const pass=($('#login-pass').value||'').trim();
+  const email = ($('#login-email').value||'').trim().toLowerCase();
+  const pass = ($('#login-pass').value||'').trim();
   if(!email || !pass) return msg('Completa correo y contraseña.','error');
   if(!emailOk(email)) return msg('El formato del correo no es válido.','error');
-  const btn = $('#btn-login-2');
-  btn.disabled = true;
   try{
     await auth.signInWithEmailAndPassword(email, pass);
     msg('');
   }catch(e){
-    console.error(e);
-    if(['auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials'].includes(e.code)){
-      msg('Contraseña incorrecta.','error');
-    }else if(e.code==='auth/user-not-found'){
-      msg('Correo no registrado.','error');
-    }else{
-      msg(MSGS[e.code] || e.message || 'Ocurrió un error. Intenta nuevamente.','error');
-    }
-  }finally{
-    btn.disabled = false;
+    msg(MSGS[e.code] || 'Ocurrió un error. Intenta nuevamente.','error');
   }
 });
+
 $('#btn-register-2').addEventListener('click', async ()=>{
-  const email=($('#reg-email').value||'').trim().toLowerCase();
-  const pass=($('#reg-pass').value||'').trim();
-  const pass2=($('#reg-pass2').value||'').trim();
+  const email = ($('#reg-email').value||'').trim().toLowerCase();
+  const pass = ($('#reg-pass').value||'').trim();
+  const pass2 = ($('#reg-pass2').value||'').trim();
   if(!email || !pass || !pass2) return msg('Completa todos los campos.','error');
   if(!emailOk(email)) return msg('El formato del correo no es válido.','error');
-  if(pass!==pass2) return msg('Las contraseñas no coinciden.','error');
+  if(pass !== pass2) return msg('Las contraseñas no coinciden.','error');
   try{
-    const cred=await auth.createUserWithEmailAndPassword(email, pass);
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
     await cred.user.sendEmailVerification();
     msg('Cuenta creada. Revisa tu correo y valida tu cuenta.','ok');
     setHidden('verify-box', false);
     setTab('login');
-    $('#login-email').value=email;
-    $('#login-pass').value='';
+    $('#login-email').value = email;
+    $('#login-pass').value = '';
   }catch(e){
-    console.error(e);
-    msg(MSGS[e.code] || e.message || 'No se pudo crear la cuenta.','error');
+    msg(MSGS[e.code] || 'No se pudo crear la cuenta.','error');
   }
 });
+
 $('#btn-reset').addEventListener('click', async ()=>{
-  const email=($('#login-email').value||'').trim().toLowerCase();
+  const email = ($('#login-email').value||'').trim().toLowerCase();
   if(!email) return msg('Escribe tu correo para enviarte el enlace.','error');
   if(!emailOk(email)) return msg('El formato del correo no es válido.','error');
   try{
     await auth.sendPasswordResetEmail(email);
     msg('Te enviamos un correo para restablecer la contraseña.','ok');
   }catch(e){
-    console.error(e);
-    msg(MSGS[e.code] || e.message || 'No se pudo enviar.','error');
+    msg(MSGS[e.code] || 'No se pudo enviar.','error');
   }
 });
+
 $('#btn-resend-verify').addEventListener('click', async ()=>{
   try{
     if(auth.currentUser){
@@ -722,27 +776,27 @@ $('#btn-resend-verify').addEventListener('click', async ()=>{
       msg('Correo de verificación reenviado.','ok');
     }
   }catch(e){
-    console.error(e);
     msg('No se pudo reenviar el correo.','error');
   }
 });
+
 $('#btn-refresh-verify').addEventListener('click', async ()=>{
   try{
     await auth.currentUser?.reload();
-    const u=auth.currentUser;
+    const u = auth.currentUser;
     if(u?.emailVerified){
       msg('Correo verificado correctamente.','ok');
       setHidden('verify-box', true);
-      await syncFromCloud();
       showCourse();
+      await syncFromCloud(u);
     }else{
       msg('Aún no aparece verificado. Revisa tu correo.','error');
     }
   }catch(e){
-    console.error(e);
     msg('No se pudo actualizar el estado de verificación.','error');
   }
 });
+
 $('#btn-logout').addEventListener('click', async ()=>{
   try{
     stopAllPlayers();
@@ -752,11 +806,11 @@ $('#btn-logout').addEventListener('click', async ()=>{
     await auth.signOut();
     msg('Sesión cerrada.','ok');
   }catch(e){
-    console.error(e);
     msg('No se pudo cerrar sesión.','error');
   }
 });
 
+/* ======================== VISTAS ======================== */
 function showCourse(){
   if(!auth.currentUser) return;
   if(!auth.currentUser.emailVerified){
@@ -768,8 +822,10 @@ function showCourse(){
   setHidden('step-welcome', true);
   setHidden('btn-logout', false);
   setHidden('profile', false);
+
   $('#pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
   $('#pf-spec').value = state.profile?.spec || '';
+
   if(profileComplete()){
     setProfileReadonly(true);
     $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.';
@@ -779,46 +835,45 @@ function showCourse(){
   }
   renderAllByTrack(getSelectedTrack());
   updateGlobalProgress();
+  startProfileRealtime();
 }
-
 auth.onAuthStateChanged(async (user)=>{
   stopAllPlayers();
-  if(unsubProfile){ try{unsubProfile();}catch(_){} unsubProfile=null; }
+  if(unsubProfile){ try{unsubProfile();}catch(_){} unsubProfile = null; }
+
   if(!user){
-    CURRENT_UID=null;
-    state={};
-    $('#auth-user').textContent='';
+    CURRENT_UID = null;
+    state = {};
+    $('#auth-user').textContent = '';
     setHidden('btn-logout', true);
     setHidden('verify-box', true);
     setTab('login');
     showLogin();
     return;
   }
-  CURRENT_UID=user.uid;
-  state=loadState(CURRENT_UID)||{};
+
+  await user.reload().catch(()=>{});
+  const freshUser = auth.currentUser || user;
+  CURRENT_UID = freshUser.uid;
+  state = loadState(CURRENT_UID) || {};
   ensureState();
-  $('#auth-user').textContent=user.email||'';
-  if(!user.emailVerified){
+  $('#auth-user').textContent = freshUser.email || '';
+
+  if(!freshUser.emailVerified){
     showLogin();
     setHidden('btn-logout', false);
     setHidden('verify-box', false);
     msg('Tu sesión está iniciada, pero debes verificar tu correo para continuar.','error');
     return;
   }
+
   msg('');
   setHidden('verify-box', true);
-
+  await syncFromCloud(freshUser);
   showCourse();
-
-  syncFromCloud().then(()=>{
-    $('#pf-name').value = state.profile?.name || auth.currentUser?.displayName || '';
-    $('#pf-spec').value = state.profile?.spec || '';
-    renderAllByTrack(getSelectedTrack());
-    updateGlobalProgress();
-    startProfileRealtime();
-  }).catch(console.warn);
 });
 
+/* ======================== INICIAL ======================== */
 document.getElementById('year').textContent = new Date().getFullYear();
 fillTrackOptions();
 setTab('login');
