@@ -4,11 +4,9 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Inducción a PEP-SOUL MV • Hospital Vozandes</title>
-
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-
 <style>
 :root{--brand:#781C38;--ink:#1f2937;--muted:#6b7280;--bg:#f8fafc;--card:#ffffff;--ok:#15803d}
 *{box-sizing:border-box}
@@ -16,23 +14,34 @@ body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sa
 .container{max-width:980px;margin:auto;padding:24px}
 header{display:flex;gap:16px;align-items:center;margin:12px 0 20px}
 header .logo{width:48px;height:48px;border-radius:12px;background:var(--brand);display:grid;place-content:center;color:#fff;font-weight:800}
-h1{font-size:clamp(22px,3.5vw,34px);margin:0}.subtitle{color:var(--muted);margin-top:4px}
+h1{font-size:clamp(22px,3.5vw,34px);margin:0}
+.subtitle{color:var(--muted);margin-top:4px}
 .card{background:var(--card);border-radius:18px;box-shadow:0 10px 24px rgba(0,0,0,.06);padding:20px}
-.grid{display:grid;gap:16px}.grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.grid{display:grid;gap:16px}
+.grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media (max-width:800px){.grid.cols-2{grid-template-columns:1fr}}
 button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor:pointer;font-weight:600}
-.btn-primary{background:var(--brand);color:#fff}.btn-muted{background:#e5e7eb;color:#111827}.btn-success{background:var(--ok);color:#fff}
+.btn-primary{background:var(--brand);color:#fff}
+.btn-muted{background:#e5e7eb;color:#111827}
+.btn-success{background:var(--ok);color:#fff}
 .btn[disabled]{opacity:.5;cursor:not-allowed}
 .badge{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:600;background:#eef2ff;color:#3730a3}
-.progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}.progress>span{display:block;height:100%;background:var(--brand);width:0}
-.module{display:flex;gap:16px;align-items:flex-start}.module .num{flex:0 0 auto;width:36px;height:36px;border-radius:10px;background:#f3f4f6;display:grid;place-content:center;font-weight:700}.module .meta{flex:1}
+.progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}
+.progress>span{display:block;height:100%;background:var(--brand);width:0}
+.module{display:flex;gap:16px;align-items:flex-start}
+.module .num{flex:0 0 auto;width:36px;height:36px;border-radius:10px;background:#f3f4f6;display:grid;place-content:center;font-weight:700}
+.module .meta{flex:1}
 .yt-wrap{position:relative;padding-top:56.25%;border-radius:16px;overflow:hidden;background:#000;margin-top:12px}
 .yt-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .lock{position:absolute;inset:0;display:grid;place-content:center;background:rgba(17,24,39,.65);color:#fff;font-weight:700;font-size:14px;border-radius:16px;backdrop-filter:blur(1px)}
 .muted{color:var(--muted)}
 .footer{margin-top:24px;color:var(--muted);font-size:13px}
-#certificado{display:none}#certificado.show{display:block}
-@media print{.no-print{display:none !important}#certificado{display:block}}
+#certificado{display:none}
+#certificado.show{display:block}
+@media print{
+  .no-print{display:none !important}
+  #certificado{display:block}
+}
 .cert-card{background:#fff;border:4px solid var(--brand);border-radius:20px;padding:40px;text-align:center}
 .cert-title{font-size:28px;font-weight:800;margin:0 0 10px;color:var(--brand)}
 .cert-name{font-size:26px;font-weight:800;margin:8px 0}
@@ -150,13 +159,13 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     <div class="grid cols-2">
       <label>Nombre completo (para certificado)<br><input id="pf-name" type="text" required></label>
       <label>Cédula o Pasaporte<br><input id="pf-id" type="text" required></label>
-      <label style="grid-column:1/-1">Especialidad<br>
+      <label style="grid-column:1/-1">Módulo PEP<br>
         <div class="combo" id="spec-combo">
-          <input id="pf-spec" type="text" placeholder="Escribe para buscar…" autocomplete="off" readonly>
+          <input id="pf-spec" type="text" placeholder="Selecciona el módulo PEP…" autocomplete="off" readonly>
           <span class="arrow">▾</span>
           <div class="panel" id="spec-panel"></div>
         </div>
-        <small class="muted">Selecciona de la lista. Esto define los módulos que verás.</small>
+        <small class="muted">Selecciona de la lista. Esto define los módulos y evaluaciones que verás.</small>
       </label>
     </div>
     <div class="actions" style="display:flex;gap:8px;margin-top:10px">
@@ -182,7 +191,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
       <div class="cert-title">Certificado de participación</div>
       <p>Otorgado a</p>
       <div class="cert-name" id="cert-nombre">Nombre Apellido</div>
-      <p>por completar el curso <strong>Inducción a Soul MV</strong>.</p>
+      <p>por completar satisfactoriamente el programa <strong>Inducción PEP – Soul MV</strong>.</p>
       <div class="cert-meta">
         <div id="cert-fecha"></div>
         <div>Hospital Vozandes • Formación Interna</div>
@@ -199,44 +208,55 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
-const ESPECIALIDADES=["ACUPUNTURA","ALERGOLOGIA","ANESTESIOLOGIA","CARDIOLOGIA","CARDIOLOGIA HEMODINAMIA","CARDIOLOGIA INTERVENCIONISTA","CARDIOLOGIA PEDIATRICA","CIR. GENERAL-COLOPROCTOLOGIA","CIR. MANO/MUÑE-NERVIO PERI/BRA","CIRUGIA CARDIACA","CIRUGIA DE CABEZA Y CUELLO","CIRUGIA DE COLUMNA","CIRUGIA DE HOMBRO Y CODO","CIRUGIA GENERAL","CIRUGIA ONCOCOLOGICA","CIRUGIA PEDIATRICA","CIRUGIA PLASTICA","CIRUGIA TORACICA","CIRUGIA VASCULAR","COLOPROCTOLOGIA","CUIDADOS PALIATIVOS","DERMATOLOGIA","DIABETOLOGIA","EMERGENCIAS Y DESASTRES","ENDOCRINO PEDIATRA","ENDOCRINOLOGIA","ENFERMEDADES AUTOINMUNES","FISIATRIA","FONOAUDIOLOGIA","GASTROENTEROLOGIA","GASTROENTEROLOGIA PEDIATRICA","GENETICA MEDICA","GERIATRIA","GINECOLOGIA INFANTO JUVENIL","GINECOLOGIA ONCOLOGICA","GINECOLOGIA Y OBSTETRICIA","HEMATOLOGIA","HEMATOLOGO ONCOLOGO PEDIATRIA","HEPATOLOGIA","INFECTOLOGIA","INFECTOLOGIA PEDIATRICA","INTERVENCIONISMO","MASTOLOGIA","MAXILO FACIAL","MEDICINA CRITICA","MEDICINA CRITICA PEDIATRICA","MEDICINA DEL DEPORTE","MEDICINA FAMILIAR","MEDICINA FAMILIAR EMERGENCIA","MEDICINA GENERAL","MEDICINA INTERNA","MEDICINA MATERNO FETAL","MEDICINA PALIATIVA","MICROBIOLOGIA","NEFROLOGIA","NEFROLOGIA PEDIATRICA","NEONATOLOGIA","NEUMOLOGIA","NEUMOLOGIA PEDIATRICA","NEUROCIRUGIA","NEUROFISIOLOGIA CLINICA","NEUROLOGIA","NEUROLOGIA PEDIATRICA","NEUROPSICOLOGIA","NEURORADIOL INTERVENCIONISTA","NEURORADIOLOGIA","NUTRICION","ODONTOLOGIA","ODONTOPEDIATRIA","OFTALMOLOGIA","OFTALMOLOGIA PEDIATRICA","ONCOLOGIA CLINICA","OTORRINOLARINGOLOGIA","PATOLOGIA","PEDIATRIA","PSICOLOGIA","PSIQUIATRIA","RADIOLOGIA","RADIOLOGIA INTERVENCIONISTA","RADIOTERAPIA","RESIDENTE/INTERNO","REUMATOLOGIA","REUMATOLOGIA PEDIATRICA","SEXOLOGIA","TRATAMIENTO DEL DOLOR","TRAUMATO PEDIATRICA DE COLUMNA","TRAUMATOLOGIA DEL COLUMNA","TRAUMATOLOGIA ONCOLOGICA","TRAUMATOLOGIA PEDIATRICA","TRAUMATOLOGIA Y ORTOPEDIA","UROLOGIA","UROLOGIA PEDIATRICA"];
-const M={CE:"CONSULTA EXTERNA",H:"HOSPITALIZACIÓN-HDD",CQ:"CENTRO QUIRÚRGICO",G:"GENERALIDADES",AN:"ANESTESIOLOGÍA",EM:"EMERGENCIAS"};
-const BASE_MEDICA=[M.G,M.H,M.CE],BASE_QUIR=[M.G,M.H,M.CE,M.CQ];
-const ESPEC_MODS={
-"ACUPUNTURA":BASE_MEDICA,"ALERGOLOGIA":BASE_MEDICA,"ANESTESIOLOGIA":[M.G,M.AN],
-"CARDIOLOGIA":BASE_MEDICA,"CARDIOLOGIA HEMODINAMIA":BASE_MEDICA,"CARDIOLOGIA INTERVENCIONISTA":BASE_MEDICA,"CARDIOLOGIA PEDIATRICA":BASE_MEDICA,
-"CIR. GENERAL-COLOPROCTOLOGIA":BASE_QUIR,"CIR. MANO/MUÑE-NERVIO PERI/BRA":BASE_QUIR,"CIRUGIA CARDIACA":BASE_QUIR,"CIRUGIA DE CABEZA Y CUELLO":BASE_QUIR,"CIRUGIA DE COLUMNA":BASE_QUIR,"CIRUGIA DE HOMBRO Y CODO":BASE_QUIR,"CIRUGIA GENERAL":BASE_QUIR,"CIRUGIA ONCOCOLOGICA":BASE_QUIR,"CIRUGIA PEDIATRICA":BASE_QUIR,"CIRUGIA PLASTICA":BASE_QUIR,"CIRUGIA TORACICA":BASE_QUIR,"CIRUGIA VASCULAR":BASE_QUIR,"COLOPROCTOLOGIA":BASE_QUIR,
-"CUIDADOS PALIATIVOS":BASE_MEDICA,"DERMATOLOGIA":BASE_MEDICA,"DIABETOLOGIA":BASE_MEDICA,
-"EMERGENCIAS Y DESASTRES":[M.G,M.EM],"ENDOCRINO PEDIATRA":BASE_MEDICA,"ENDOCRINOLOGIA":BASE_MEDICA,
-"ENFERMEDADES AUTOINMUNES":BASE_MEDICA,"FISIATRIA":BASE_MEDICA,"FONOAUDIOLOGIA":BASE_MEDICA,
-"GASTROENTEROLOGIA":BASE_QUIR,"GASTROENTEROLOGIA PEDIATRICA":BASE_QUIR,"GENETICA MEDICA":BASE_MEDICA,"GERIATRIA":BASE_MEDICA,
-"GINECOLOGIA INFANTO JUVENIL":BASE_QUIR,"GINECOLOGIA ONCOLOGICA":BASE_QUIR,"GINECOLOGIA Y OBSTETRICIA":BASE_QUIR,
-"HEMATOLOGIA":BASE_QUIR,"HEMATOLOGO ONCOLOGO PEDIATRIA":BASE_QUIR,"HEPATOLOGIA":BASE_MEDICA,
-"INFECTOLOGIA":BASE_MEDICA,"INFECTOLOGIA PEDIATRICA":BASE_MEDICA,"INTERVENCIONISMO":BASE_QUIR,"MASTOLOGIA":BASE_QUIR,"MAXILO FACIAL":BASE_QUIR,
-"MEDICINA CRITICA":BASE_MEDICA,"MEDICINA CRITICA PEDIATRICA":BASE_MEDICA,"MEDICINA DEL DEPORTE":BASE_MEDICA,"MEDICINA FAMILIAR":[M.G,M.CE],"MEDICINA FAMILIAR EMERGENCIA":[M.G,M.EM],
-"MEDICINA GENERAL":BASE_MEDICA,"MEDICINA INTERNA":BASE_MEDICA,"MEDICINA MATERNO FETAL":BASE_MEDICA,"MEDICINA PALIATIVA":BASE_MEDICA,"MICROBIOLOGIA":BASE_MEDICA,
-"NEFROLOGIA":BASE_MEDICA,"NEFROLOGIA PEDIATRICA":BASE_MEDICA,"NEONATOLOGIA":BASE_MEDICA,"NEUMOLOGIA":BASE_MEDICA,"NEUMOLOGIA PEDIATRICA":BASE_MEDICA,
-"NEUROCIRUGIA":BASE_QUIR,"NEUROFISIOLOGIA CLINICA":BASE_MEDICA,"NEUROLOGIA":BASE_QUIR,"NEUROLOGIA PEDIATRICA":BASE_QUIR,"NEUROPSICOLOGIA":BASE_MEDICA,"NEURORADIOL INTERVENCIONISTA":BASE_QUIR,"NEURORADIOLOGIA":BASE_QUIR,
-"NUTRICION":BASE_MEDICA,"ODONTOLOGIA":BASE_QUIR,"ODONTOPEDIATRIA":BASE_QUIR,
-"OFTALMOLOGIA":BASE_QUIR,"OFTALMOLOGIA PEDIATRICA":BASE_QUIR,"ONCOLOGIA CLINICA":BASE_QUIR,
-"OTORRINOLARINGOLOGIA":BASE_QUIR,"PATOLOGIA":BASE_MEDICA,"PEDIATRIA":BASE_MEDICA,"PSICOLOGIA":BASE_MEDICA,"PSIQUIATRIA":BASE_MEDICA,
-"RADIOLOGIA":BASE_QUIR,"RADIOLOGIA INTERVENCIONISTA":BASE_QUIR,"RADIOTERAPIA":BASE_QUIR,"RESIDENTE/INTERNO":BASE_QUIR,
-"REUMATOLOGIA":BASE_MEDICA,"REUMATOLOGIA PEDIATRICA":BASE_MEDICA,"SEXOLOGIA":BASE_MEDICA,
-"TRATAMIENTO DEL DOLOR":BASE_QUIR,"TRAUMATO PEDIATRICA DE COLUMNA":BASE_QUIR,"TRAUMATOLOGIA DEL COLUMNA":BASE_QUIR,
-"TRAUMATOLOGIA ONCOLOGICA":BASE_QUIR,"TRAUMATOLOGIA PEDIATRICA":BASE_QUIR,"TRAUMATOLOGIA Y ORTOPEDIA":BASE_QUIR,
-"UROLOGIA":BASE_QUIR,"UROLOGIA PEDIATRICA":BASE_QUIR
+const TIPOS_PEP=[
+  "PEP ESTUDIANTES EN FORMACION",
+  "PEP CLÍNICO/QUIRÚRGICO",
+  "PEP CLÍNICO",
+  "PEP UCI",
+  "PEP EMERGENCIAS",
+  "PEP CONSULTA EXTERNA"
+];
+
+const M={
+  G:"GENERALIDADES",
+  H:"HOSPITALIZACIÓN",
+  CQ:"CENTRO QUIRÚRGICO",
+  CE:"CONSULTA EXTERNA",
+  EM:"EMERGENCIAS",
+  V:"VIVACE",
+  A:"AUDITORÍA"
 };
+
+const PEP_MODS={
+  "PEP ESTUDIANTES EN FORMACION":[M.G,M.H,M.CQ,M.CE,M.EM],
+  "PEP CLÍNICO/QUIRÚRGICO":[M.G,M.H,M.CQ,M.CE,M.V,M.A],
+  "PEP CLÍNICO":[M.G,M.H,M.CE,M.V,M.A],
+  "PEP UCI":[M.G,M.H,M.A],
+  "PEP EMERGENCIAS":[M.G,M.EM,M.A],
+  "PEP CONSULTA EXTERNA":[M.G,M.CE,M.V]
+};
+
 const VIDEO_DEFAULTS={
-"GENERALIDADES":["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0"],
-"HOSPITALIZACIÓN-HDD":["eY52Zsg-KVI","fJ9rUzIMcZQ","L_jWHffIx5E"],
-"CONSULTA EXTERNA":["kXYiU_JCYtU","hTWKbfoikeg","QH2-TGUlwu4"],
-"CENTRO QUIRÚRGICO":["3JZ_D3ELwOQ","04854XqcfCY","ktvTqknDobU"],
-"ANESTESIOLOGÍA":["60ItHLz5WEA","CevxZvSJLk8","ktvTqknDobU"],
-"EMERGENCIAS":["2vjPBrBU-TM","hTWKbfoikeg","lWA2pjMjpBs"]
+  "GENERALIDADES":["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0"],
+  "HOSPITALIZACIÓN":["eY52Zsg-KVI","fJ9rUzIMcZQ","L_jWHffIx5E"],
+  "CENTRO QUIRÚRGICO":["3JZ_D3ELwOQ","04854XqcfCY","ktvTqknDobU"],
+  "CONSULTA EXTERNA":["kXYiU_JCYtU","hTWKbfoikeg","QH2-TGUlwu4"],
+  "EMERGENCIAS":["2vjPBrBU-TM","hTWKbfoikeg","lWA2pjMjpBs"],
+  "VIVACE":["60ItHLz5WEA","CevxZvSJLk8","OPf0YbXqDm0"],
+  "AUDITORÍA":["RgKAFK5djSk","09R8_2nJtjg","YQHsXMglC9A"]
 };
+
 const DEFAULT_VIDEOS=["dQw4w9WgXcQ"];
 
-const firebaseConfig={apiKey:"AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",authDomain:"induccion-pep-hvq.firebaseapp.com",projectId:"induccion-pep-hvq",storageBucket:"induccion-pep-hvq.firebasestorage.app",messagingSenderId:"651724182766",appId:"1:651724182766:web:4eec9be43e9e8e60dc0fff",measurementId:"G-Z62L1CCYP1"};
+const firebaseConfig={
+  apiKey:"AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",
+  authDomain:"induccion-pep-hvq.firebaseapp.com",
+  projectId:"induccion-pep-hvq",
+  storageBucket:"induccion-pep-hvq.firebasestorage.app",
+  messagingSenderId:"651724182766",
+  appId:"1:651724182766:web:4eec9be43e9e8e60dc0fff",
+  measurementId:"G-Z62L1CCYP1"
+};
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.warn);
@@ -254,17 +274,17 @@ const $=s=>document.querySelector(s);
 $('#year').textContent=new Date().getFullYear();
 
 const MSGS={
-'auth/email-already-in-use':'Ese correo ya tiene una cuenta. Usa Iniciar sesión.',
-'auth/invalid-email':'El formato del correo no es válido.',
-'auth/missing-email':'Ingresa tu correo.',
-'auth/missing-password':'Ingresa tu contraseña.',
-'auth/weak-password':'La contraseña es muy corta (mínimo 6).',
-'auth/user-not-found':'Correo no registrado.',
-'auth/wrong-password':'Contraseña incorrecta.',
-'auth/invalid-credential':'Contraseña incorrecta.',
-'auth/invalid-login-credentials':'Contraseña incorrecta.',
-'auth/too-many-requests':'Demasiados intentos. Intenta más tarde.',
-'auth/network-request-failed':'Error de red. Revisa tu conexión.'
+  'auth/email-already-in-use':'Ese correo ya tiene una cuenta. Usa Iniciar sesión.',
+  'auth/invalid-email':'El formato del correo no es válido.',
+  'auth/missing-email':'Ingresa tu correo.',
+  'auth/missing-password':'Ingresa tu contraseña.',
+  'auth/weak-password':'La contraseña es muy corta (mínimo 6).',
+  'auth/user-not-found':'Correo no registrado.',
+  'auth/wrong-password':'Contraseña incorrecta.',
+  'auth/invalid-credential':'Contraseña incorrecta.',
+  'auth/invalid-login-credentials':'Contraseña incorrecta.',
+  'auth/too-many-requests':'Demasiados intentos. Intenta más tarde.',
+  'auth/network-request-failed':'Error de red. Revisa tu conexión.'
 };
 
 const msg=(t)=>{const el=$('#auth-msg');if(el)el.textContent=t||'';};
@@ -287,7 +307,9 @@ function markDirty(){
 }
 
 ['pf-name','pf-id','pf-spec'].forEach(id=>{
-  document.addEventListener('input',(e)=>{if(e.target&&e.target.id===id)markDirty();});
+  document.addEventListener('input',(e)=>{
+    if(e.target&&e.target.id===id)markDirty();
+  });
 });
 
 let ytApiReady=false;
@@ -296,6 +318,7 @@ const cfgByPid=new Map();
 let lastPlayingPid=null;
 
 function ytThumb(id){return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;}
+
 function makePoster(pid,videoId,lockedMsg){
   const lockLayer=lockedMsg?`<div class="lock" id="lock-${pid}">🔒 ${lockedMsg}</div>`:'';
   return `
@@ -500,7 +523,7 @@ function showLogin(){
 
 function profileComplete(){
   const p=state.profile||{};
-  return !!(p.name&&p.iddoc&&p.spec&&ESPECIALIDADES.includes(p.spec));
+  return !!(p.name&&p.iddoc&&p.spec&&TIPOS_PEP.includes(p.spec));
 }
 
 function setProfileReadonly(ro){
@@ -515,7 +538,7 @@ function setProfileReadonly(ro){
   btnSave.disabled=true;
 }
 
-function getSpecialty(){return (state.profile?.spec||'').trim();}
+function getSelectedTrack(){return (state.profile?.spec||'').trim();}
 
 function showCourse(){
   if(!auth.currentUser)return;
@@ -542,11 +565,11 @@ function showCourse(){
   $('#pf-id').value=state.profile?.iddoc||'';
   $('#pf-spec').value=state.profile?.spec||'';
 
-  renderAllBySpecialty(getSpecialty());
+  renderAllByTrack(getSelectedTrack());
   updateGlobalProgress();
   startProfileRealtime();
   loadProfile().then(()=>{
-    renderAllBySpecialty(getSpecialty());
+    renderAllByTrack(getSelectedTrack());
     updateGlobalProgress();
     if(profileComplete()){
       setProfileReadonly(true);
@@ -734,8 +757,8 @@ function startProfileRealtime(){
       $('#pf-id').value=state.profile?.iddoc||'';
       $('#pf-spec').value=state.profile?.spec||'';
     }
-    if(prevSpec!==state.profile?.spec&&ESPECIALIDADES.includes(state.profile?.spec||'')){
-      renderAllBySpecialty(state.profile.spec);
+    if(prevSpec!==state.profile?.spec&&TIPOS_PEP.includes(state.profile?.spec||'')){
+      renderAllByTrack(state.profile.spec);
       updateGlobalProgress();
     }
     if(savingProfile){
@@ -773,12 +796,12 @@ async function saveProfile(){
   const pfMsg=$('#pf-msg');
   const btn=$('#btn-save-profile');
 
-  if(!name||!iddoc||!spec){pfMsg.textContent='Completa nombre, cédula/pasaporte y especialidad.';return;}
-  if(!ESPECIALIDADES.includes(spec)){pfMsg.textContent='Selecciona una especialidad válida de la lista.';return;}
+  if(!name||!iddoc||!spec){pfMsg.textContent='Completa nombre, cédula/pasaporte y módulo PEP.';return;}
+  if(!TIPOS_PEP.includes(spec)){pfMsg.textContent='Selecciona un módulo PEP válido de la lista.';return;}
 
   state.profile={name,iddoc,spec};
   persist();
-  renderAllBySpecialty(spec);
+  renderAllByTrack(spec);
   updateGlobalProgress();
   document.getElementById('modules')?.scrollIntoView({behavior:'smooth',block:'start'});
   pfMsg.classList.add('saving');
@@ -832,7 +855,7 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
   const wrap=document.getElementById('spec-combo');
   const input=document.getElementById('pf-spec');
   const panel=document.getElementById('spec-panel');
-  let filtered=ESPECIALIDADES.slice(),open=false,hoverIndex=-1;
+  let filtered=TIPOS_PEP.slice(),open=false,hoverIndex=-1;
 
   function render(list){
     panel.innerHTML='';
@@ -860,7 +883,7 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
   wrap.addEventListener('mousedown',()=>{
     if(input.readOnly)return;
     if(!open){
-      filtered=ESPECIALIDADES.slice();
+      filtered=TIPOS_PEP.slice();
       render(filtered);
       show();
       setTimeout(()=>input.select(),0);
@@ -870,7 +893,7 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
   input.addEventListener('input',()=>{
     if(input.readOnly)return;
     const q=input.value.trim().toLowerCase();
-    filtered=ESPECIALIDADES.filter(e=>e.toLowerCase().includes(q));
+    filtered=TIPOS_PEP.filter(e=>e.toLowerCase().includes(q));
     hoverIndex=-1;
     render(filtered);
     show();
@@ -879,7 +902,7 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
 
   input.addEventListener('keydown',(e)=>{
     if(input.readOnly)return;
-    if(!open&&(e.key==='ArrowDown'||e.key==='Enter')){filtered=ESPECIALIDADES.slice();render(filtered);show();return;}
+    if(!open&&(e.key==='ArrowDown'||e.key==='Enter')){filtered=TIPOS_PEP.slice();render(filtered);show();return;}
     if(e.key==='ArrowDown'){hoverIndex=Math.min((hoverIndex+1),filtered.length-1);render(filtered);e.preventDefault();}
     else if(e.key==='ArrowUp'){hoverIndex=Math.max((hoverIndex-1),0);render(filtered);e.preventDefault();}
     else if(e.key==='Enter'){
@@ -891,7 +914,7 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
 
   input.addEventListener('blur',()=>{
     const v=input.value.trim();
-    if(v&&!ESPECIALIDADES.includes(v)){input.value='';}
+    if(v&&!TIPOS_PEP.includes(v)){input.value='';}
   });
 
   render(filtered);
@@ -900,26 +923,27 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
 function mkModule(id,titulo,ytIds){
   const vids=(ytIds&&ytIds.length?ytIds:DEFAULT_VIDEOS).slice(0,5).map((v,i)=>({yt:v,dur:'08:00',n:i+1}));
   const quiz=[
-    {id:`${id}-q1`,text:'Pregunta 1 del módulo',options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'A'},
-    {id:`${id}-q2`,text:'Pregunta 2 del módulo',options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'B'},
-    {id:`${id}-q3`,text:'Pregunta 3 del módulo',options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'B'}
+    {id:`${id}-q1`,text:`Pregunta 1 del módulo ${titulo}`,options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'A'},
+    {id:`${id}-q2`,text:`Pregunta 2 del módulo ${titulo}`,options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'B'},
+    {id:`${id}-q3`,text:`Pregunta 3 del módulo ${titulo}`,options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'B'}
   ];
   return {id,titulo,videos:vids,quiz};
 }
 
-function pickModulesFor(spec){
-  const wanted=ESPEC_MODS[spec]||[M.G];
+function pickModulesFor(track){
+  const wanted=PEP_MODS[track]||[M.G];
   return wanted.map((titulo,idx)=>{
     const ids=VIDEO_DEFAULTS[titulo]||DEFAULT_VIDEOS;
-    const mId=`${titulo.toLowerCase().replace(/\s+/g,'-')}-${idx+1}`;
+    const safeId=titulo.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\w\s-]/g,"").replace(/\s+/g,"-");
+    const mId=`${safeId}-${idx+1}`;
     return mkModule(mId,titulo,ids);
   });
 }
 
-function renderAllBySpecialty(spec){
-  const useSpec=spec||'MEDICINA INTERNA';
-  const modulesDef=pickModulesFor(useSpec);
-  state.course={spec:useSpec,modules:modulesDef};
+function renderAllByTrack(track){
+  const useTrack=track||'PEP CLÍNICO';
+  const modulesDef=pickModulesFor(useTrack);
+  state.course={spec:useTrack,modules:modulesDef};
   persist();
   $('#progress').style.display='block';
   $('#modules').style.display='grid';
@@ -1053,7 +1077,7 @@ function gradeQuizModule(m){
 }
 
 function updateGlobalProgress(){
-  const spec=getSpecialty()||'MEDICINA INTERNA';
+  const spec=getSelectedTrack()||'PEP CLÍNICO';
   const modulesDef=pickModulesFor(spec);
   const totalVideos=modulesDef.reduce((a,m)=>a+m.videos.length,0);
   const doneVideos=modulesDef.reduce((a,m)=>a+m.videos.filter(v=>(state.videosDone?.[m.id]||{})[v.yt]).length,0);
