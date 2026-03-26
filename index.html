@@ -182,15 +182,16 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:16px 0}
 <script>
 /* ======================== CONFIGURACIÓN ======================== */
 const firebaseConfig = {
-  apiKey: "REEMPLAZA_AQUI",
-  authDomain: "REEMPLAZA_AQUI",
-  projectId: "REEMPLAZA_AQUI",
-  storageBucket: "REEMPLAZA_AQUI",
-  messagingSenderId: "REEMPLAZA_AQUI",
-  appId: "REEMPLAZA_AQUI"
+  apiKey: "AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",
+  authDomain: "induccion-pep-hvq.firebaseapp.com",
+  projectId: "induccion-pep-hvq",
+  storageBucket: "induccion-pep-hvq.firebasestorage.app",
+  messagingSenderId: "651724182766",
+  appId: "1:651724182766:web:4eec9be43e9e8e60dc0fff"
 };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.warn);
 const db = firebase.firestore();
 
 /* ======================== DATOS ======================== */
