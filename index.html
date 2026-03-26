@@ -192,7 +192,6 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
       <div class="cert-title">Certificado de participación</div>
       <p>Otorgado a</p>
       <div class="cert-name" id="cert-nombre">Nombre Apellido</div>
-      <div class="cert-meta" id="cert-email" style="margin-bottom:10px"></div>
       <p>por completar satisfactoriamente el programa <strong>Inducción Soul MV</strong>.</p>
       <div class="cert-meta">
         <div id="cert-fecha"></div>
@@ -240,7 +239,7 @@ const MODS_POR_TIPO={
 
 const VIDEO_DEFAULTS={
   "GENERALIDADES":["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0"],
-  "HOSPITALIZACIÓN":["eY52Zsg-KVI","fJ9rUzIMcZQ","L_jWHffIx5E"],
+  "HOSPITALIZACIÓN":["aqz-KE-bpKQ","fJ9rUzIMcZQ","L_jWHffIx5E"],
   "CENTRO QUIRÚRGICO":["3JZ_D3ELwOQ","04854XqcfCY","ktvTqknDobU"],
   "CONSULTA EXTERNA":["kXYiU_JCYtU","hTWKbfoikeg","QH2-TGUlwu4"],
   "EMERGENCIAS":["2vjPBrBU-TM","hTWKbfoikeg","lWA2pjMjpBs"],
@@ -808,7 +807,7 @@ async function loadProfile(){
     if(!uid)return;
     const s=await db.collection('users').doc(uid).collection('profile').doc('main').get();
     if(s.exists){
-      state.profile={...(s.data()||{})};
+      state.profile=s.data();
       if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec))state.profile.spec='';
       persist();
       $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
@@ -828,15 +827,15 @@ async function saveProfile(){
   const btn=$('#btn-save-profile');
 
   if(!name||!iddoc||!spec){
-    pfMsg.textContent='Completa nombre, cédula o pasaporte y módulo.';
+    pfMsg.textContent='Completa todos los campos.';
     return;
   }
   if(!TIPOS_MODULO.includes(spec)){
-    pfMsg.textContent='Selecciona un módulo válido de la lista.';
+    pfMsg.textContent='Selecciona un módulo válido.';
     return;
   }
 
-  state.profile={...(state.profile||{}),name,iddoc,spec,email:auth.currentUser?.email||state.profile?.email||''};
+  state.profile={name,iddoc,spec};
   persist();
   renderAllByTrack(spec);
   updateGlobalProgress();
@@ -847,57 +846,29 @@ async function saveProfile(){
   savingProfile=true;
 
   try{
-    if(auth.currentUser&&name){
-      try{
-        await auth.currentUser.updateProfile({displayName:name});
-      }catch(_){ }
-    }
-
     const uid=auth.currentUser?.uid;
-    if(!uid) throw new Error('Sin UID');
+    if(!uid)throw new Error('No UID');
 
-    const ref=db.collection('users').doc(uid).collection('profile').doc('main');
-    const payload={
-      ...(state.profile||{}),
-      email:auth.currentUser?.email||state.profile?.email||'',
+    try{
+      if(name) await auth.currentUser.updateProfile({displayName:name});
+    }catch(_){}
+
+    await db.collection('users').doc(uid).collection('profile').doc('main').set({
+      ...state.profile,
       updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-    };
-
-    let ok=false;
-    let lastErr=null;
-
-    for(let i=0;i<3 && !ok;i++){
-      try{
-        await ref.set(payload,{merge:true});
-        ok=true;
-      }catch(e){
-        lastErr=e;
-        await new Promise(r=>setTimeout(r,700*(i+1)));
-      }
-    }
-
-    if(!ok) throw lastErr||new Error('No se pudo guardar');
+    },{merge:true});
 
     savingProfile=false;
     pfMsg.classList.remove('saving');
-    pfMsg.textContent='✅ Perfil guardado.';
+    pfMsg.textContent='✅ Perfil guardado';
     setProfileReadonly(true);
-    setTimeout(()=>{
-      if(pfMsg.textContent.includes('✅')) pfMsg.textContent='';
-    },3000);
+    setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; },3000);
   }catch(e){
     console.error(e);
     savingProfile=false;
     pfMsg.classList.remove('saving');
-
-    if(!navigator.onLine){
-      pfMsg.textContent='Sin conexión. Guardado local; se sincronizará al volver la red.';
-      setProfileReadonly(true);
-    }else{
-      pfMsg.textContent='No se pudo guardar en la nube; tus datos quedan localmente.';
-      setProfileReadonly(false);
-      markDirty();
-    }
+    pfMsg.textContent='Error al guardar en la nube';
+    btn.disabled=false;
   }
 }
 
@@ -1095,10 +1066,7 @@ function updateGlobalProgress(){
 
   if(allPassed){
     const preferName=state.profile?.name||auth.currentUser?.displayName||'';
-    const preferEmail=state.profile?.email||auth.currentUser?.email||'';
     $('#cert-nombre').textContent=preferName;
-    const certEmail=$('#cert-email');
-    if(certEmail) certEmail.textContent=preferEmail?`Correo electrónico: ${preferEmail}`:'';
     const f=new Date();
     const fecha=f.toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'});
     $('#cert-fecha').textContent=`Fecha: ${fecha}`;
