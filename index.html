@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-:root{--brand:#781C38;--ink:#1f2937;--muted:#6b7280;--bg:#f8fafc;--card:#ffffff;--ok:#15803d}
+:root{--brand:#781C38;--ink:#1f2937;--muted:#6b7280;--bg:#f8fafc;--card:#ffffff;--ok:#15803d;--danger:#b91c1c}
 *{box-sizing:border-box}
 body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
 .container{max-width:980px;margin:auto;padding:24px}
@@ -40,7 +40,9 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 #certificado.show{display:block}
 @media print{
   .no-print{display:none !important}
-  #certificado{display:block}
+  #certificado{display:block !important}
+  body{background:#fff}
+  .container{max-width:none;padding:0}
 }
 .cert-card{background:#fff;border:4px solid var(--brand);border-radius:20px;padding:40px;text-align:center}
 .cert-title{font-size:28px;font-weight:800;margin:0 0 10px;color:var(--brand)}
@@ -66,6 +68,8 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .poster img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.8)}
 .poster button{position:relative;z-index:2;padding:10px 14px;border-radius:999px;background:#ffffffd9;font-weight:800;border:0}
 .warnmsg{position:absolute;left:12px;right:12px;bottom:12px;background:#fff3cd;color:#7a5400;border-radius:10px;padding:8px 10px;font-size:13px;display:none}
+.auth-error{color:var(--danger)!important;font-weight:600}
+.auth-ok{color:var(--ok)!important;font-weight:600}
 </style>
 </head>
 <body>
@@ -159,9 +163,9 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     <div class="grid cols-2">
       <label>Nombre completo (para certificado)<br><input id="pf-name" type="text" required></label>
       <label>Cédula o Pasaporte<br><input id="pf-id" type="text" required></label>
-      <label style="grid-column:1/-1">Módulo PEP<br>
+      <label style="grid-column:1/-1">Módulo<br>
         <div class="combo" id="spec-combo">
-          <input id="pf-spec" type="text" placeholder="Selecciona el módulo PEP…" autocomplete="off" readonly>
+          <input id="pf-spec" type="text" placeholder="Selecciona el módulo…" autocomplete="off" readonly>
           <span class="arrow">▾</span>
           <div class="panel" id="spec-panel"></div>
         </div>
@@ -191,7 +195,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
       <div class="cert-title">Certificado de participación</div>
       <p>Otorgado a</p>
       <div class="cert-name" id="cert-nombre">Nombre Apellido</div>
-      <p>por completar satisfactoriamente el programa <strong>Inducción PEP – Soul MV</strong>.</p>
+      <p>por completar satisfactoriamente el programa <strong>Inducción Soul MV</strong>.</p>
       <div class="cert-meta">
         <div id="cert-fecha"></div>
         <div>Hospital Vozandes • Formación Interna</div>
@@ -208,13 +212,13 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
-const TIPOS_PEP=[
-  "PEP ESTUDIANTES EN FORMACION",
-  "PEP CLÍNICO/QUIRÚRGICO",
-  "PEP CLÍNICO",
-  "PEP UCI",
-  "PEP EMERGENCIAS",
-  "PEP CONSULTA EXTERNA"
+const TIPOS_MODULO=[
+  "ESTUDIANTES EN FORMACION",
+  "CLÍNICO/QUIRÚRGICO",
+  "CLÍNICO",
+  "SOLO UCI",
+  "SOLO EMERGENCIAS",
+  "SOLO CONSULTA EXTERNA O RADIOLOGÍA"
 ];
 
 const M={
@@ -227,13 +231,13 @@ const M={
   A:"AUDITORÍA"
 };
 
-const PEP_MODS={
-  "PEP ESTUDIANTES EN FORMACION":[M.G,M.H,M.CQ,M.CE,M.EM],
-  "PEP CLÍNICO/QUIRÚRGICO":[M.G,M.H,M.CQ,M.CE,M.V,M.A],
-  "PEP CLÍNICO":[M.G,M.H,M.CE,M.V,M.A],
-  "PEP UCI":[M.G,M.H,M.A],
-  "PEP EMERGENCIAS":[M.G,M.EM,M.A],
-  "PEP CONSULTA EXTERNA":[M.G,M.CE,M.V]
+const MODS_POR_TIPO={
+  "ESTUDIANTES EN FORMACION":[M.G,M.H,M.CQ,M.CE,M.EM],
+  "CLÍNICO/QUIRÚRGICO":[M.G,M.H,M.CQ,M.CE,M.V,M.A],
+  "CLÍNICO":[M.G,M.H,M.CE,M.V,M.A],
+  "SOLO UCI":[M.G,M.H,M.A],
+  "SOLO EMERGENCIAS":[M.G,M.EM,M.A],
+  "SOLO CONSULTA EXTERNA O RADIOLOGÍA":[M.G,M.CE,M.V]
 };
 
 const VIDEO_DEFAULTS={
@@ -287,7 +291,15 @@ const MSGS={
   'auth/network-request-failed':'Error de red. Revisa tu conexión.'
 };
 
-const msg=(t)=>{const el=$('#auth-msg');if(el)el.textContent=t||'';};
+function msg(t,type='normal'){
+  const el=$('#auth-msg');
+  if(!el)return;
+  el.textContent=t||'';
+  el.classList.remove('auth-error','auth-ok');
+  if(type==='error')el.classList.add('auth-error');
+  if(type==='ok')el.classList.add('auth-ok');
+}
+
 const emailOk=(e)=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((e||'').trim().toLowerCase());
 let CURRENT_UID=null;
 const keyFor=(uid)=>`soulmv_${uid||'anon'}`;
@@ -513,17 +525,22 @@ $('#tab-login').addEventListener('click',()=>setTab('login'));
 $('#tab-register').addEventListener('click',()=>setTab('reg'));
 setTab('login');
 
+function hideCertificate(){
+  $('#certificado').classList.remove('show');
+}
+
 function showLogin(){
   $('#step-welcome').style.display='block';
   $('#profile').style.display='none';
   $('#progress').style.display='none';
   $('#modules').style.display='none';
   $('#btn-logout').style.display='none';
+  hideCertificate();
 }
 
 function profileComplete(){
   const p=state.profile||{};
-  return !!(p.name&&p.iddoc&&p.spec&&TIPOS_PEP.includes(p.spec));
+  return !!(p.name&&p.iddoc&&p.spec&&TIPOS_MODULO.includes(p.spec));
 }
 
 function setProfileReadonly(ro){
@@ -552,6 +569,11 @@ function showCourse(){
   $('#step-welcome').style.display='none';
   $('#btn-logout').style.display='inline-flex';
   $('#profile').style.display='block';
+
+  if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec)){
+    state.profile.spec='';
+    persist();
+  }
 
   if(profileComplete()){
     setProfileReadonly(true);
@@ -618,15 +640,15 @@ document.getElementById('btn-register-2').addEventListener('click',async ()=>{
   const email=($('#reg-email').value||'').trim().toLowerCase();
   const pass=($('#reg-pass').value||'').trim();
   const pass2=($('#reg-pass2').value||'').trim();
-  if(!email||!pass||!pass2)return msg('Completa todos los campos.');
-  if(!emailOk(email))return msg('El formato del correo no es válido.');
-  if(pass!==pass2)return msg('Las contraseñas no coinciden.');
+  if(!email||!pass||!pass2)return msg('Completa todos los campos.','error');
+  if(!emailOk(email))return msg('El formato del correo no es válido.','error');
+  if(pass!==pass2)return msg('Las contraseñas no coinciden.','error');
   try{
     const methods=await auth.fetchSignInMethodsForEmail(email);
     if(methods&&methods.length){
       setTab('login');
       $('#login-email').value=email;
-      return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.');
+      return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.','error');
     }
     const {user}=await auth.createUserWithEmailAndPassword(email,pass);
     if(auth.currentUser?.uid!==user.uid)await auth.updateCurrentUser(user);
@@ -634,15 +656,15 @@ document.getElementById('btn-register-2').addEventListener('click',async ()=>{
     const actionCodeSettings={url:location.href.split('?')[0]+'?verified=1',handleCodeInApp:false};
     try{
       await auth.currentUser.sendEmailVerification(actionCodeSettings);
-      msg('Te enviamos el correo de verificación (revisa Spam).');
+      msg('Te enviamos el correo de verificación (revisa Spam).','ok');
     }catch(_){
-      msg('No se pudo enviar automáticamente. Usa “Reenviar verificación”.');
+      msg('No se pudo enviar automáticamente. Usa “Reenviar verificación”.','error');
     }
     $('#verify-box').style.display='block';
     setTab('login');
     $('#login-email').value=email;
   }catch(e){
-    msg(MSGS[e.code]||'Ocurrió un error. Intenta nuevamente.');
+    msg(MSGS[e.code]||'Ocurrió un error. Intenta nuevamente.','error');
   }
 });
 
@@ -654,7 +676,7 @@ document.getElementById('btn-check-verify').addEventListener('click',async ()=>{
       msg('');
       showCourse();
     }else{
-      msg('Aún no se detecta la verificación del correo.');
+      msg('Aún no se detecta la verificación del correo.','error');
     }
   }
 });
@@ -664,20 +686,20 @@ document.getElementById('btn-resend-verify').addEventListener('click',async ()=>
     const acs={url:location.href.split('?')[0]+'?verified=1',handleCodeInApp:false};
     if(auth.currentUser){
       await auth.currentUser.sendEmailVerification(acs);
-      msg('Te enviamos el correo de verificación (revisa Spam).');
+      msg('Te enviamos el correo de verificación (revisa Spam).','ok');
     }else{
-      msg('Primero inicia sesión.');
+      msg('Primero inicia sesión.','error');
     }
   }catch(e){
-    msg(MSGS[e.code]||'No se pudo enviar.');
+    msg(MSGS[e.code]||'No se pudo enviar.','error');
   }
 });
 
 document.getElementById('btn-login').addEventListener('click',async ()=>{
   const email=($('#login-email').value||'').trim().toLowerCase();
   const pass=($('#login-pass').value||'').trim();
-  if(!email||!pass)return msg('Ingresa correo y contraseña.');
-  if(!emailOk(email))return msg('El formato del correo no es válido.');
+  if(!email||!pass)return msg('Ingresa correo y contraseña.','error');
+  if(!emailOk(email))return msg('El formato del correo no es válido.','error');
   const btn=$('#btn-login');
   btn.disabled=true;
   try{
@@ -685,7 +707,7 @@ document.getElementById('btn-login').addEventListener('click',async ()=>{
     const u=auth.currentUser;
     await u.reload().catch(()=>{});
     if(!u.emailVerified){
-      msg('Tu sesión está iniciada, pero debes verificar tu correo antes de continuar.');
+      msg('Tu sesión está iniciada, pero debes verificar tu correo antes de continuar.','error');
       $('#verify-box').style.display='block';
       $('#btn-logout').style.display='inline-flex';
       showLogin();
@@ -700,17 +722,17 @@ document.getElementById('btn-login').addEventListener('click',async ()=>{
     let methods=[];
     try{methods=await auth.fetchSignInMethodsForEmail(email);}catch(_){}
     if(!methods||methods.length===0){
-      msg('Correo no registrado.');
+      msg('Correo no registrado.','error');
       setTab('reg');
       $('#reg-email').value=email;
     }else if(['auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials'].includes(e.code)){
-      msg('Contraseña incorrecta.');
+      msg('Contraseña incorrecta.','error');
     }else if(e.code==='auth/too-many-requests'){
-      msg('Demasiados intentos. Intenta más tarde.');
+      msg('Demasiados intentos. Intenta más tarde.','error');
     }else if(e.code==='auth/invalid-email'){
-      msg('El formato del correo no es válido.');
+      msg('El formato del correo no es válido.','error');
     }else{
-      msg(MSGS[e.code]||'Ocurrió un error. Intenta nuevamente.');
+      msg(MSGS[e.code]||'Ocurrió un error. Intenta nuevamente.','error');
     }
   }finally{
     btn.disabled=false;
@@ -719,15 +741,15 @@ document.getElementById('btn-login').addEventListener('click',async ()=>{
 
 document.getElementById('btn-reset').addEventListener('click',async ()=>{
   const email=($('#login-email').value||'').trim().toLowerCase();
-  if(!email)return msg('Escribe tu correo para enviarte el enlace.');
-  if(!emailOk(email))return msg('El formato del correo no es válido.');
+  if(!email)return msg('Escribe tu correo para enviarte el enlace.','error');
+  if(!emailOk(email))return msg('El formato del correo no es válido.','error');
   try{
     const methods=await auth.fetchSignInMethodsForEmail(email);
-    if(!methods||methods.length===0)return msg('Correo no registrado.');
+    if(!methods||methods.length===0)return msg('Correo no registrado.','error');
     await auth.sendPasswordResetEmail(email);
-    msg('Te enviamos un correo para restablecer la contraseña.');
+    msg('Te enviamos un correo para restablecer la contraseña.','ok');
   }catch(e){
-    msg(MSGS[e.code]||'No se pudo enviar.');
+    msg(MSGS[e.code]||'No se pudo enviar.','error');
   }
 });
 
@@ -751,13 +773,14 @@ function startProfileRealtime(){
     const cloud=snap.data()||{};
     const prevSpec=state.profile?.spec;
     state.profile={...state.profile,...cloud};
+    if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec))state.profile.spec='';
     persist();
     if(document.getElementById('pf-name').readOnly){
       $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
       $('#pf-id').value=state.profile?.iddoc||'';
       $('#pf-spec').value=state.profile?.spec||'';
     }
-    if(prevSpec!==state.profile?.spec&&TIPOS_PEP.includes(state.profile?.spec||'')){
+    if(prevSpec!==state.profile?.spec&&TIPOS_MODULO.includes(state.profile?.spec||'')){
       renderAllByTrack(state.profile.spec);
       updateGlobalProgress();
     }
@@ -779,6 +802,7 @@ async function loadProfile(){
     const s=await db.collection('users').doc(uid).collection('profile').doc('main').get();
     if(s.exists){
       state.profile=s.data();
+      if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec))state.profile.spec='';
       persist();
       $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
       $('#pf-id').value=state.profile?.iddoc||'';
@@ -796,8 +820,8 @@ async function saveProfile(){
   const pfMsg=$('#pf-msg');
   const btn=$('#btn-save-profile');
 
-  if(!name||!iddoc||!spec){pfMsg.textContent='Completa nombre, cédula/pasaporte y módulo PEP.';return;}
-  if(!TIPOS_PEP.includes(spec)){pfMsg.textContent='Selecciona un módulo PEP válido de la lista.';return;}
+  if(!name||!iddoc||!spec){pfMsg.textContent='Completa nombre, cédula/pasaporte y módulo.';return;}
+  if(!TIPOS_MODULO.includes(spec)){pfMsg.textContent='Selecciona un módulo válido de la lista.';return;}
 
   state.profile={name,iddoc,spec};
   persist();
@@ -855,7 +879,7 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
   const wrap=document.getElementById('spec-combo');
   const input=document.getElementById('pf-spec');
   const panel=document.getElementById('spec-panel');
-  let filtered=TIPOS_PEP.slice(),open=false,hoverIndex=-1;
+  let filtered=TIPOS_MODULO.slice(),open=false,hoverIndex=-1;
 
   function render(list){
     panel.innerHTML='';
@@ -883,7 +907,7 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
   wrap.addEventListener('mousedown',()=>{
     if(input.readOnly)return;
     if(!open){
-      filtered=TIPOS_PEP.slice();
+      filtered=TIPOS_MODULO.slice();
       render(filtered);
       show();
       setTimeout(()=>input.select(),0);
@@ -893,7 +917,7 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
   input.addEventListener('input',()=>{
     if(input.readOnly)return;
     const q=input.value.trim().toLowerCase();
-    filtered=TIPOS_PEP.filter(e=>e.toLowerCase().includes(q));
+    filtered=TIPOS_MODULO.filter(e=>e.toLowerCase().includes(q));
     hoverIndex=-1;
     render(filtered);
     show();
@@ -902,7 +926,7 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
 
   input.addEventListener('keydown',(e)=>{
     if(input.readOnly)return;
-    if(!open&&(e.key==='ArrowDown'||e.key==='Enter')){filtered=TIPOS_PEP.slice();render(filtered);show();return;}
+    if(!open&&(e.key==='ArrowDown'||e.key==='Enter')){filtered=TIPOS_MODULO.slice();render(filtered);show();return;}
     if(e.key==='ArrowDown'){hoverIndex=Math.min((hoverIndex+1),filtered.length-1);render(filtered);e.preventDefault();}
     else if(e.key==='ArrowUp'){hoverIndex=Math.max((hoverIndex-1),0);render(filtered);e.preventDefault();}
     else if(e.key==='Enter'){
@@ -914,7 +938,7 @@ document.getElementById('btn-save-profile').addEventListener('click',saveProfile
 
   input.addEventListener('blur',()=>{
     const v=input.value.trim();
-    if(v&&!TIPOS_PEP.includes(v)){input.value='';}
+    if(v&&!TIPOS_MODULO.includes(v)){input.value='';}
   });
 
   render(filtered);
@@ -931,7 +955,7 @@ function mkModule(id,titulo,ytIds){
 }
 
 function pickModulesFor(track){
-  const wanted=PEP_MODS[track]||[M.G];
+  const wanted=MODS_POR_TIPO[track]||[];
   return wanted.map((titulo,idx)=>{
     const ids=VIDEO_DEFAULTS[titulo]||DEFAULT_VIDEOS;
     const safeId=titulo.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\w\s-]/g,"").replace(/\s+/g,"-");
@@ -941,9 +965,16 @@ function pickModulesFor(track){
 }
 
 function renderAllByTrack(track){
-  const useTrack=track||'PEP CLÍNICO';
-  const modulesDef=pickModulesFor(useTrack);
-  state.course={spec:useTrack,modules:modulesDef};
+  if(!track || !TIPOS_MODULO.includes(track)){
+    state.course={spec:'',modules:[]};
+    persist();
+    $('#progress').style.display='none';
+    $('#modules').style.display='none';
+    hideCertificate();
+    return;
+  }
+  const modulesDef=pickModulesFor(track);
+  state.course={spec:track,modules:modulesDef};
   persist();
   $('#progress').style.display='block';
   $('#modules').style.display='grid';
@@ -1077,7 +1108,13 @@ function gradeQuizModule(m){
 }
 
 function updateGlobalProgress(){
-  const spec=getSelectedTrack()||'PEP CLÍNICO';
+  const spec=getSelectedTrack();
+  if(!spec || !TIPOS_MODULO.includes(spec)){
+    $('#progress').style.display='none';
+    $('#modules').style.display='none';
+    hideCertificate();
+    return;
+  }
   const modulesDef=pickModulesFor(spec);
   const totalVideos=modulesDef.reduce((a,m)=>a+m.videos.length,0);
   const doneVideos=modulesDef.reduce((a,m)=>a+m.videos.filter(v=>(state.videosDone?.[m.id]||{})[v.yt]).length,0);
@@ -1086,7 +1123,7 @@ function updateGlobalProgress(){
   $('#modules').style.display='grid';
   $('#bar').style.width=pct+'%';
   const evalsPassed=modulesDef.filter(m=>state.quizzes?.[m.id]?.passed).length;
-  const allPassed=modulesDef.every(m=>state.quizzes?.[m.id]?.passed);
+  const allPassed=modulesDef.length>0 && modulesDef.every(m=>state.quizzes?.[m.id]?.passed);
   const labelExtra=`• Evaluaciones ${evalsPassed}/${modulesDef.length}${allPassed?' • ✅ Listo para certificar':''}`;
   $('#progress-label').textContent=`${pct}% completado — Videos ${doneVideos}/${totalVideos} ${labelExtra}`;
   if(allPassed){
@@ -1096,6 +1133,8 @@ function updateGlobalProgress(){
     const fecha=f.toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'});
     document.getElementById('cert-fecha').textContent=`Fecha: ${fecha}`;
     document.getElementById('certificado').classList.add('show');
+  }else{
+    hideCertificate();
   }
 }
 
@@ -1120,6 +1159,7 @@ async function syncFromCloud(user){
     const psnap=await db.collection('users').doc(user.uid).collection('profile').doc('main').get();
     if(psnap.exists){
       state.profile={...(state.profile||{}),...(psnap.data()||{})};
+      if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec))state.profile.spec='';
       persist();
     }
   }catch(e){
