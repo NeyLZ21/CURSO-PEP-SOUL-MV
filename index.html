@@ -776,8 +776,7 @@ function startProfileRealtime(){
     if(!snap.exists)return;
     const cloud=snap.data()||{};
     const prevSpec=state.profile?.spec;
-    state.profile={...(state.profile||{}),...cloud};
-    if(!state.profile.email && auth.currentUser?.email) state.profile.email=auth.currentUser.email;
+    state.profile={...state.profile,...cloud};
     if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec))state.profile.spec='';
     persist();
 
@@ -809,8 +808,7 @@ async function loadProfile(){
     if(!uid)return;
     const s=await db.collection('users').doc(uid).collection('profile').doc('main').get();
     if(s.exists){
-      state.profile={...(s.data()||{})};
-      if(!state.profile.email && auth.currentUser?.email) state.profile.email=auth.currentUser.email;
+      state.profile=s.data();
       if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec))state.profile.spec='';
       persist();
       $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
@@ -838,7 +836,7 @@ async function saveProfile(){
     return;
   }
 
-  state.profile={...(state.profile||{}),name,iddoc,spec,email:auth.currentUser?.email||state.profile?.email||''};
+  state.profile={name,iddoc,spec};
   persist();
   renderAllByTrack(spec);
   updateGlobalProgress();
@@ -1069,10 +1067,9 @@ function updateGlobalProgress(){
 
   if(allPassed){
     const preferName=state.profile?.name||auth.currentUser?.displayName||'';
-    const preferEmail=auth.currentUser?.email||state.profile?.email||'';
     $('#cert-nombre').textContent=preferName;
-    const certEmail=$('#cert-email');
-    if(certEmail) certEmail.textContent=preferEmail ? `Correo electrónico: ${preferEmail}` : '';
+    const preferEmail=auth.currentUser?.email||state.profile?.email||'';
+    $('#cert-email').textContent=preferEmail ? `Correo electrónico: ${preferEmail}` : '';
     const f=new Date();
     const fecha=f.toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'});
     $('#cert-fecha').textContent=`Fecha: ${fecha}`;
@@ -1105,7 +1102,6 @@ async function syncFromCloud(user){
     const psnap=await db.collection('users').doc(user.uid).collection('profile').doc('main').get();
     if(psnap.exists){
       state.profile={...(state.profile||{}),...(psnap.data()||{})};
-      if(!state.profile.email && auth.currentUser?.email) state.profile.email=auth.currentUser.email;
       if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec))state.profile.spec='';
       persist();
     }
