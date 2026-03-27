@@ -324,10 +324,6 @@ const keyFor=uid=>`soulmv_${uid||"anon"}`;
 const loadState=uid=>{try{return JSON.parse(localStorage.getItem(keyFor(uid))||"{}");}catch{return {}}};
 const saveStateLocal=(uid,st)=>localStorage.setItem(keyFor(uid),JSON.stringify(st));
 
-let state=loadState(null);
-
-function persist(){ saveStateLocal(CURRENT_UID,state); }
-
 function defaultState(){
   return {
     profile:{name:"",spec:"",email:""},
@@ -337,6 +333,10 @@ function defaultState(){
     course:{spec:"",modules:[]}
   };
 }
+
+let state=defaultState();
+
+function persist(){ saveStateLocal(CURRENT_UID,state); }
 
 function normalizeCloudData(data){
   return {
@@ -359,60 +359,30 @@ function applyCloudData(data){
 
 async function ensureUserDoc(uid,email=""){
   const ref=db.collection("users").doc(uid);
-  await ref.set({
-    profile:{email:email||"",name:"",spec:""},
-    videosDone:{},
-    quizzes:{},
-    play:{},
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  },{merge:true});
+  const snap=await ref.get().catch(()=>null);
+
+  if(!snap || !snap.exists){
+    await ref.set({
+      profile:{email:email||"",name:"",spec:""},
+      videosDone:{},
+      quizzes:{},
+      play:{},
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }else{
+    const data=snap.data()||{};
+    const profile=data.profile||{};
+    if((email||"") && profile.email!==email){
+      await ref.set({
+        profile:{
+          ...profile,
+          email:email||profile.email||""
+        },
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      },{merge:true});
+    }
+  }
   return ref;
-}
-
-async function waitForServerUserDoc(uid, timeoutMs=10000){
-  return new Promise((resolve)=>{
-    let settled=false;
-    let unsub=()=>{};
-    const finish=(value)=>{
-      if(settled)return;
-      settled=true;
-      try{unsub();}catch(_){}
-      resolve(value);
-    };
-
-    const timer=setTimeout(async ()=>{
-      try{
-        const snap=await db.collection("users").doc(uid).get({source:"server"});
-        finish(snap.exists ? snap.data() : null);
-      }catch(_){
-        try{
-          const fallback=await db.collection("users").doc(uid).get();
-          finish(fallback.exists ? fallback.data() : null);
-        }catch(_2){
-          finish(null);
-        }
-      }
-    }, timeoutMs);
-
-    unsub=db.collection("users").doc(uid).onSnapshot(
-      {includeMetadataChanges:true},
-      (snap)=>{
-        if(!snap.exists) return;
-        if(snap.metadata.fromCache) return;
-        clearTimeout(timer);
-        finish(snap.data()||null);
-      },
-      async ()=>{
-        clearTimeout(timer);
-        try{
-          const snap=await db.collection("users").doc(uid).get({source:"server"});
-          finish(snap.exists ? snap.data() : null);
-        }catch(_){
-          finish(null);
-        }
-      }
-    );
-  });
 }
 
 function showLogin(){
@@ -901,10 +871,31 @@ async function syncToCloud(){
 
 function subscribeUserDoc(uid){
   if(unsubUserDoc){ try{unsubUserDoc();}catch(_){} unsubUserDoc=null; }
+
   unsubUserDoc=db.collection("users").doc(uid).onSnapshot((snap)=>{
     if(!snap.exists)return;
+
+    const incoming=normalizeCloudData(snap.data()||{});
+
+    const currentUpdated=JSON.stringify({
+      profile: state.profile||{},
+      videosDone: state.videosDone||{},
+      quizzes: state.quizzes||{},
+      play: state.play||{}
+    });
+
+    const incomingUpdated=JSON.stringify({
+      profile: incoming.profile||{},
+      videosDone: incoming.videosDone||{},
+      quizzes: incoming.quizzes||{},
+      play: incoming.play||{}
+    });
+
+    if(currentUpdated===incomingUpdated)return;
+
     applyCloudData(snap.data()||{});
     hydrateUIFromState();
+
     if(savingProfile){
       savingProfile=false;
       const pfMsg=$("#pf-msg");
@@ -920,8 +911,10 @@ function subscribeUserDoc(uid){
 
 async function loadInitialRemoteData(uid,email){
   await ensureUserDoc(uid,email);
-  const remoteData=await waitForServerUserDoc(uid,10000);
-  if(remoteData) applyCloudData(remoteData);
+  const snap=await db.collection("users").doc(uid).get().catch(()=>null);
+  if(snap && snap.exists){
+    applyCloudData(snap.data()||{});
+  }
 }
 
 async function showCourse(){
@@ -978,6 +971,11 @@ async function saveProfile(){
       try{ await auth.currentUser.updateProfile({displayName:name}); }catch(_){}
     }
     await syncToCloud();
+    savingProfile=false;
+    pfMsg.classList.remove("saving");
+    pfMsg.textContent="✅ Perfil guardado.";
+    setProfileReadonly(true);
+    setTimeout(()=>{ if(pfMsg.textContent.includes("✅")) pfMsg.textContent=""; },3000);
   }catch(e){
     console.error(e);
     savingProfile=false;
@@ -1006,7 +1004,6 @@ auth.onAuthStateChanged(async (user)=>{
     return;
   }
 
-  try{ await user.reload(); }catch(_){}
   const freshUser=auth.currentUser||user;
   CURRENT_UID=freshUser.uid;
   state=loadState(CURRENT_UID)||defaultState();
@@ -1023,8 +1020,6 @@ auth.onAuthStateChanged(async (user)=>{
   msg("");
   $("#verify-box").style.display="none";
   $("#btn-logout").style.display="inline-flex";
-
-  try{ await freshUser.getIdToken(true); }catch(_){}
   await showCourse();
 });
 
@@ -1067,7 +1062,6 @@ $("#btn-check-verify").addEventListener("click",async ()=>{
     if(auth.currentUser.emailVerified){
       $("#verify-box").style.display="none";
       msg("");
-      try{ await auth.currentUser.getIdToken(true); }catch(_){}
     }else{
       msg("Aún no se detecta la verificación del correo.","error");
     }
