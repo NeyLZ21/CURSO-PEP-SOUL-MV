@@ -321,6 +321,8 @@ let unsubUserDoc=null;
 let savingProfile=false;
 let lastCloudSyncAt=0;
 let cloudSyncTimer=null;
+let isRenderingFromRemote=false;
+let lastRenderedTrack="";
 
 const keyFor=uid=>`soulmv_${uid||"anon"}`;
 const loadState=uid=>{try{return JSON.parse(localStorage.getItem(keyFor(uid))||"{}");}catch{return {}}};
@@ -429,6 +431,7 @@ function destroyAllPlayers(){
 
 function showLogin(){
   destroyAllPlayers();
+  lastRenderedTrack="";
   $("#step-welcome").style.display="block";
   $("#profile").style.display="none";
   $("#progress").style.display="none";
@@ -625,21 +628,16 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
             const dur=p.getDuration?.()||0;
             if(dur) store.dur=dur;
           }catch(_){}
-
           state.videosDone=state.videosDone||{};
           state.videosDone[moduleId]=state.videosDone[moduleId]||{};
           state.videosDone[moduleId][videoId]=true;
-
           store.allow=store.dur||store.allow||0;
           store.t=store.allow;
-
           persist();
-
           const m=(state.course?.modules||[]).find(mm=>mm.id===moduleId);
           const nextPid=`player-${moduleId}-${index+1}`;
           const nextLock=document.getElementById(`lock-${nextPid}`);
           if(nextLock)nextLock.remove();
-
           updateGlobalProgress();
           maybeEnableQuiz({id:moduleId,videos:m?.videos||[]});
           syncToCloud(true);
@@ -684,7 +682,6 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
       if(st===YT.PlayerState.PLAYING){
         if(cur>store.allow) store.allow=cur;
         store.t=cur;
-
         const curSec=Math.floor(cur);
         if(curSec!==meta.lastSavedSecond && curSec>0 && curSec%5===0){
           meta.lastSavedSecond=curSec;
@@ -750,6 +747,7 @@ setTab("login");
 
 function renderAllByTrack(track){
   if(!track || !TIPOS_MODULO.includes(track)){
+    lastRenderedTrack="";
     state.course={spec:"",modules:[]};
     persist();
     $("#progress").style.display="none";
@@ -757,12 +755,21 @@ function renderAllByTrack(track){
     $("#certificado").classList.remove("show");
     return;
   }
+
   const modulesDef=pickModulesFor(track);
   state.course={spec:track,modules:modulesDef};
   persist();
+
   $("#progress").style.display="block";
   $("#modules").style.display="grid";
-  renderModules(modulesDef);
+
+  if(lastRenderedTrack!==track){
+    renderModules(modulesDef);
+    lastRenderedTrack=track;
+  }else{
+    updateModuleLocksAndButtons(modulesDef);
+  }
+
   updateGlobalProgress();
 }
 
@@ -792,6 +799,7 @@ function renderModules(modulesDef){
 
     const card=document.createElement("article");
     card.className="card module";
+    card.setAttribute("data-module-id",m.id);
     card.innerHTML=`
       <div class="num">${modIdx+1}</div>
       <div class="meta">
@@ -823,6 +831,52 @@ function renderModules(modulesDef){
       if(state.quizzes?.[m.id]?.passed)return;
       renderQuizForModule(m);
     });
+  });
+}
+
+function updateModuleLocksAndButtons(modulesDef){
+  modulesDef.forEach((m,modIdx)=>{
+    const doneVideos=(state.videosDone?.[m.id]||{});
+    const firstLockedMsg=modIdx===0?null:(prevModuleConcluded(m.id)?null:"Primero concluye el módulo anterior");
+
+    m.videos.forEach((v,i)=>{
+      const pid=`player-${m.id}-${i}`;
+      const wrap=document.getElementById(pid)?.closest(".yt-wrap");
+      if(!wrap)return;
+      const existingLock=document.getElementById(`lock-${pid}`);
+      const shouldLock=(i===0)?!!firstLockedMsg:!doneVideos[m.videos[i-1].yt];
+      const lockMsg=shouldLock?((i===0&&firstLockedMsg)?firstLockedMsg:"Termina el video anterior"):null;
+      if(shouldLock && !existingLock){
+        const div=document.createElement("div");
+        div.className="lock";
+        div.id=`lock-${pid}`;
+        div.textContent=`🔒 ${lockMsg}`;
+        wrap.appendChild(div);
+      }else if(!shouldLock && existingLock){
+        existingLock.remove();
+      }else if(shouldLock && existingLock){
+        existingLock.textContent=`🔒 ${lockMsg}`;
+      }
+    });
+
+    const canStart=m.videos.every(v=>doneVideos[v.yt]);
+    const passed=state.quizzes?.[m.id]?.passed;
+    const btn=$(`#btn-${m.id}`);
+    const hint=$(`#hint-${m.id}`);
+    if(btn&&hint){
+      btn.disabled=!canStart;
+      btn.textContent=passed?"Aprobado ✓":"Comenzar evaluación";
+      btn.classList.toggle("btn-success",!!passed);
+      btn.classList.toggle("btn-primary",!passed);
+      hint.textContent=canStart?"Listo para evaluar":"Completa los videos para habilitar";
+    }
+
+    const res=$(`#res-${m.id}`);
+    if(res && state.quizzes?.[m.id]){
+      const q=state.quizzes[m.id];
+      res.style.display="block";
+      res.textContent=`Resultado: ${q.correct}/${q.total} (${q.scorePct}%). ${q.passed?"✅ Aprobado":"❌ No aprobado"}.`;
+    }
   });
 }
 
@@ -936,6 +990,7 @@ function hydrateUIFromState(){
     $("#progress").style.display="none";
     $("#modules").style.display="none";
     $("#certificado").classList.remove("show");
+    lastRenderedTrack="";
   }
 }
 
@@ -947,24 +1002,37 @@ function subscribeUserDoc(uid){
 
     const incoming=normalizeCloudData(snap.data()||{});
 
-    const currentUpdated=JSON.stringify({
+    const currentCore=JSON.stringify({
       profile: state.profile||{},
       videosDone: state.videosDone||{},
-      quizzes: state.quizzes||{},
-      play: state.play||{}
+      quizzes: state.quizzes||{}
     });
 
-    const incomingUpdated=JSON.stringify({
+    const incomingCore=JSON.stringify({
       profile: incoming.profile||{},
       videosDone: incoming.videosDone||{},
-      quizzes: incoming.quizzes||{},
-      play: incoming.play||{}
+      quizzes: incoming.quizzes||{}
     });
 
-    if(currentUpdated===incomingUpdated)return;
+    const currentPlay=JSON.stringify(state.play||{});
+    const incomingPlay=JSON.stringify(incoming.play||{});
 
+    if(currentCore===incomingCore && currentPlay===incomingPlay)return;
+
+    const shouldUpdateOnlyPlay=currentCore===incomingCore && currentPlay!==incomingPlay;
+    if(shouldUpdateOnlyPlay){
+      state.play=incoming.play||{};
+      persist();
+      return;
+    }
+
+    isRenderingFromRemote=true;
+    const oldTrack=getSelectedTrack();
     applyCloudData(snap.data()||{});
+    const newTrack=getSelectedTrack();
+    if(oldTrack!==newTrack) lastRenderedTrack="";
     hydrateUIFromState();
+    isRenderingFromRemote=false;
 
     if(savingProfile){
       savingProfile=false;
@@ -1020,12 +1088,17 @@ async function saveProfile(){
     return;
   }
 
+  const oldTrack=getSelectedTrack();
+
   state.profile={
     ...(state.profile||{}),
     name,
     spec,
     email:auth.currentUser?.email||state.profile?.email||""
   };
+
+  if(oldTrack!==spec) lastRenderedTrack="";
+
   persist();
   hydrateUIFromState();
 
@@ -1066,6 +1139,7 @@ auth.onAuthStateChanged(async (user)=>{
     CURRENT_UID=null;
     state=defaultState();
     $("#auth-user").textContent="";
+    lastRenderedTrack="";
     if(unsubUserDoc){ try{unsubUserDoc();}catch(_){} unsubUserDoc=null; }
     showLogin();
     msg("");
