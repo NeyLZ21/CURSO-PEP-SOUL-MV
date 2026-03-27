@@ -155,7 +155,6 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     <p class="muted" id="pf-help">Completa todos los campos para habilitar los módulos.</p>
     <div class="grid cols-2">
       <label>Nombre completo (para certificado)<br><input id="pf-name" type="text" required></label>
-      <label>Cédula o Pasaporte<br><input id="pf-id" type="text" required></label>
       <label style="grid-column:1/-1">Módulo<br>
         <select id="pf-spec">
           <option value="">Selecciona el módulo…</option>
@@ -240,7 +239,7 @@ const MODS_POR_TIPO={
 
 const VIDEO_DEFAULTS={
   "GENERALIDADES":["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0"],
-  "HOSPITALIZACIÓN":["eY52Zsg-KVI","fJ9rUzIMcZQ","L_jWHffIx5E"],
+  "HOSPITALIZACIÓN":["kJQP7kiw5Fk","fJ9rUzIMcZQ","L_jWHffIx5E"],
   "CENTRO QUIRÚRGICO":["3JZ_D3ELwOQ","04854XqcfCY","ktvTqknDobU"],
   "CONSULTA EXTERNA":["kXYiU_JCYtU","hTWKbfoikeg","QH2-TGUlwu4"],
   "EMERGENCIAS":["2vjPBrBU-TM","hTWKbfoikeg","lWA2pjMjpBs"],
@@ -316,7 +315,7 @@ function markDirty(){
   if(pfMsg && /guardado|sin conexión|nube/i.test(pfMsg.textContent))pfMsg.textContent='';
 }
 
-['pf-name','pf-id'].forEach(id=>{
+['pf-name'].forEach(id=>{
   document.addEventListener('input',(e)=>{
     if(e.target&&e.target.id===id)markDirty();
   });
@@ -540,11 +539,11 @@ function showLogin(){
 
 function profileComplete(){
   const p=state.profile||{};
-  return !!(p.name&&p.iddoc&&p.spec&&TIPOS_MODULO.includes(p.spec));
+  return !!(p.name&&p.spec&&TIPOS_MODULO.includes(p.spec));
 }
 
 function setProfileReadonly(ro){
-  ['pf-name','pf-id','pf-spec'].forEach(id=>{
+  ['pf-name','pf-spec'].forEach(id=>{
     const el=document.getElementById(id);
     if(!el)return;
     if(el.tagName==='SELECT'){
@@ -589,7 +588,6 @@ function showCourse(){
   }
 
   $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
-  $('#pf-id').value=state.profile?.iddoc||'';
   $('#pf-spec').value=state.profile?.spec||'';
 
   renderAllByTrack(getSelectedTrack());
@@ -782,7 +780,6 @@ function startProfileRealtime(){
 
     if($('#pf-name').readOnly){
       $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
-      $('#pf-id').value=state.profile?.iddoc||'';
       $('#pf-spec').value=state.profile?.spec||'';
     }
 
@@ -812,7 +809,6 @@ async function loadProfile(){
       if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec))state.profile.spec='';
       persist();
       $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
-      $('#pf-id').value=state.profile?.iddoc||'';
       $('#pf-spec').value=state.profile?.spec||'';
     }
   }catch(e){
@@ -822,13 +818,12 @@ async function loadProfile(){
 
 async function saveProfile(){
   const name=($('#pf-name').value||'').trim();
-  const iddoc=($('#pf-id').value||'').trim();
   const spec=($('#pf-spec').value||'').trim();
   const pfMsg=$('#pf-msg');
   const btn=$('#btn-save-profile');
 
-  if(!name||!iddoc||!spec){
-    pfMsg.textContent='Completa nombre, cédula o pasaporte y módulo.';
+  if(!name||!spec){
+    pfMsg.textContent='Completa nombre y módulo.';
     return;
   }
   if(!TIPOS_MODULO.includes(spec)){
@@ -836,7 +831,7 @@ async function saveProfile(){
     return;
   }
 
-  state.profile={...(state.profile||{}),name,iddoc,spec,email:auth.currentUser?.email||state.profile?.email||''};
+  state.profile={...(state.profile||{}),name,spec,email:auth.currentUser?.email||state.profile?.email||''};
   persist();
   renderAllByTrack(spec);
   updateGlobalProgress();
