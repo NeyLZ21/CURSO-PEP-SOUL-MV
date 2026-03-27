@@ -561,7 +561,7 @@ function setProfileReadonly(ro){
 
 function getSelectedTrack(){ return (state.profile?.spec||'').trim(); }
 
-function showCourse(){
+async function showCourse(){
   if(!auth.currentUser)return;
   if(!auth.currentUser.emailVerified){
     showLogin();
@@ -573,11 +573,21 @@ function showCourse(){
   $('#step-welcome').style.display='none';
   $('#btn-logout').style.display='inline-flex';
   $('#profile').style.display='block';
+  $('#progress').style.display='none';
+  $('#modules').style.display='none';
+
+  startProfileRealtime();
+
+  await loadProfile().catch(()=>{});
+  await syncFromCloud(auth.currentUser).catch(()=>{});
 
   if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec)){
     state.profile.spec='';
     persist();
   }
+
+  $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
+  $('#pf-spec').value=state.profile?.spec||'';
 
   if(profileComplete()){
     setProfileReadonly(true);
@@ -587,20 +597,8 @@ function showCourse(){
     $('#pf-help').textContent='Completa todos los campos para habilitar los módulos.';
   }
 
-  $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
-  $('#pf-spec').value=state.profile?.spec||'';
-
   renderAllByTrack(getSelectedTrack());
   updateGlobalProgress();
-  startProfileRealtime();
-  loadProfile().then(()=>{
-    renderAllByTrack(getSelectedTrack());
-    updateGlobalProgress();
-    if(profileComplete()){
-      setProfileReadonly(true);
-      $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.';
-    }
-  }).catch(()=>{});
 }
 
 auth.onAuthStateChanged(async (user)=>{
@@ -634,8 +632,8 @@ auth.onAuthStateChanged(async (user)=>{
   msg('');
   $('#verify-box').style.display='none';
   $('#btn-logout').style.display='inline-flex';
-  showCourse();
-  syncFromCloud(freshUser).catch(()=>{});
+
+  await showCourse();
 });
 
 $('#btn-register-2').addEventListener('click',async ()=>{
@@ -718,8 +716,7 @@ $('#btn-login').addEventListener('click',async ()=>{
     msg('');
     $('#verify-box').style.display='none';
     $('#btn-logout').style.display='inline-flex';
-    showCourse();
-    syncFromCloud(u).catch(()=>{});
+    await showCourse();
   }catch(e){
     let methods=[];
     try{methods=await auth.fetchSignInMethodsForEmail(email);}catch(_){}
@@ -851,10 +848,20 @@ async function saveProfile(){
     const uid=auth.currentUser?.uid;
     if(!uid) throw new Error('Sin UID');
 
-    const ref=db.collection('users').doc(uid).collection('profile').doc('main');
-    const payload={
+    const profileRef=db.collection('users').doc(uid).collection('profile').doc('main');
+    const courseRef=db.collection('users').doc(uid).collection('courses').doc('soulmv');
+
+    const profilePayload={
       ...(state.profile||{}),
       email:auth.currentUser?.email||state.profile?.email||'',
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    const coursePayload={
+      videosDone:state.videosDone||{},
+      quizzes:state.quizzes||{},
+      play:state.play||{},
+      spec,
       updatedAt:firebase.firestore.FieldValue.serverTimestamp()
     };
 
@@ -863,7 +870,8 @@ async function saveProfile(){
 
     for(let i=0;i<3 && !ok;i++){
       try{
-        await ref.set(payload,{merge:true});
+        await profileRef.set(profilePayload,{merge:true});
+        await courseRef.set(coursePayload,{merge:true});
         ok=true;
       }catch(e){
         lastErr=e;
@@ -1119,14 +1127,25 @@ async function syncFromCloud(user){
         state.videosDone={...(state.videosDone||{}),...(cloud.videosDone||{})};
         state.quizzes={...(state.quizzes||{}),...(cloud.quizzes||{})};
         state.play={...(state.play||{}),...(cloud.play||{})};
+        if(!state.profile) state.profile={};
+        if(!state.profile.spec && cloud.spec && TIPOS_MODULO.includes(cloud.spec)){
+          state.profile.spec=cloud.spec;
+        }
         persist();
       }
     }
 
     const psnap=await db.collection('users').doc(user.uid).collection('profile').doc('main').get();
     if(psnap.exists){
-      state.profile={...(state.profile||{}),...(psnap.data()||{})};
+      const pdata=psnap.data()||{};
+      state.profile={...(state.profile||{}),...pdata};
       if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec))state.profile.spec='';
+      persist();
+    }
+
+    if((!state.profile?.spec || !TIPOS_MODULO.includes(state.profile.spec)) && state.course?.spec && TIPOS_MODULO.includes(state.course.spec)){
+      state.profile=state.profile||{};
+      state.profile.spec=state.course.spec;
       persist();
     }
 
@@ -1141,7 +1160,13 @@ async function syncToCloud(){
   try{
     const ref=await userDoc();
     if(!ref)return;
-    const payload={videosDone:state.videosDone||{},quizzes:state.quizzes||{},play:state.play||{}};
+    const payload={
+      videosDone:state.videosDone||{},
+      quizzes:state.quizzes||{},
+      play:state.play||{},
+      spec:state.profile?.spec||'',
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    };
     await ref.set(payload,{merge:true});
     const uid=auth.currentUser?.uid;
     if(uid&&state.profile){
