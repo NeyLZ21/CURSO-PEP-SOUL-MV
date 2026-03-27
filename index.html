@@ -323,6 +323,7 @@ let lastCloudSyncAt=0;
 let cloudSyncTimer=null;
 let isRenderingFromRemote=false;
 let lastRenderedTrack="";
+let autoResumePlayers=new Set();
 
 const keyFor=uid=>`soulmv_${uid||"anon"}`;
 const loadState=uid=>{try{return JSON.parse(localStorage.getItem(keyFor(uid))||"{}");}catch{return {}}};
@@ -427,6 +428,7 @@ function destroyAllPlayers(){
     delete players[k];
   });
   cfgByPid.clear();
+  autoResumePlayers.clear();
 }
 
 function showLogin(){
@@ -704,12 +706,36 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
 
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden){
-    Object.values(players).forEach(({player})=>{
-      try{player.pauseVideo();}catch(_){}
+    autoResumePlayers.clear();
+
+    Object.entries(players).forEach(([pid,entry])=>{
+      try{
+        const p=entry?.player;
+        const st=p?.getPlayerState?.();
+        if(st===YT.PlayerState.PLAYING){
+          autoResumePlayers.add(pid);
+          p.pauseVideo();
+        }
+      }catch(_){}
     });
+
     persist();
     syncToCloud(true);
+    return;
   }
+
+  autoResumePlayers.forEach(pid=>{
+    try{
+      const p=players[pid]?.player;
+      if(!p)return;
+      const st=p.getPlayerState?.();
+      if(st===YT.PlayerState.PAUSED || st===YT.PlayerState.CUED){
+        p.playVideo();
+      }
+    }catch(_){}
+  });
+
+  autoResumePlayers.clear();
 });
 
 window.addEventListener("pagehide",()=>{
