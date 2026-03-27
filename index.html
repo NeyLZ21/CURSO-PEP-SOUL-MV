@@ -319,6 +319,8 @@ const emailOk=e=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((e||"").trim().toLowerCase
 let CURRENT_UID=null;
 let unsubUserDoc=null;
 let savingProfile=false;
+let lastCloudSyncAt=0;
+let cloudSyncTimer=null;
 
 const keyFor=uid=>`soulmv_${uid||"anon"}`;
 const loadState=uid=>{try{return JSON.parse(localStorage.getItem(keyFor(uid))||"{}");}catch{return {}}};
@@ -360,7 +362,6 @@ function applyCloudData(data){
 async function ensureUserDoc(uid,email=""){
   const ref=db.collection("users").doc(uid);
   const snap=await ref.get().catch(()=>null);
-
   if(!snap || !snap.exists){
     await ref.set({
       profile:{email:email||"",name:"",spec:""},
@@ -384,6 +385,35 @@ async function ensureUserDoc(uid,email=""){
   }
   return ref;
 }
+
+async function syncToCloud(force=false){
+  try{
+    const uid=auth.currentUser?.uid;
+    if(!uid)return;
+    const now=Date.now();
+    if(!force && now-lastCloudSyncAt<4000)return;
+    lastCloudSyncAt=now;
+    await db.collection("users").doc(uid).set({
+      profile: state.profile||{},
+      videosDone: state.videosDone||{},
+      quizzes: state.quizzes||{},
+      play: state.play||{},
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    },{merge:true});
+  }catch(e){
+    console.warn("No se pudo guardar en la nube", e);
+  }
+}
+
+function scheduleCloudSync(delay=1200){
+  if(cloudSyncTimer) clearTimeout(cloudSyncTimer);
+  cloudSyncTimer=setTimeout(()=>{
+    syncToCloud(false);
+  },delay);
+}
+
+let players={};
+let cfgByPid=new Map();
 
 function destroyAllPlayers(){
   Object.keys(players).forEach(k=>{
@@ -452,9 +482,6 @@ document.addEventListener("input",(e)=>{
 document.addEventListener("change",(e)=>{
   if(e.target && e.target.id==="pf-spec") markDirty();
 });
-
-let players={};
-let cfgByPid=new Map();
 
 function ytThumb(id){ return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`; }
 
@@ -545,7 +572,7 @@ function clickToLoad(pid){
 function actuallyCreatePlayer({pid,videoId,moduleId,index}){
   if(players[pid])return;
   const store=ensureStoreFor(moduleId,videoId);
-  const meta={pid,videoId,moduleId,index,tick:null,retries:0};
+  const meta={pid,videoId,moduleId,index,tick:null,retries:0,lastSavedSecond:-1};
   players[pid]={player:null,meta};
   const holder=document.getElementById(pid);
   if(!holder)return;
@@ -563,31 +590,59 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
           ev.target.unMute();
           ev.target.setVolume(100);
         }catch(_){}
-        const startAt=Math.min(store.t||0,store.allow||0);
-        if(startAt>1){ try{ev.target.seekTo(startAt,true);}catch(_){} }
+        const savedTime=Math.max(0,Number(store.t||0));
+        const allowedTime=Math.max(0,Number(store.allow||0));
+        const startAt=Math.min(savedTime,allowedTime);
+        if(startAt>1){
+          try{ev.target.seekTo(startAt,true);}catch(_){}
+        }
       },
       onStateChange:(ev)=>{
-        const p=ev.target,st=ev.data;
+        const p=ev.target;
+        const st=ev.data;
+
         if(st===YT.PlayerState.PLAYING){
-          if(isLocked(meta)){ showWarn(pid,lockReason(meta)); try{p.pauseVideo();}catch(_){} return; }
+          if(isLocked(meta)){
+            showWarn(pid,lockReason(meta));
+            try{p.pauseVideo();}catch(_){}
+            return;
+          }
           startTick();
         }else if(st===YT.PlayerState.PAUSED){
-          persist();
+          stopTick();
+          try{
+            const cur=p.getCurrentTime?.()||0;
+            const dur=p.getDuration?.()||0;
+            if(dur) store.dur=dur;
+            store.t=cur;
+            if(cur>store.allow) store.allow=cur;
+            persist();
+            scheduleCloudSync(600);
+          }catch(_){}
         }else if(st===YT.PlayerState.ENDED){
           stopTick();
+          try{
+            const dur=p.getDuration?.()||0;
+            if(dur) store.dur=dur;
+          }catch(_){}
+
           state.videosDone=state.videosDone||{};
           state.videosDone[moduleId]=state.videosDone[moduleId]||{};
           state.videosDone[moduleId][videoId]=true;
-          store.allow=store.dur||store.allow;
+
+          store.allow=store.dur||store.allow||0;
           store.t=store.allow;
+
           persist();
+
           const m=(state.course?.modules||[]).find(mm=>mm.id===moduleId);
           const nextPid=`player-${moduleId}-${index+1}`;
           const nextLock=document.getElementById(`lock-${nextPid}`);
           if(nextLock)nextLock.remove();
+
           updateGlobalProgress();
           maybeEnableQuiz({id:moduleId,videos:m?.videos||[]});
-          syncToCloud();
+          syncToCloud(true);
         }
       },
       onError:()=>{
@@ -618,11 +673,24 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
         dur=p.getDuration?.()||0;
         st=p.getPlayerState?.();
       }catch(_){}
-      if(dur&&(!store.dur||Math.abs(store.dur-dur)>0.5)){ store.dur=dur; persist(); }
-      if(cur>(store.allow+1.0)){ try{p.seekTo(store.allow,true);}catch(_){} return; }
+
+      if(dur&&(!store.dur||Math.abs(store.dur-dur)>0.5)) store.dur=dur;
+
+      if(cur>(store.allow+1.0)){
+        try{p.seekTo(store.allow,true);}catch(_){}
+        return;
+      }
+
       if(st===YT.PlayerState.PLAYING){
         if(cur>store.allow) store.allow=cur;
         store.t=cur;
+
+        const curSec=Math.floor(cur);
+        if(curSec!==meta.lastSavedSecond && curSec>0 && curSec%5===0){
+          meta.lastSavedSecond=curSec;
+          persist();
+          scheduleCloudSync(1200);
+        }
       }else{
         store.t=cur;
       }
@@ -630,19 +698,32 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
   }
 
   function stopTick(){
-    if(meta.tick){ clearInterval(meta.tick); meta.tick=null; }
+    if(meta.tick){
+      clearInterval(meta.tick);
+      meta.tick=null;
+    }
   }
 }
 
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden){
-    Object.values(players).forEach(({player})=>{ try{player.pauseVideo();}catch(_){} });
+    Object.values(players).forEach(({player})=>{
+      try{player.pauseVideo();}catch(_){}
+    });
     persist();
+    syncToCloud(true);
   }
 });
 
-window.addEventListener("pagehide",persist);
-window.addEventListener("beforeunload",persist);
+window.addEventListener("pagehide",()=>{
+  persist();
+  syncToCloud(true);
+});
+
+window.addEventListener("beforeunload",()=>{
+  persist();
+});
+
 window.onYouTubeIframeAPIReady=()=>{};
 
 document.querySelectorAll(".eye").forEach(btn=>{
@@ -687,7 +768,6 @@ function renderAllByTrack(track){
 
 function renderModules(modulesDef){
   destroyAllPlayers();
-
   const wrap=$("#modules");
   wrap.innerHTML="";
 
@@ -801,7 +881,7 @@ function gradeQuizModule(m){
       btn.classList.remove("btn-primary");
       btn.classList.add("btn-success");
     }
-    setTimeout(syncToCloud,300);
+    setTimeout(()=>syncToCloud(true),300);
   }
   updateGlobalProgress();
 }
@@ -856,22 +936,6 @@ function hydrateUIFromState(){
     $("#progress").style.display="none";
     $("#modules").style.display="none";
     $("#certificado").classList.remove("show");
-  }
-}
-
-async function syncToCloud(){
-  try{
-    const uid=auth.currentUser?.uid;
-    if(!uid)return;
-    await db.collection("users").doc(uid).set({
-      profile: state.profile||{},
-      videosDone: state.videosDone||{},
-      quizzes: state.quizzes||{},
-      play: state.play||{},
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    },{merge:true});
-  }catch(e){
-    console.warn("No se pudo guardar en la nube", e);
   }
 }
 
@@ -935,11 +999,9 @@ async function showCourse(){
 
   showGlobalLoading(true);
   showAppShell();
-
   await loadInitialRemoteData(user.uid,user.email||"");
   hydrateUIFromState();
   subscribeUserDoc(user.uid);
-
   showGlobalLoading(false);
 }
 
@@ -976,7 +1038,7 @@ async function saveProfile(){
     if(auth.currentUser&&name){
       try{ await auth.currentUser.updateProfile({displayName:name}); }catch(_){}
     }
-    await syncToCloud();
+    await syncToCloud(true);
     savingProfile=false;
     pfMsg.classList.remove("saving");
     pfMsg.textContent="✅ Perfil guardado.";
@@ -1147,6 +1209,7 @@ $("#btn-reset").addEventListener("click",async ()=>{
 
 $("#btn-logout").addEventListener("click",async ()=>{
   persist();
+  await syncToCloud(true);
   destroyAllPlayers();
   await auth.signOut();
   msg("Sesión cerrada.");
