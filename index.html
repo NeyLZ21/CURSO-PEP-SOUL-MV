@@ -63,6 +63,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .warnmsg{position:absolute;left:12px;right:12px;bottom:12px;background:#fff3cd;color:#7a5400;border-radius:10px;padding:8px 10px;font-size:13px;display:none}
 .auth-error{color:var(--danger)!important;font-weight:600}
 .auth-ok{color:var(--ok)!important;font-weight:600}
+.loading-box{display:none;margin-top:12px;padding:10px 12px;border-radius:12px;background:#eef2ff;color:#3730a3;font-size:14px;font-weight:600}
 </style>
 </head>
 <body>
@@ -128,6 +129,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
           </div>
 
           <div id="auth-msg" class="muted" style="min-height:18px"></div>
+          <div id="loading-msg" class="loading-box">Cargando perfil y avance…</div>
         </div>
 
         <div id="verify-box" class="alert alert-warn" style="display:none;margin-top:10px">
@@ -258,6 +260,7 @@ const firebaseConfig={
   appId:"1:651724182766:web:4eec9be43e9e8e60dc0fff",
   measurementId:"G-Z62L1CCYP1"
 };
+
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.warn);
@@ -297,6 +300,11 @@ function msg(t,type='normal'){
   if(type==='ok')el.classList.add('auth-ok');
 }
 
+function showLoading(show){
+  const box=$('#loading-msg');
+  if(box) box.style.display=show?'block':'none';
+}
+
 const emailOk=(e)=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((e||'').trim().toLowerCase());
 let CURRENT_UID=null;
 const keyFor=(uid)=>`soulmv_${uid||'anon'}`;
@@ -315,10 +323,8 @@ function markDirty(){
   if(pfMsg && /guardado|sin conexión|nube/i.test(pfMsg.textContent))pfMsg.textContent='';
 }
 
-['pf-name'].forEach(id=>{
-  document.addEventListener('input',(e)=>{
-    if(e.target&&e.target.id===id)markDirty();
-  });
+document.addEventListener('input',(e)=>{
+  if(e.target&&e.target.id==='pf-name')markDirty();
 });
 
 document.addEventListener('change',(e)=>{
@@ -493,10 +499,6 @@ document.addEventListener('visibilitychange',()=>{
   if(document.hidden){
     Object.values(players).forEach(({player})=>{try{player.pauseVideo();}catch(_){}});
     persist();
-  }else{
-    if(lastPlayingPid&&players[lastPlayingPid]?.player){
-      try{players[lastPlayingPid].player.playVideo();}catch(_){}
-    }
   }
 });
 
@@ -535,6 +537,7 @@ function showLogin(){
   $('#modules').style.display='none';
   $('#btn-logout').style.display='none';
   hideCertificate();
+  showLoading(false);
 }
 
 function profileComplete(){
@@ -561,228 +564,74 @@ function setProfileReadonly(ro){
 
 function getSelectedTrack(){ return (state.profile?.spec||'').trim(); }
 
-async function showCourse(){
-  if(!auth.currentUser)return;
-  if(!auth.currentUser.emailVerified){
-    showLogin();
-    $('#verify-box').style.display='block';
-    $('#btn-logout').style.display='inline-flex';
-    return;
-  }
-
-  $('#step-welcome').style.display='none';
-  $('#btn-logout').style.display='inline-flex';
-  $('#profile').style.display='block';
-  $('#progress').style.display='none';
-  $('#modules').style.display='none';
-
-  startProfileRealtime();
-
-  await loadProfile().catch(()=>{});
-  await syncFromCloud(auth.currentUser).catch(()=>{});
-
-  if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec)){
-    state.profile.spec='';
-    persist();
-  }
-
-  $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
-  $('#pf-spec').value=state.profile?.spec||'';
-
-  if(profileComplete()){
-    setProfileReadonly(true);
-    $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.';
-  }else{
-    setProfileReadonly(false);
-    $('#pf-help').textContent='Completa todos los campos para habilitar los módulos.';
-  }
-
-  renderAllByTrack(getSelectedTrack());
-  updateGlobalProgress();
+function normalizeCloudData(data){
+  const profile=data?.profile||{};
+  const videosDone=data?.videosDone||{};
+  const quizzes=data?.quizzes||{};
+  const play=data?.play||{};
+  return {profile,videosDone,quizzes,play};
 }
 
-auth.onAuthStateChanged(async (user)=>{
-  if(!user){
-    CURRENT_UID=null;
-    state={};
-    $('#auth-user').textContent='';
-    $('#btn-logout').style.display='none';
-    $('#verify-box').style.display='none';
-    setTab('login');
-    showLogin();
-    msg('');
-    if(unsubProfile){try{unsubProfile();}catch(_){}unsubProfile=null;}
-    return;
-  }
-
-  await user.reload().catch(()=>{});
-  const freshUser=auth.currentUser||user;
-  CURRENT_UID=freshUser.uid;
-  state=loadState(CURRENT_UID)||{};
-  $('#auth-user').textContent=freshUser.email||'';
-
-  if(!freshUser.emailVerified){
-    showLogin();
-    $('#btn-logout').style.display='inline-flex';
-    $('#verify-box').style.display='block';
-    msg('Tu sesión está iniciada, pero debes verificar tu correo para continuar.');
-    return;
-  }
-
-  msg('');
-  $('#verify-box').style.display='none';
-  $('#btn-logout').style.display='inline-flex';
-
-  await showCourse();
-});
-
-$('#btn-register-2').addEventListener('click',async ()=>{
-  const email=($('#reg-email').value||'').trim().toLowerCase();
-  const pass=($('#reg-pass').value||'').trim();
-  const pass2=($('#reg-pass2').value||'').trim();
-  if(!email||!pass||!pass2)return msg('Completa todos los campos.','error');
-  if(!emailOk(email))return msg('El formato del correo no es válido.','error');
-  if(pass!==pass2)return msg('Las contraseñas no coinciden.','error');
+async function loadProfile(){
   try{
-    const methods=await auth.fetchSignInMethodsForEmail(email);
-    if(methods&&methods.length){
-      setTab('login');
-      $('#login-email').value=email;
-      return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.','error');
+    const uid=auth.currentUser?.uid;
+    if(!uid)return;
+
+    const doc=await db.collection('users').doc(uid).get();
+    if(!doc.exists)return;
+
+    const data=normalizeCloudData(doc.data()||{});
+    state.profile={...(data.profile||{})};
+    state.videosDone=data.videosDone||{};
+    state.quizzes=data.quizzes||{};
+    state.play=data.play||{};
+
+    if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec)){
+      state.profile.spec='';
     }
-    const {user}=await auth.createUserWithEmailAndPassword(email,pass);
-    if(auth.currentUser?.uid!==user.uid)await auth.updateCurrentUser(user);
-    db.collection('users').doc(user.uid).collection('courses').doc('soulmv').set({}, {merge:true}).catch(()=>{});
-    const actionCodeSettings={url:location.href.split('?')[0]+'?verified=1',handleCodeInApp:false};
-    try{
-      await auth.currentUser.sendEmailVerification(actionCodeSettings);
-      msg('Te enviamos el correo de verificación (revisa Spam).','ok');
-    }catch(_){
-      msg('No se pudo enviar automáticamente. Usa “Reenviar verificación”.','error');
-    }
-    $('#verify-box').style.display='block';
-    setTab('login');
-    $('#login-email').value=email;
+
+    persist();
+
+    $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
+    $('#pf-spec').value=state.profile?.spec||'';
   }catch(e){
-    msg(MSGS[e.code]||'Ocurrió un error. Intenta nuevamente.','error');
+    console.warn('No se pudo cargar perfil/avance',e);
   }
-});
-
-$('#btn-check-verify').addEventListener('click',async ()=>{
-  if(auth.currentUser){
-    await auth.currentUser.reload();
-    if(auth.currentUser.emailVerified){
-      $('#verify-box').style.display='none';
-      msg('');
-      showCourse();
-    }else{
-      msg('Aún no se detecta la verificación del correo.','error');
-    }
-  }
-});
-
-$('#btn-resend-verify').addEventListener('click',async ()=>{
-  try{
-    const acs={url:location.href.split('?')[0]+'?verified=1',handleCodeInApp:false};
-    if(auth.currentUser){
-      await auth.currentUser.sendEmailVerification(acs);
-      msg('Te enviamos el correo de verificación (revisa Spam).','ok');
-    }else{
-      msg('Primero inicia sesión.','error');
-    }
-  }catch(e){
-    msg(MSGS[e.code]||'No se pudo enviar.','error');
-  }
-});
-
-$('#btn-login').addEventListener('click',async ()=>{
-  const email=($('#login-email').value||'').trim().toLowerCase();
-  const pass=($('#login-pass').value||'').trim();
-  if(!email||!pass)return msg('Ingresa correo y contraseña.','error');
-  if(!emailOk(email))return msg('El formato del correo no es válido.','error');
-  const btn=$('#btn-login');
-  btn.disabled=true;
-  try{
-    await auth.signInWithEmailAndPassword(email,pass);
-    const u=auth.currentUser;
-    await u.reload().catch(()=>{});
-    if(!u.emailVerified){
-      msg('Tu sesión está iniciada, pero debes verificar tu correo antes de continuar.','error');
-      $('#verify-box').style.display='block';
-      $('#btn-logout').style.display='inline-flex';
-      showLogin();
-      return;
-    }
-    msg('');
-    $('#verify-box').style.display='none';
-    $('#btn-logout').style.display='inline-flex';
-    await showCourse();
-  }catch(e){
-    let methods=[];
-    try{methods=await auth.fetchSignInMethodsForEmail(email);}catch(_){}
-    if(!methods||methods.length===0){
-      msg('Correo no registrado.','error');
-      setTab('reg');
-      $('#reg-email').value=email;
-    }else if(['auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials'].includes(e.code)){
-      msg('Contraseña incorrecta.','error');
-    }else if(e.code==='auth/too-many-requests'){
-      msg('Demasiados intentos. Intenta más tarde.','error');
-    }else if(e.code==='auth/invalid-email'){
-      msg('El formato del correo no es válido.','error');
-    }else{
-      msg(MSGS[e.code]||'Ocurrió un error. Intenta nuevamente.','error');
-    }
-  }finally{
-    btn.disabled=false;
-  }
-});
-
-$('#btn-reset').addEventListener('click',async ()=>{
-  const email=($('#login-email').value||'').trim().toLowerCase();
-  if(!email)return msg('Escribe tu correo para enviarte el enlace.','error');
-  if(!emailOk(email))return msg('El formato del correo no es válido.','error');
-  try{
-    const methods=await auth.fetchSignInMethodsForEmail(email);
-    if(!methods||methods.length===0)return msg('Correo no registrado.','error');
-    await auth.sendPasswordResetEmail(email);
-    msg('Te enviamos un correo para restablecer la contraseña.','ok');
-  }catch(e){
-    msg(MSGS[e.code]||'No se pudo enviar.','error');
-  }
-});
-
-$('#btn-logout').addEventListener('click',async ()=>{
-  await auth.signOut();
-  msg('Sesión cerrada.');
-});
-
-$('#btn-edit-profile').addEventListener('click',()=>{
-  setProfileReadonly(false);
-  $('#pf-help').textContent='Edita tus datos y guarda los cambios.';
-});
+}
 
 function startProfileRealtime(){
   if(unsubProfile){try{unsubProfile();}catch(_){}unsubProfile=null;}
   const uid=auth.currentUser?.uid;
   if(!uid)return;
-  const ref=db.collection('users').doc(uid).collection('profile').doc('main');
+
+  const ref=db.collection('users').doc(uid);
+
   unsubProfile=ref.onSnapshot((snap)=>{
     if(!snap.exists)return;
-    const cloud=snap.data()||{};
-    const prevSpec=state.profile?.spec;
-    state.profile={...state.profile,...cloud};
-    if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec))state.profile.spec='';
-    persist();
 
-    if($('#pf-name').readOnly){
-      $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
-      $('#pf-spec').value=state.profile?.spec||'';
+    const data=normalizeCloudData(snap.data()||{});
+    state.profile={...(data.profile||{})};
+    state.videosDone=data.videosDone||{};
+    state.quizzes=data.quizzes||{};
+    state.play=data.play||{};
+
+    if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec)){
+      state.profile.spec='';
     }
 
-    if(prevSpec!==state.profile?.spec && TIPOS_MODULO.includes(state.profile?.spec||'')){
+    persist();
+
+    $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
+    $('#pf-spec').value=state.profile?.spec||'';
+
+    if(state.profile?.spec){
       renderAllByTrack(state.profile.spec);
       updateGlobalProgress();
+    }
+
+    if(profileComplete()){
+      setProfileReadonly(true);
+      $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.';
     }
 
     if(savingProfile){
@@ -793,24 +642,9 @@ function startProfileRealtime(){
       setTimeout(()=>{ if(pfMsg.textContent.includes('✅')) pfMsg.textContent=''; },3000);
       setProfileReadonly(true);
     }
+  },(err)=>{
+    console.warn('Snapshot error',err);
   });
-}
-
-async function loadProfile(){
-  try{
-    const uid=auth.currentUser?.uid;
-    if(!uid)return;
-    const s=await db.collection('users').doc(uid).collection('profile').doc('main').get();
-    if(s.exists){
-      state.profile={...(s.data()||{})};
-      if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec))state.profile.spec='';
-      persist();
-      $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
-      $('#pf-spec').value=state.profile?.spec||'';
-    }
-  }catch(e){
-    console.warn('Perfil no disponible',e);
-  }
 }
 
 async function saveProfile(){
@@ -828,7 +662,13 @@ async function saveProfile(){
     return;
   }
 
-  state.profile={...(state.profile||{}),name,spec,email:auth.currentUser?.email||state.profile?.email||''};
+  state.profile={
+    ...(state.profile||{}),
+    name,
+    spec,
+    email:auth.currentUser?.email||state.profile?.email||''
+  };
+
   persist();
   renderAllByTrack(spec);
   updateGlobalProgress();
@@ -842,44 +682,19 @@ async function saveProfile(){
     if(auth.currentUser&&name){
       try{
         await auth.currentUser.updateProfile({displayName:name});
-      }catch(_){ }
+      }catch(_){}
     }
 
     const uid=auth.currentUser?.uid;
     if(!uid) throw new Error('Sin UID');
 
-    const profileRef=db.collection('users').doc(uid).collection('profile').doc('main');
-    const courseRef=db.collection('users').doc(uid).collection('courses').doc('soulmv');
-
-    const profilePayload={
-      ...(state.profile||{}),
-      email:auth.currentUser?.email||state.profile?.email||'',
-      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-    };
-
-    const coursePayload={
-      videosDone:state.videosDone||{},
-      quizzes:state.quizzes||{},
-      play:state.play||{},
-      spec,
-      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-    };
-
-    let ok=false;
-    let lastErr=null;
-
-    for(let i=0;i<3 && !ok;i++){
-      try{
-        await profileRef.set(profilePayload,{merge:true});
-        await courseRef.set(coursePayload,{merge:true});
-        ok=true;
-      }catch(e){
-        lastErr=e;
-        await new Promise(r=>setTimeout(r,700*(i+1)));
-      }
-    }
-
-    if(!ok) throw lastErr||new Error('No se pudo guardar');
+    await db.collection('users').doc(uid).set({
+      profile: state.profile||{},
+      videosDone: state.videosDone||{},
+      quizzes: state.quizzes||{},
+      play: state.play||{},
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    },{merge:true});
 
     savingProfile=false;
     pfMsg.classList.remove('saving');
@@ -892,15 +707,9 @@ async function saveProfile(){
     console.error(e);
     savingProfile=false;
     pfMsg.classList.remove('saving');
-
-    if(!navigator.onLine){
-      pfMsg.textContent='Sin conexión. Guardado local; se sincronizará al volver la red.';
-      setProfileReadonly(true);
-    }else{
-      pfMsg.textContent='No se pudo guardar en la nube; tus datos quedan localmente.';
-      setProfileReadonly(false);
-      markDirty();
-    }
+    pfMsg.textContent='No se pudo guardar en Firebase.';
+    setProfileReadonly(false);
+    markDirty();
   }
 }
 
@@ -1114,71 +923,266 @@ function updateGlobalProgress(){
 async function userDoc(){
   const uid=auth.currentUser?.uid;
   if(!uid)return null;
-  return db.collection('users').doc(uid).collection('courses').doc('soulmv');
+  return db.collection('users').doc(uid);
 }
 
 async function syncFromCloud(user){
   try{
-    const ref=await userDoc();
-    if(ref){
-      const snap=await ref.get();
-      if(snap.exists){
-        const cloud=snap.data()||{};
-        state.videosDone={...(state.videosDone||{}),...(cloud.videosDone||{})};
-        state.quizzes={...(state.quizzes||{}),...(cloud.quizzes||{})};
-        state.play={...(state.play||{}),...(cloud.play||{})};
-        if(!state.profile) state.profile={};
-        if(!state.profile.spec && cloud.spec && TIPOS_MODULO.includes(cloud.spec)){
-          state.profile.spec=cloud.spec;
-        }
-        persist();
-      }
+    const uid=user?.uid||auth.currentUser?.uid;
+    if(!uid)return;
+
+    const doc=await db.collection('users').doc(uid).get();
+    if(!doc.exists)return;
+
+    const data=normalizeCloudData(doc.data()||{});
+
+    state.profile={...(data.profile||{})};
+    state.videosDone=data.videosDone||{};
+    state.quizzes=data.quizzes||{};
+    state.play=data.play||{};
+
+    if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec)){
+      state.profile.spec='';
     }
 
-    const psnap=await db.collection('users').doc(user.uid).collection('profile').doc('main').get();
-    if(psnap.exists){
-      const pdata=psnap.data()||{};
-      state.profile={...(state.profile||{}),...pdata};
-      if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec))state.profile.spec='';
-      persist();
-    }
+    persist();
 
-    if((!state.profile?.spec || !TIPOS_MODULO.includes(state.profile.spec)) && state.course?.spec && TIPOS_MODULO.includes(state.course.spec)){
-      state.profile=state.profile||{};
-      state.profile.spec=state.course.spec;
-      persist();
-    }
+    $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
+    $('#pf-spec').value=state.profile?.spec||'';
 
     renderAllByTrack(getSelectedTrack());
     updateGlobalProgress();
   }catch(e){
-    console.warn('No se pudo leer progreso/perfil',e);
+    console.warn('No se pudo leer desde Firebase',e);
   }
 }
 
 async function syncToCloud(){
   try{
-    const ref=await userDoc();
-    if(!ref)return;
-    const payload={
-      videosDone:state.videosDone||{},
-      quizzes:state.quizzes||{},
-      play:state.play||{},
-      spec:state.profile?.spec||'',
-      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-    };
-    await ref.set(payload,{merge:true});
     const uid=auth.currentUser?.uid;
-    if(uid&&state.profile){
-      await db.collection('users').doc(uid).collection('profile').doc('main').set({
-        ...state.profile,
-        updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-      },{merge:true});
-    }
+    if(!uid)return;
+
+    await db.collection('users').doc(uid).set({
+      profile: state.profile||{},
+      videosDone: state.videosDone||{},
+      quizzes: state.quizzes||{},
+      play: state.play||{},
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    },{merge:true});
   }catch(e){
     console.warn('No se pudo guardar en la nube',e);
   }
 }
+
+async function showCourse(){
+  if(!auth.currentUser)return;
+  if(!auth.currentUser.emailVerified){
+    showLogin();
+    $('#verify-box').style.display='block';
+    $('#btn-logout').style.display='inline-flex';
+    return;
+  }
+
+  $('#step-welcome').style.display='none';
+  $('#btn-logout').style.display='inline-flex';
+  $('#profile').style.display='block';
+  $('#progress').style.display='none';
+  $('#modules').style.display='none';
+  showLoading(true);
+
+  startProfileRealtime();
+
+  await loadProfile().catch(()=>{});
+  await syncFromCloud(auth.currentUser).catch(()=>{});
+
+  if(state.profile?.spec && !TIPOS_MODULO.includes(state.profile.spec)){
+    state.profile.spec='';
+    persist();
+  }
+
+  $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
+  $('#pf-spec').value=state.profile?.spec||'';
+
+  if(profileComplete()){
+    setProfileReadonly(true);
+    $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.';
+  }else{
+    setProfileReadonly(false);
+    $('#pf-help').textContent='Completa todos los campos para habilitar los módulos.';
+  }
+
+  renderAllByTrack(getSelectedTrack());
+  updateGlobalProgress();
+  showLoading(false);
+}
+
+auth.onAuthStateChanged(async (user)=>{
+  if(!user){
+    CURRENT_UID=null;
+    state={};
+    $('#auth-user').textContent='';
+    $('#btn-logout').style.display='none';
+    $('#verify-box').style.display='none';
+    setTab('login');
+    showLogin();
+    msg('');
+    if(unsubProfile){try{unsubProfile();}catch(_){}unsubProfile=null;}
+    return;
+  }
+
+  await user.reload().catch(()=>{});
+  const freshUser=auth.currentUser||user;
+  CURRENT_UID=freshUser.uid;
+  state=loadState(CURRENT_UID)||{};
+  $('#auth-user').textContent=freshUser.email||'';
+
+  if(!freshUser.emailVerified){
+    showLogin();
+    $('#btn-logout').style.display='inline-flex';
+    $('#verify-box').style.display='block';
+    msg('Tu sesión está iniciada, pero debes verificar tu correo para continuar.');
+    return;
+  }
+
+  msg('');
+  $('#verify-box').style.display='none';
+  $('#btn-logout').style.display='inline-flex';
+  await showCourse();
+});
+
+$('#btn-register-2').addEventListener('click',async ()=>{
+  const email=($('#reg-email').value||'').trim().toLowerCase();
+  const pass=($('#reg-pass').value||'').trim();
+  const pass2=($('#reg-pass2').value||'').trim();
+  if(!email||!pass||!pass2)return msg('Completa todos los campos.','error');
+  if(!emailOk(email))return msg('El formato del correo no es válido.','error');
+  if(pass!==pass2)return msg('Las contraseñas no coinciden.','error');
+  try{
+    const methods=await auth.fetchSignInMethodsForEmail(email);
+    if(methods&&methods.length){
+      setTab('login');
+      $('#login-email').value=email;
+      return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.','error');
+    }
+    const {user}=await auth.createUserWithEmailAndPassword(email,pass);
+    if(auth.currentUser?.uid!==user.uid)await auth.updateCurrentUser(user);
+
+    await db.collection('users').doc(user.uid).set({
+      profile:{email:user.email||'',name:'',spec:''},
+      videosDone:{},
+      quizzes:{},
+      play:{},
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    },{merge:true}).catch(()=>{});
+
+    const actionCodeSettings={url:location.href.split('?')[0]+'?verified=1',handleCodeInApp:false};
+    try{
+      await auth.currentUser.sendEmailVerification(actionCodeSettings);
+      msg('Te enviamos el correo de verificación (revisa Spam).','ok');
+    }catch(_){
+      msg('No se pudo enviar automáticamente. Usa “Reenviar verificación”.','error');
+    }
+    $('#verify-box').style.display='block';
+    setTab('login');
+    $('#login-email').value=email;
+  }catch(e){
+    msg(MSGS[e.code]||'Ocurrió un error. Intenta nuevamente.','error');
+  }
+});
+
+$('#btn-check-verify').addEventListener('click',async ()=>{
+  if(auth.currentUser){
+    await auth.currentUser.reload();
+    if(auth.currentUser.emailVerified){
+      $('#verify-box').style.display='none';
+      msg('');
+      await showCourse();
+    }else{
+      msg('Aún no se detecta la verificación del correo.','error');
+    }
+  }
+});
+
+$('#btn-resend-verify').addEventListener('click',async ()=>{
+  try{
+    const acs={url:location.href.split('?')[0]+'?verified=1',handleCodeInApp:false};
+    if(auth.currentUser){
+      await auth.currentUser.sendEmailVerification(acs);
+      msg('Te enviamos el correo de verificación (revisa Spam).','ok');
+    }else{
+      msg('Primero inicia sesión.','error');
+    }
+  }catch(e){
+    msg(MSGS[e.code]||'No se pudo enviar.','error');
+  }
+});
+
+$('#btn-login').addEventListener('click',async ()=>{
+  const email=($('#login-email').value||'').trim().toLowerCase();
+  const pass=($('#login-pass').value||'').trim();
+  if(!email||!pass)return msg('Ingresa correo y contraseña.','error');
+  if(!emailOk(email))return msg('El formato del correo no es válido.','error');
+  const btn=$('#btn-login');
+  btn.disabled=true;
+  try{
+    await auth.signInWithEmailAndPassword(email,pass);
+    const u=auth.currentUser;
+    await u.reload().catch(()=>{});
+    if(!u.emailVerified){
+      msg('Tu sesión está iniciada, pero debes verificar tu correo antes de continuar.','error');
+      $('#verify-box').style.display='block';
+      $('#btn-logout').style.display='inline-flex';
+      showLogin();
+      return;
+    }
+    msg('');
+    $('#verify-box').style.display='none';
+    $('#btn-logout').style.display='inline-flex';
+    await showCourse();
+  }catch(e){
+    let methods=[];
+    try{methods=await auth.fetchSignInMethodsForEmail(email);}catch(_){}
+    if(!methods||methods.length===0){
+      msg('Correo no registrado.','error');
+      setTab('reg');
+      $('#reg-email').value=email;
+    }else if(['auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials'].includes(e.code)){
+      msg('Contraseña incorrecta.','error');
+    }else if(e.code==='auth/too-many-requests'){
+      msg('Demasiados intentos. Intenta más tarde.','error');
+    }else if(e.code==='auth/invalid-email'){
+      msg('El formato del correo no es válido.','error');
+    }else{
+      msg(MSGS[e.code]||'Ocurrió un error. Intenta nuevamente.','error');
+    }
+  }finally{
+    btn.disabled=false;
+  }
+});
+
+$('#btn-reset').addEventListener('click',async ()=>{
+  const email=($('#login-email').value||'').trim().toLowerCase();
+  if(!email)return msg('Escribe tu correo para enviarte el enlace.','error');
+  if(!emailOk(email))return msg('El formato del correo no es válido.','error');
+  try{
+    const methods=await auth.fetchSignInMethodsForEmail(email);
+    if(!methods||methods.length===0)return msg('Correo no registrado.','error');
+    await auth.sendPasswordResetEmail(email);
+    msg('Te enviamos un correo para restablecer la contraseña.','ok');
+  }catch(e){
+    msg(MSGS[e.code]||'No se pudo enviar.','error');
+  }
+});
+
+$('#btn-logout').addEventListener('click',async ()=>{
+  await auth.signOut();
+  msg('Sesión cerrada.');
+});
+
+$('#btn-edit-profile').addEventListener('click',()=>{
+  setProfileReadonly(false);
+  $('#pf-help').textContent='Edita tus datos y guarda los cambios.';
+});
 </script>
 </body>
 </html>
