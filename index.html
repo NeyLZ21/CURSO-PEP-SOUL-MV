@@ -334,7 +334,6 @@ document.addEventListener('change',(e)=>{
 let ytApiReady=false;
 const players={};
 const cfgByPid=new Map();
-let lastPlayingPid=null;
 
 function ytThumb(id){return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;}
 
@@ -429,7 +428,6 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
       onStateChange:(ev)=>{
         const p=ev.target,st=ev.data;
         if(st===YT.PlayerState.PLAYING){
-          lastPlayingPid=pid;
           if(isLocked(meta)){showWarn(pid,lockReason(meta));try{p.pauseVideo();}catch(_){}return;}
           startTick();
         }else if(st===YT.PlayerState.PAUSED){
@@ -572,13 +570,37 @@ function normalizeCloudData(data){
   return {profile,videosDone,quizzes,play};
 }
 
+async function fetchUserDocWithRetry(uid,maxTries=5){
+  let lastSnap=null;
+  for(let i=0;i<maxTries;i++){
+    try{
+      const snap=await db.collection('users').doc(uid).get();
+      lastSnap=snap;
+      if(snap.exists){
+        const data=snap.data()||{};
+        const hasProfile=!!(data.profile&&(data.profile.name||data.profile.spec));
+        const hasProgress=!!(
+          (data.videosDone&&Object.keys(data.videosDone).length)||
+          (data.quizzes&&Object.keys(data.quizzes).length)||
+          (data.play&&Object.keys(data.play).length)
+        );
+        if(hasProfile||hasProgress)return snap;
+      }
+    }catch(e){
+      console.warn('Retry lectura Firestore',i+1,e);
+    }
+    await new Promise(r=>setTimeout(r,800));
+  }
+  return lastSnap;
+}
+
 async function loadProfile(){
   try{
     const uid=auth.currentUser?.uid;
     if(!uid)return;
 
-    const doc=await db.collection('users').doc(uid).get();
-    if(!doc.exists)return;
+    const doc=await fetchUserDocWithRetry(uid,5);
+    if(!doc||!doc.exists)return;
 
     const data=normalizeCloudData(doc.data()||{});
     state.profile={...(data.profile||{})};
@@ -931,11 +953,10 @@ async function syncFromCloud(user){
     const uid=user?.uid||auth.currentUser?.uid;
     if(!uid)return;
 
-    const doc=await db.collection('users').doc(uid).get();
-    if(!doc.exists)return;
+    const doc=await fetchUserDocWithRetry(uid,5);
+    if(!doc||!doc.exists)return;
 
     const data=normalizeCloudData(doc.data()||{});
-
     state.profile={...(data.profile||{})};
     state.videosDone=data.videosDone||{};
     state.quizzes=data.quizzes||{};
@@ -1030,10 +1051,10 @@ auth.onAuthStateChanged(async (user)=>{
     return;
   }
 
-  await user.reload().catch(()=>{});
+  try{ await user.reload(); }catch(_){}
   const freshUser=auth.currentUser||user;
+
   CURRENT_UID=freshUser.uid;
-  state=loadState(CURRENT_UID)||{};
   $('#auth-user').textContent=freshUser.email||'';
 
   if(!freshUser.emailVerified){
@@ -1047,6 +1068,13 @@ auth.onAuthStateChanged(async (user)=>{
   msg('');
   $('#verify-box').style.display='none';
   $('#btn-logout').style.display='inline-flex';
+  showLoading(true);
+
+  try{
+    await freshUser.getIdToken(true);
+  }catch(_){}
+
+  state=loadState(CURRENT_UID)||{};
   await showCourse();
 });
 
@@ -1096,7 +1124,7 @@ $('#btn-check-verify').addEventListener('click',async ()=>{
     if(auth.currentUser.emailVerified){
       $('#verify-box').style.display='none';
       msg('');
-      await showCourse();
+      await auth.currentUser.getIdToken(true).catch(()=>{});
     }else{
       msg('Aún no se detecta la verificación del correo.','error');
     }
@@ -1138,7 +1166,6 @@ $('#btn-login').addEventListener('click',async ()=>{
     msg('');
     $('#verify-box').style.display='none';
     $('#btn-logout').style.display='inline-flex';
-    await showCourse();
   }catch(e){
     let methods=[];
     try{methods=await auth.fetchSignInMethodsForEmail(email);}catch(_){}
