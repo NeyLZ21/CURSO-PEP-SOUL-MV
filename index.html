@@ -81,7 +81,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     <div class="logo">HVQ</div>
     <div style="flex:1">
       <h1>Inducción a PEP - SOUL MV</h1>
-      <div class="subtitle">Curso para Médicos y estudiantes en formación • Hospital Vozandes</div>
+      <div class="subtitle">Curso para Médicos y estudiantes en formación • By Dr. Ney Loor</div>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
       <span id="auth-user" class="muted" style="font-size:13px"></span>
@@ -93,7 +93,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     <div class="grid cols-2" style="align-items:start">
       <div>
         <h2 style="margin:0 0 6px">Acceso</h2>
-        <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña. Tu progreso queda guardado en la nube.</p>
+        <p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña.</p>
         <div class="grid" id="auth-forms">
           <div style="display:flex; gap:8px; margin-bottom:8px">
             <button id="tab-login" class="btn btn-primary">Iniciar sesión</button>
@@ -180,6 +180,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     </div>
     <div class="actions" style="display:flex;gap:8px;margin-top:10px">
       <button id="btn-edit-profile" class="btn btn-muted" style="display:none">Modificar</button>
+      <button id="btn-cancel-profile" class="btn btn-muted" style="display:none">Cancelar</button>
       <button id="btn-save-profile" class="btn btn-primary" disabled>Guardar perfil</button>
     </div>
     <div id="pf-msg" class="muted" style="margin-top:6px"></div>
@@ -210,7 +211,7 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     </div>
   </section>
 
-  <div class="footer no-print">© <span id="year"></span> Hospital Vozandes — Inducción a PEP - SOUL MV</div>
+  <div class="footer no-print">© <span id="year"></span> Hospital Vozandes — Inducción a PEP - SOUL MV - Desarrollado por Dr. Ney Loor</div>
 </div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
@@ -324,6 +325,7 @@ let cloudSyncTimer=null;
 let isRenderingFromRemote=false;
 let lastRenderedTrack="";
 let autoResumePlayers=new Set();
+let originalProfileSnapshot=null;
 
 const keyFor=uid=>`soulmv_${uid||"anon"}`;
 const loadState=uid=>{try{return JSON.parse(localStorage.getItem(keyFor(uid))||"{}");}catch{return {}}};
@@ -464,6 +466,7 @@ function setProfileReadonly(ro){
     el.style.background=ro?"#eef2ff":"#fff";
   });
   $("#btn-edit-profile").style.display=ro?"inline-flex":"none";
+  $("#btn-cancel-profile").style.display=ro?"none":"inline-flex";
   $("#btn-save-profile").style.display=ro?"none":"inline-flex";
   $("#btn-save-profile").disabled=true;
 }
@@ -1139,9 +1142,11 @@ async function saveProfile(){
     }
     await syncToCloud(true);
     savingProfile=false;
+    originalProfileSnapshot=null;
     pfMsg.classList.remove("saving");
     pfMsg.textContent="✅ Perfil guardado.";
     setProfileReadonly(true);
+    $("#pf-help").textContent="Puedes actualizar tus datos cuando quieras.";
     setTimeout(()=>{ if(pfMsg.textContent.includes("✅")) pfMsg.textContent=""; },3000);
   }catch(e){
     console.error(e);
@@ -1156,8 +1161,26 @@ async function saveProfile(){
 $("#btn-save-profile").addEventListener("click",saveProfile);
 
 $("#btn-edit-profile").addEventListener("click",()=>{
+  originalProfileSnapshot={
+    name: $("#pf-name").value||"",
+    spec: $("#pf-spec").value||""
+  };
   setProfileReadonly(false);
   $("#pf-help").textContent="Edita tus datos y guarda los cambios.";
+  $("#pf-msg").textContent="";
+});
+
+$("#btn-cancel-profile").addEventListener("click",()=>{
+  if(originalProfileSnapshot){
+    $("#pf-name").value=originalProfileSnapshot.name||"";
+    $("#pf-spec").value=originalProfileSnapshot.spec||"";
+  }else{
+    fillProfileForm();
+  }
+  $("#pf-msg").textContent="";
+  $("#pf-help").textContent="Puedes actualizar tus datos cuando quieras.";
+  setProfileReadonly(true);
+  originalProfileSnapshot=null;
 });
 
 auth.onAuthStateChanged(async (user)=>{
@@ -1166,6 +1189,7 @@ auth.onAuthStateChanged(async (user)=>{
     state=defaultState();
     $("#auth-user").textContent="";
     lastRenderedTrack="";
+    originalProfileSnapshot=null;
     if(unsubUserDoc){ try{unsubUserDoc();}catch(_){} unsubUserDoc=null; }
     showLogin();
     msg("");
