@@ -158,7 +158,6 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
     <p class="muted" id="pf-help">Completa todos los campos para habilitar los módulos.</p>
     <div class="grid cols-2">
       <label>Nombre completo (para certificado)<br><input id="pf-name" type="text" required></label>
-      <label>Cédula o Pasaporte<br><input id="pf-id" type="text" required></label>
       <label style="grid-column:1/-1">Módulo PEP<br>
         <div class="combo" id="spec-combo">
           <input id="pf-spec" type="text" placeholder="Selecciona el módulo PEP…" autocomplete="off" readonly>
@@ -209,12 +208,12 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 
 <script>
 const TIPOS_PEP=[
-  "PEP ESTUDIANTES EN FORMACION",
-  "PEP CLÍNICO/QUIRÚRGICO",
-  "PEP CLÍNICO",
-  "PEP UCI",
-  "PEP EMERGENCIAS",
-  "PEP CONSULTA EXTERNA"
+  "ESTUDIANTES EN FORMACION",
+  "CLÍNICO/QUIRÚRGICO",
+  "CLÍNICO",
+  "UCI",
+  "EMERGENCIAS",
+  "CONSULTA EXTERNA"
 ];
 
 const M={
@@ -228,17 +227,17 @@ const M={
 };
 
 const PEP_MODS={
-  "PEP ESTUDIANTES EN FORMACION":[M.G,M.H,M.CQ,M.CE,M.EM],
-  "PEP CLÍNICO/QUIRÚRGICO":[M.G,M.H,M.CQ,M.CE,M.V,M.A],
-  "PEP CLÍNICO":[M.G,M.H,M.CE,M.V,M.A],
-  "PEP UCI":[M.G,M.H,M.A],
-  "PEP EMERGENCIAS":[M.G,M.EM,M.A],
-  "PEP CONSULTA EXTERNA":[M.G,M.CE,M.V]
+  "ESTUDIANTES EN FORMACION":[M.G,M.H,M.CQ,M.CE,M.EM],
+  "CLÍNICO/QUIRÚRGICO":[M.G,M.H,M.CQ,M.CE,M.V,M.A],
+  "CLÍNICO":[M.G,M.H,M.CE,M.V,M.A],
+  "UCI":[M.G,M.H,M.A],
+  "EMERGENCIAS":[M.G,M.EM,M.A],
+  "CONSULTA EXTERNA":[M.G,M.CE,M.V]
 };
 
 const VIDEO_DEFAULTS={
   "GENERALIDADES":["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0"],
-  "HOSPITALIZACIÓN":["eY52Zsg-KVI","fJ9rUzIMcZQ","L_jWHffIx5E"],
+  "HOSPITALIZACIÓN":["kJQP7kiw5Fk","fJ9rUzIMcZQ","L_jWHffIx5E"],
   "CENTRO QUIRÚRGICO":["3JZ_D3ELwOQ","04854XqcfCY","ktvTqknDobU"],
   "CONSULTA EXTERNA":["kXYiU_JCYtU","hTWKbfoikeg","QH2-TGUlwu4"],
   "EMERGENCIAS":["2vjPBrBU-TM","hTWKbfoikeg","lWA2pjMjpBs"],
@@ -306,7 +305,7 @@ function markDirty(){
   if(pfMsg&&/guardado|sin conexión|nube/i.test(pfMsg.textContent))pfMsg.textContent='';
 }
 
-['pf-name','pf-id','pf-spec'].forEach(id=>{
+['pf-name','pf-spec'].forEach(id=>{
   document.addEventListener('input',(e)=>{
     if(e.target&&e.target.id===id)markDirty();
   });
@@ -523,11 +522,11 @@ function showLogin(){
 
 function profileComplete(){
   const p=state.profile||{};
-  return !!(p.name&&p.iddoc&&p.spec&&TIPOS_PEP.includes(p.spec));
+  return !!(p.name&&p.spec&&TIPOS_PEP.includes(p.spec));
 }
 
 function setProfileReadonly(ro){
-  ['pf-name','pf-id','pf-spec'].forEach(id=>{
+  ['pf-name','pf-spec'].forEach(id=>{
     const el=document.getElementById(id);
     el.readOnly=ro;
     el.style.background=ro?'#eef2ff':'#fff';
@@ -562,7 +561,6 @@ function showCourse(){
   }
 
   $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
-  $('#pf-id').value=state.profile?.iddoc||'';
   $('#pf-spec').value=state.profile?.spec||'';
 
   renderAllByTrack(getSelectedTrack());
@@ -754,7 +752,6 @@ function startProfileRealtime(){
     persist();
     if(document.getElementById('pf-name').readOnly){
       $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
-      $('#pf-id').value=state.profile?.iddoc||'';
       $('#pf-spec').value=state.profile?.spec||'';
     }
     if(prevSpec!==state.profile?.spec&&TIPOS_PEP.includes(state.profile?.spec||'')){
@@ -781,7 +778,6 @@ async function loadProfile(){
       state.profile=s.data();
       persist();
       $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
-      $('#pf-id').value=state.profile?.iddoc||'';
       $('#pf-spec').value=state.profile?.spec||'';
     }
   }catch(e){
@@ -791,15 +787,14 @@ async function loadProfile(){
 
 async function saveProfile(){
   const name=($('#pf-name').value||'').trim();
-  const iddoc=($('#pf-id').value||'').trim();
   const spec=($('#pf-spec').value||'').trim();
   const pfMsg=$('#pf-msg');
   const btn=$('#btn-save-profile');
 
-  if(!name||!iddoc||!spec){pfMsg.textContent='Completa nombre, cédula/pasaporte y módulo PEP.';return;}
+  if(!name||!spec){pfMsg.textContent='Completa nombre y módulo PEP.';return;}
   if(!TIPOS_PEP.includes(spec)){pfMsg.textContent='Selecciona un módulo PEP válido de la lista.';return;}
 
-  state.profile={name,iddoc,spec};
+  state.profile={name,spec};
   persist();
   renderAllByTrack(spec);
   updateGlobalProgress();
@@ -941,7 +936,7 @@ function pickModulesFor(track){
 }
 
 function renderAllByTrack(track){
-  const useTrack=track||'PEP CLÍNICO';
+  const useTrack=track||'CLÍNICO';
   const modulesDef=pickModulesFor(useTrack);
   state.course={spec:useTrack,modules:modulesDef};
   persist();
@@ -1077,7 +1072,7 @@ function gradeQuizModule(m){
 }
 
 function updateGlobalProgress(){
-  const spec=getSelectedTrack()||'PEP CLÍNICO';
+  const spec=getSelectedTrack()||'CLÍNICO';
   const modulesDef=pickModulesFor(spec);
   const totalVideos=modulesDef.reduce((a,m)=>a+m.videos.length,0);
   const doneVideos=modulesDef.reduce((a,m)=>a+m.videos.filter(v=>(state.videosDone?.[m.id]||{})[v.yt]).length,0);
