@@ -38,11 +38,9 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .footer{margin-top:24px;color:var(--muted);font-size:13px}
 #certificado{display:none}
 #certificado.show{display:block}
-.certificate-shell{display:none}
 @media print{
   .no-print{display:none !important}
   #certificado{display:block !important}
-  .certificate-shell{display:block !important}
   body{background:#fff}
   .container{max-width:none;padding:0}
 }
@@ -68,36 +66,6 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .loading-screen{display:none;position:fixed;inset:0;background:rgba(248,250,252,.92);backdrop-filter:blur(2px);z-index:9999;align-items:center;justify-content:center}
 .loading-card{background:#fff;padding:20px 24px;border-radius:18px;box-shadow:0 10px 24px rgba(0,0,0,.08);display:flex;align-items:center;gap:12px;font-weight:700;color:#3730a3}
 .spinner{width:18px;height:18px;border:3px solid #c7d2fe;border-top-color:#3730a3;border-radius:999px;animation:spin .8s linear infinite}
-.cert-actions{display:flex;justify-content:center;gap:10px;margin-top:20px}
-.certificate-shell{position:relative;background:#fff;min-height:1120px;padding:72px 76px;overflow:hidden}
-.certificate-shell::before,.certificate-shell::after{content:'';position:absolute;pointer-events:none}
-.certificate-shell::before{top:0;right:0;width:320px;height:240px;background:linear-gradient(135deg, transparent 0 18%, #8d0f4f 18% 70%, #d4a23a 70% 72%, transparent 72% 100%)}
-.certificate-shell::after{left:0;bottom:0;width:290px;height:240px;background:linear-gradient(315deg, transparent 0 18%, #8d0f4f 18% 70%, #d4a23a 70% 72%, transparent 72% 100%)}
-.cert-topmark{position:absolute;left:36px;top:28px;width:78px;height:78px;border-radius:12px;background:var(--brand);display:grid;place-items:center;color:#fff;font-weight:800;font-size:30px;font-style:italic;box-shadow:0 8px 18px rgba(0,0,0,.10)}
-.cert-print-title{font-family:Georgia, 'Times New Roman', serif;font-size:78px;line-height:1;color:#8d0f4f;letter-spacing:1px;text-align:center;margin:34px 0 10px}
-.cert-divider{display:flex;align-items:center;justify-content:center;gap:14px;margin:8px 0 28px;color:#111}
-.cert-divider .line{height:1px;width:120px;background:#111}
-.cert-divider .dot{font-size:18px;line-height:1}
-.cert-body{text-align:center;position:relative;z-index:1}
-.cert-label{font-family:Georgia, 'Times New Roman', serif;font-size:30px;color:#444;margin:32px 0 12px}
-.cert-person{font-size:46px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:#111;margin:0 0 12px}
-.cert-mail{font-size:22px;color:#374151;margin:0 0 34px}
-.cert-text{font-family:Georgia, 'Times New Roman', serif;font-size:26px;line-height:1.65;color:#5b5b5b;max-width:1100px;margin:0 auto}
-.cert-text strong{color:#4b1023}
-.cert-sign-wrap{margin-top:96px;text-align:center}
-.cert-sign-line{width:280px;height:2px;background:#d6a1b4;margin:0 auto 12px}
-.cert-sign-text{font-family:Georgia, 'Times New Roman', serif;font-size:24px;letter-spacing:.4px;color:#333}
-.cert-date-print{position:absolute;right:52px;bottom:34px;font-size:22px;color:#222}
-@media print{
-  @page{size:A4 landscape;margin:0}
-  #certificado{padding:0 !important;margin:0 !important}
-  .certificate-shell{min-height:auto;height:100vh;padding:54px 64px}
-}
-@media (max-width:900px){
-  .cert-print-title{font-size:54px}
-  .cert-person{font-size:32px}
-  .cert-text{font-size:20px}
-}
 </style>
 </head>
 <body>
@@ -185,9 +153,8 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
         <div class="badge"><span>ℹ️</span> Requisitos</div>
         <ul>
           <li>Registrarse y validar correo electrónico</li>
-          <li>Completar el video de cada módulo para habilitar su evaluación</li>
-          <li>Aprobar cada evaluación para desbloquear el siguiente módulo</li>
-          <li>Imprimir o enviar el certificado al área correspondiente</li>
+          <li>Completar todos los videos para habilitar cada evaluación</li>
+          <li>Enviar certificado al área correspondiente</li>
         </ul>
       </div>
     </div>
@@ -231,30 +198,16 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
   <section id="modules" class="grid no-print" style="display:none"></section>
 
   <section id="certificado" class="container">
-    <div class="certificate-shell" id="certificado-pdf">
-      <div class="cert-topmark">HvQ</div>
-      <div class="cert-print-title">CERTIFICADO</div>
-      <div class="cert-divider">
-        <span class="dot">✦</span>
-        <span class="line"></span>
-        <span class="dot">✧</span>
-        <span class="line"></span>
-        <span class="dot">✦</span>
+    <div class="cert-card">
+      <div class="cert-title">Certificado de participación</div>
+      <p>Otorgado a</p>
+      <div class="cert-name" id="cert-nombre">Nombre Apellido</div>
+      <div class="cert-meta" id="cert-email" style="margin-bottom:10px"></div>
+      <p>por completar satisfactoriamente el programa <strong>Inducción a PEP - SOUL MV</strong>.</p>
+      <div class="cert-meta">
+        <div id="cert-fecha"></div>
+        <div>Hospital Vozandes • Formación Interna</div>
       </div>
-      <div class="cert-body">
-        <div class="cert-label">Otorgado a</div>
-        <div class="cert-person" id="cert-nombre">Nombre Apellido</div>
-        <div class="cert-mail" id="cert-email"></div>
-        <div class="cert-text">Por completar satisfactoriamente el curso online de <strong>Inducción a PEP - SOUL MV</strong>.</div>
-        <div class="cert-sign-wrap">
-          <div class="cert-sign-line"></div>
-          <div class="cert-sign-text">Hospital Vozandes Quito - TICS</div>
-        </div>
-      </div>
-      <div class="cert-date-print" id="cert-fecha"></div>
-    </div>
-    <div class="cert-actions no-print">
-      <button id="btn-download-cert" class="btn btn-primary">Descargar certificado en PDF</button>
     </div>
   </section>
 
@@ -296,13 +249,13 @@ const MODS_POR_TIPO={
 };
 
 const VIDEO_DEFAULTS={
-  "GENERALIDADES":["dQw4w9WgXcQ"],
-  "HOSPITALIZACIÓN":["kJQP7kiw5Fk"],
-  "CENTRO QUIRÚRGICO":["3JZ_D3ELwOQ"],
-  "CONSULTA EXTERNA":["kXYiU_JCYtU"],
-  "EMERGENCIAS":["2vjPBrBU-TM"],
-  "VIVACE":["60ItHLz5WEA"],
-  "AUDITORÍA":["RgKAFK5djSk"]
+  "GENERALIDADES":["dQw4w9WgXcQ","l482T0yNkeo","9bZkp7q19f0"],
+  "HOSPITALIZACIÓN":["kJQP7kiw5Fk","fJ9rUzIMcZQ","L_jWHffIx5E"],
+  "CENTRO QUIRÚRGICO":["3JZ_D3ELwOQ","04854XqcfCY","ktvTqknDobU"],
+  "CONSULTA EXTERNA":["kXYiU_JCYtU","hTWKbfoikeg","QH2-TGUlwu4"],
+  "EMERGENCIAS":["2vjPBrBU-TM","hTWKbfoikeg","lWA2pjMjpBs"],
+  "VIVACE":["60ItHLz5WEA","CevxZvSJLk8","OPf0YbXqDm0"],
+  "AUDITORÍA":["RgKAFK5djSk","09R8_2nJtjg","YQHsXMglC9A"]
 };
 
 const DEFAULT_VIDEOS=["dQw4w9WgXcQ"];
@@ -473,7 +426,7 @@ function destroyAllPlayers(){
       players[k]?.player?.pauseVideo?.();
       players[k]?.player?.stopVideo?.();
       players[k]?.player?.destroy?.();
-    }catch(_){ }
+    }catch(_){}
     delete players[k];
   });
   cfgByPid.clear();
@@ -557,7 +510,7 @@ function makePoster(pid,videoId,lockedMsg){
 function pickModulesFor(track){
   const wanted=MODS_POR_TIPO[track]||[];
   return wanted.map((titulo,idx)=>{
-    const ids=(VIDEO_DEFAULTS[titulo]||DEFAULT_VIDEOS).slice(0,1);
+    const ids=(VIDEO_DEFAULTS[titulo]||DEFAULT_VIDEOS).slice(0,5);
     const safeId=titulo.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\w\s-]/g,"").replace(/\s+/g,"-");
     return {
       id:`${safeId}-${idx+1}`,
@@ -579,7 +532,9 @@ function prevModuleConcluded(moduleId){
   const idx=mods.findIndex(m=>m.id===moduleId);
   if(idx<=0)return true;
   const prev=mods[idx-1];
-  return !!(state.quizzes?.[prev.id]?.passed);
+  const passed=!!(state.quizzes?.[prev.id]?.passed);
+  const allVideosDone=prev.videos.every(v=>(state.videosDone?.[prev.id]||{})[v.yt]);
+  return passed||allVideosDone;
 }
 
 function ensureStoreFor(mid,vid){
@@ -600,7 +555,7 @@ function isLocked({moduleId,index}){
 }
 
 function lockReason({moduleId,index}){
-  if(index===0&&!prevModuleConcluded(moduleId)) return "Primero aprueba la evaluación del módulo anterior";
+  if(index===0&&!prevModuleConcluded(moduleId)) return "Primero concluye el módulo anterior";
   return "Termina el video anterior";
 }
 
@@ -642,12 +597,12 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
           if(ifr)ifr.setAttribute("allow","autoplay; fullscreen; encrypted-media; picture-in-picture");
           ev.target.unMute();
           ev.target.setVolume(100);
-        }catch(_){ }
+        }catch(_){}
         const savedTime=Math.max(0,Number(store.t||0));
         const allowedTime=Math.max(0,Number(store.allow||0));
         const startAt=Math.min(savedTime,allowedTime);
         if(startAt>1){
-          try{ev.target.seekTo(startAt,true);}catch(_){ }
+          try{ev.target.seekTo(startAt,true);}catch(_){}
         }
       },
       onStateChange:(ev)=>{
@@ -657,7 +612,7 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
         if(st===YT.PlayerState.PLAYING){
           if(isLocked(meta)){
             showWarn(pid,lockReason(meta));
-            try{p.pauseVideo();}catch(_){ }
+            try{p.pauseVideo();}catch(_){}
             return;
           }
           startTick();
@@ -671,13 +626,13 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
             if(cur>store.allow) store.allow=cur;
             persist();
             scheduleCloudSync(600);
-          }catch(_){ }
+          }catch(_){}
         }else if(st===YT.PlayerState.ENDED){
           stopTick();
           try{
             const dur=p.getDuration?.()||0;
             if(dur) store.dur=dur;
-          }catch(_){ }
+          }catch(_){}
           state.videosDone=state.videosDone||{};
           state.videosDone[moduleId]=state.videosDone[moduleId]||{};
           state.videosDone[moduleId][videoId]=true;
@@ -697,7 +652,7 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
         if(meta.retries<3){
           meta.retries++;
           setTimeout(()=>{
-            try{players[pid]?.player?.destroy?.();}catch(_){ }
+            try{players[pid]?.player?.destroy?.();}catch(_){}
             delete players[pid];
             actuallyCreatePlayer({pid,videoId,moduleId,index});
           },600*meta.retries);
@@ -720,12 +675,12 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
         cur=p.getCurrentTime?.()||0;
         dur=p.getDuration?.()||0;
         st=p.getPlayerState?.();
-      }catch(_){ }
+      }catch(_){}
 
       if(dur&&(!store.dur||Math.abs(store.dur-dur)>0.5)) store.dur=dur;
 
       if(cur>(store.allow+1.0)){
-        try{p.seekTo(store.allow,true);}catch(_){ }
+        try{p.seekTo(store.allow,true);}catch(_){}
         return;
       }
 
@@ -764,7 +719,7 @@ document.addEventListener("visibilitychange",()=>{
           autoResumePlayers.add(pid);
           p.pauseVideo();
         }
-      }catch(_){ }
+      }catch(_){}
     });
 
     persist();
@@ -780,7 +735,7 @@ document.addEventListener("visibilitychange",()=>{
       if(st===YT.PlayerState.PAUSED || st===YT.PlayerState.CUED){
         p.playVideo();
       }
-    }catch(_){ }
+    }catch(_){}
   });
 
   autoResumePlayers.clear();
@@ -797,23 +752,13 @@ window.addEventListener("beforeunload",()=>{
 
 window.onYouTubeIframeAPIReady=()=>{};
 
-document.addEventListener("click",(e)=>{
-  const btn=e.target.closest(".eye");
-  if(!btn)return;
-  const inp=document.querySelector(btn.dataset.eye);
-  if(!inp)return;
-  inp.type=inp.type==="password"?"text":"password";
+document.querySelectorAll(".eye").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    const inp=document.querySelector(btn.dataset.eye);
+    if(!inp)return;
+    inp.type=inp.type==="password"?"text":"password";
+  });
 });
-
-const oldPrintBtn=$("#btn-print-cert");
-if(oldPrintBtn){
-  oldPrintBtn.addEventListener("click",()=>window.print());
-}
-
-const downloadBtn=$("#btn-download-cert");
-if(downloadBtn){
-  downloadBtn.addEventListener("click",()=>window.print());
-}
 
 function setTab(which){
   const onLogin=(which==="login");
@@ -864,7 +809,7 @@ function renderModules(modulesDef){
 
   modulesDef.forEach((m,modIdx)=>{
     const doneVideos=(state.videosDone?.[m.id]||{});
-    const firstLockedMsg=modIdx===0?null:(prevModuleConcluded(m.id)?null:"Primero aprueba la evaluación del módulo anterior");
+    const firstLockedMsg=modIdx===0?null:(prevModuleConcluded(m.id)?null:"Primero concluye el módulo anterior");
 
     const videosHtml=m.videos.map((v,i)=>{
       const pid=`player-${m.id}-${i}`;
@@ -879,7 +824,7 @@ function renderModules(modulesDef){
     const quizBtnLabel=passed?"Aprobado ✓":"Comenzar evaluación";
     const quizBtnClass=passed?"btn-success":"btn-primary";
     const quizDisabled=canStart?"":"disabled";
-    const quizHint=canStart?"Listo para evaluar":"Completa el video para habilitar";
+    const quizHint=canStart?"Listo para evaluar":"Completa los videos para habilitar";
 
     const card=document.createElement("article");
     card.className="card module";
@@ -889,9 +834,9 @@ function renderModules(modulesDef){
       <div class="meta">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
           <h3 style="margin:0">${m.titulo}</h3>
-          <span class="badge">${m.videos.length} video</span>
+          <span class="badge">${m.videos.length} videos</span>
         </div>
-        <p class="muted" style="margin:6px 0 10px">Debes ver el video completo para habilitar la evaluación y aprobarla para desbloquear el siguiente módulo.</p>
+        <p class="muted" style="margin:6px 0 10px">Debes ver cada video completo (sin adelantar) para habilitar la evaluación.</p>
         ${videosHtml}
         <div class="quiz-wrap">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
@@ -921,7 +866,7 @@ function renderModules(modulesDef){
 function updateModuleLocksAndButtons(modulesDef){
   modulesDef.forEach((m,modIdx)=>{
     const doneVideos=(state.videosDone?.[m.id]||{});
-    const firstLockedMsg=modIdx===0?null:(prevModuleConcluded(m.id)?null:"Primero aprueba la evaluación del módulo anterior");
+    const firstLockedMsg=modIdx===0?null:(prevModuleConcluded(m.id)?null:"Primero concluye el módulo anterior");
 
     m.videos.forEach((v,i)=>{
       const pid=`player-${m.id}-${i}`;
@@ -952,7 +897,7 @@ function updateModuleLocksAndButtons(modulesDef){
       btn.textContent=passed?"Aprobado ✓":"Comenzar evaluación";
       btn.classList.toggle("btn-success",!!passed);
       btn.classList.toggle("btn-primary",!passed);
-      hint.textContent=canStart?"Listo para evaluar":"Completa el video para habilitar";
+      hint.textContent=canStart?"Listo para evaluar":"Completa los videos para habilitar";
     }
 
     const res=$(`#res-${m.id}`);
@@ -970,7 +915,7 @@ function maybeEnableQuiz(m){
   const hint=$(`#hint-${m.id}`);
   if(btn&&hint){
     btn.disabled=!canStart;
-    hint.textContent=canStart?"Listo para evaluar":"Completa el video para habilitar";
+    hint.textContent=canStart?"Listo para evaluar":"Completa los videos para habilitar";
   }
 }
 
@@ -1022,7 +967,6 @@ function gradeQuizModule(m){
     setTimeout(()=>syncToCloud(true),300);
   }
   updateGlobalProgress();
-  updateModuleLocksAndButtons(state.course?.modules||[]);
 }
 
 function updateGlobalProgress(){
@@ -1046,7 +990,7 @@ function updateGlobalProgress(){
   const evalsPassed=modulesDef.filter(m=>state.quizzes?.[m.id]?.passed).length;
   const allPassed=modulesDef.length>0 && modulesDef.every(m=>state.quizzes?.[m.id]?.passed);
 
-  $("#progress-label").textContent=`${pct}% completado — Videos ${doneVideos}/${totalVideos} • Evaluaciones aprobadas ${evalsPassed}/${modulesDef.length}${allPassed?" • ✅ Listo para certificar":""}`;
+  $("#progress-label").textContent=`${pct}% completado — Videos ${doneVideos}/${totalVideos} • Evaluaciones ${evalsPassed}/${modulesDef.length}${allPassed?" • ✅ Listo para certificar":""}`;
 
   if(allPassed){
     const preferName=state.profile?.name||auth.currentUser?.displayName||"";
@@ -1080,7 +1024,7 @@ function hydrateUIFromState(){
 }
 
 function subscribeUserDoc(uid){
-  if(unsubUserDoc){ try{unsubUserDoc();}catch(_){ } unsubUserDoc=null; }
+  if(unsubUserDoc){ try{unsubUserDoc();}catch(_){} unsubUserDoc=null; }
 
   unsubUserDoc=db.collection("users").doc(uid).onSnapshot((snap)=>{
     if(!snap.exists)return;
@@ -1194,7 +1138,7 @@ async function saveProfile(){
 
   try{
     if(auth.currentUser&&name){
-      try{ await auth.currentUser.updateProfile({displayName:name}); }catch(_){ }
+      try{ await auth.currentUser.updateProfile({displayName:name}); }catch(_){}
     }
     await syncToCloud(true);
     savingProfile=false;
@@ -1246,7 +1190,7 @@ auth.onAuthStateChanged(async (user)=>{
     $("#auth-user").textContent="";
     lastRenderedTrack="";
     originalProfileSnapshot=null;
-    if(unsubUserDoc){ try{unsubUserDoc();}catch(_){ } unsubUserDoc=null; }
+    if(unsubUserDoc){ try{unsubUserDoc();}catch(_){} unsubUserDoc=null; }
     showLogin();
     msg("");
     return;
@@ -1354,7 +1298,7 @@ $("#btn-login").addEventListener("click",async ()=>{
     $("#btn-logout").style.display="inline-flex";
   }catch(e){
     let methods=[];
-    try{ methods=await auth.fetchSignInMethodsForEmail(email); }catch(_){ }
+    try{ methods=await auth.fetchSignInMethodsForEmail(email); }catch(_){}
     if(!methods||methods.length===0){
       msg("Correo no registrado.","error");
       setTab("reg");
