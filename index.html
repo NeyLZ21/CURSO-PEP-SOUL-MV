@@ -62,8 +62,22 @@ const auth=firebase.auth(); const db=firebase.firestore(); auth.setPersistence(f
 const $=s=>document.querySelector(s); document.getElementById('year').textContent=new Date().getFullYear();
 const MSGS={"auth/email-already-in-use":"Ese correo ya tiene una cuenta. Usa Iniciar sesión.","auth/invalid-email":"El formato del correo no es válido.","auth/missing-email":"Ingresa tu correo.","auth/missing-password":"Ingresa tu contraseña.","auth/weak-password":"La contraseña es muy corta (mínimo 6).","auth/user-not-found":"Correo no registrado.","auth/wrong-password":"Contraseña incorrecta.","auth/invalid-credential":"Contraseña incorrecta.","auth/invalid-login-credentials":"Contraseña incorrecta.","auth/too-many-requests":"Demasiados intentos. Intenta más tarde.","auth/network-request-failed":"Error de red. Revisa tu conexión."};
 const TIPOS_MODULO=["ESTUDIANTES EN FORMACION","CLÍNICO/QUIRÚRGICO","CLÍNICO","SOLO UCI","SOLO EMERGENCIAS","SOLO CONSULTA EXTERNA O RADIOLOGÍA"];
-const MODS_POR_TIPO={"ESTUDIANTES EN FORMACION":["GENERALIDADES","HOSPITALIZACIÓN","CENTRO QUIRÚRGICO","CONSULTA EXTERNA","EMERGENCIAS"],"CLÍNICO/QUIRÚRGICO":["GENERALIDADES","HOSPITALIZACIÓN","CENTRO QUIRÚRGICO","CONSULTA EXTERNA","VIVACE","AUDITORÍA"],"CLÍNICO":["GENERALIDADES","HOSPITALIZACIÓN","CONSULTA EXTERNA","VIVACE","AUDITORÍA"],"SOLO UCI":["GENERALIDADES","HOSPITALIZACIÓN","AUDITORÍA"],"SOLO EMERGENCIAS":["GENERALIDADES","EMERGENCIAS","AUDITORÍA"],"SOLO CONSULTA EXTERNA O RADIOLOGÍA":["GENERALIDADES","CONSULTA EXTERNA","VIVACE"]};
-const VIDEO_DEFAULTS={"GENERALIDADES":["dQw4w9WgXcQ"],"HOSPITALIZACIÓN":["kJQP7kiw5Fk"],"CENTRO QUIRÚRGICO":["3JZ_D3ELwOQ"],"CONSULTA EXTERNA":["kXYiU_JCYtU"],"EMERGENCIAS":["2vjPBrBU-TM"],"VIVACE":["60ItHLz5WEA"],"AUDITORÍA":["RgKAFK5djSk"]};
+const MODS_POR_TIPO={
+"ESTUDIANTES EN FORMACION":["GENERALIDADES","HOSPITALIZACIÓN","CENTRO QUIRÚRGICO","CONSULTA EXTERNA","EMERGENCIAS","INDICACIONES PARA PRÁCTICA EVALUADA"],
+"CLÍNICO/QUIRÚRGICO":["GENERALIDADES","HOSPITALIZACIÓN","CENTRO QUIRÚRGICO","CONSULTA EXTERNA","INDICACIONES PARA PRÁCTICA EVALUADA"],
+"CLÍNICO":["GENERALIDADES","HOSPITALIZACIÓN","CONSULTA EXTERNA","INDICACIONES PARA PRÁCTICA EVALUADA"],
+"SOLO UCI":["GENERALIDADES","HOSPITALIZACIÓN","INDICACIONES PARA PRÁCTICA EVALUADA"],
+"SOLO EMERGENCIAS":["GENERALIDADES","EMERGENCIAS","INDICACIONES PARA PRÁCTICA EVALUADA"],
+"SOLO CONSULTA EXTERNA O RADIOLOGÍA":["GENERALIDADES","CONSULTA EXTERNA","INDICACIONES PARA PRÁCTICA EVALUADA"]
+};
+const VIDEO_DEFAULTS={
+"GENERALIDADES":["dQw4w9WgXcQ"],
+"HOSPITALIZACIÓN":["kJQP7kiw5Fk"],
+"CENTRO QUIRÚRGICO":["3JZ_D3ELwOQ"],
+"CONSULTA EXTERNA":["kXYiU_JCYtU"],
+"EMERGENCIAS":["2vjPBrBU-TM"],
+"INDICACIONES PARA PRÁCTICA EVALUADA":["RgKAFK5djSk"]
+};
 let CURRENT_UID=null, unsubUserDoc=null, savingProfile=false, lastCloudSyncAt=0, cloudSyncTimer=null, lastRenderedTrack="", players={}, cfgByPid=new Map();
 const keyFor=uid=>`soulmv_${uid||'anon'}`; const defaultState=()=>({profile:{name:'',spec:'',email:''},videosDone:{},quizzes:{},play:{},course:{spec:'',modules:[]}}); let state=defaultState();
 const loadState=uid=>{try{return JSON.parse(localStorage.getItem(keyFor(uid))||'{}');}catch{return {}}}; const persist=()=>localStorage.setItem(keyFor(CURRENT_UID),JSON.stringify(state));
@@ -82,7 +96,25 @@ function setProfileReadonly(ro){['pf-name','pf-spec'].forEach(id=>{const el=docu
 function fillProfileForm(){ $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||''; $('#pf-spec').value=state.profile?.spec||''; }
 document.addEventListener('input',e=>{if(e.target?.id==='pf-name') $('#btn-save-profile').disabled=false;}); document.addEventListener('change',e=>{if(e.target?.id==='pf-spec') $('#btn-save-profile').disabled=false;});
 document.addEventListener('click',e=>{const btn=e.target.closest('.eye'); if(!btn)return; const inp=document.querySelector(btn.dataset.eye); if(inp) inp.type=inp.type==='password'?'text':'password';});
-function pickModulesFor(track){const wanted=MODS_POR_TIPO[track]||[]; return wanted.map((titulo,idx)=>{const safeId=titulo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\w\s-]/g,'').replace(/\s+/g,'-'); const ids=(VIDEO_DEFAULTS[titulo]||['dQw4w9WgXcQ']).slice(0,1); return{id:`${safeId}-${idx+1}`,titulo,videos:ids.map((v,i)=>({yt:v,n:i+1})),quiz:[{id:`${safeId}-${idx+1}-q1`,text:`Pregunta 1 del módulo ${titulo}`,options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'A'},{id:`${safeId}-${idx+1}-q2`,text:`Pregunta 2 del módulo ${titulo}`,options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'B'},{id:`${safeId}-${idx+1}-q3`,text:`Pregunta 3 del módulo ${titulo}`,options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'B'}]};});}
+
+function pickModulesFor(track){
+const wanted=MODS_POR_TIPO[track]||[];
+return wanted.map((titulo,idx)=>{
+const safeId=titulo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\w\s-]/g,'').replace(/\s+/g,'-');
+const ids=(VIDEO_DEFAULTS[titulo]||['dQw4w9WgXcQ']).slice(0,1);
+return{
+id:`${safeId}-${idx+1}`,
+titulo,
+videos:ids.map((v,i)=>({yt:v,n:i+1})),
+quiz:[
+{id:`${safeId}-${idx+1}-q1`,text:`Pregunta 1 del módulo ${titulo}`,options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'A'},
+{id:`${safeId}-${idx+1}-q2`,text:`Pregunta 2 del módulo ${titulo}`,options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'B'},
+{id:`${safeId}-${idx+1}-q3`,text:`Pregunta 3 del módulo ${titulo}`,options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'B'}
+]
+};
+});
+}
+
 function getSelectedTrack(){return (state.profile?.spec||'').trim();}
 function prevModuleConcluded(moduleId){const mods=state.course?.modules||[]; const idx=mods.findIndex(m=>m.id===moduleId); if(idx<=0)return true; const prev=mods[idx-1]; return !!(state.quizzes?.[prev.id]?.passed);}
 function ensureStoreFor(mid,vid){state.play=state.play||{}; state.play[mid]=state.play[mid]||{}; state.play[mid][vid]=state.play[mid][vid]||{t:0,allow:0,dur:0}; return state.play[mid][vid];}
@@ -115,6 +147,28 @@ $('#btn-reset').addEventListener('click',async ()=>{const email=($('#login-email
 $('#btn-logout').addEventListener('click',async ()=>{persist(); await syncToCloud(true); destroyAllPlayers(); await auth.signOut(); msg('Sesión cerrada.');});
 async function downloadCertificatePDF(){const source=document.getElementById('certificado-pdf'); if(!source)return alert('No se encontró el certificado.'); if(!window.html2canvas||!window.jspdf||!window.jspdf.jsPDF)return alert('No se cargaron las librerías del PDF.'); const clone=source.cloneNode(true); clone.style.display='block'; clone.style.position='fixed'; clone.style.left='-10000px'; clone.style.top='0'; clone.style.width='1400px'; clone.style.zIndex='-1'; clone.style.visibility='visible'; document.body.appendChild(clone); try{const canvas=await window.html2canvas(clone,{scale:2,backgroundColor:'#ffffff',useCORS:true,logging:false}); const imgData=canvas.toDataURL('image/png',1.0); const PDF=window.jspdf.jsPDF; const pdf=new PDF({orientation:'landscape',unit:'mm',format:'a4'}); pdf.addImage(imgData,'PNG',0,0,pdf.internal.pageSize.getWidth(),pdf.internal.pageSize.getHeight()); let safeName=(document.getElementById('cert-nombre')?.textContent||'certificado').trim(); safeName=safeName.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ _-]/g,'').replace(/\s+/g,'_'); pdf.save('Certificado_Aprobacion_'+safeName+'.pdf');}catch(e){console.error(e); alert('No se pudo generar el certificado en PDF.');}finally{clone.remove();}}
 const downloadBtn=document.getElementById('btn-download-cert'); if(downloadBtn){downloadBtn.addEventListener('click',downloadCertificatePDF); downloadBtn.onclick=downloadCertificatePDF;}
+
+function setTab(tab){
+const loginBtn=document.getElementById('tab-login');
+const registerBtn=document.getElementById('tab-register');
+const loginForm=document.getElementById('form-login');
+const registerForm=document.getElementById('form-register');
+if(tab==='login'){
+loginBtn.className='btn btn-primary';
+registerBtn.className='btn btn-muted';
+loginForm.style.display='block';
+registerForm.style.display='none';
+}else{
+loginBtn.className='btn btn-muted';
+registerBtn.className='btn btn-primary';
+loginForm.style.display='none';
+registerForm.style.display='block';
+}
+}
+
+document.getElementById('tab-login').addEventListener('click',()=>setTab('login'));
+document.getElementById('tab-register').addEventListener('click',()=>setTab('reg'));
+setTab('login');
 </script>
 </body>
 </html>
