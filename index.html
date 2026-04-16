@@ -805,7 +805,15 @@ document.addEventListener("click",(e)=>{
   inp.type=inp.type==="password"?"text":"password";
 });
 
-$("#btn-print-cert").addEventListener("click",()=>window.print());
+const oldPrintBtn=$("#btn-print-cert");
+if(oldPrintBtn){
+  oldPrintBtn.addEventListener("click",()=>window.print());
+}
+
+const downloadBtn=$("#btn-download-cert");
+if(downloadBtn){
+  downloadBtn.addEventListener("click",()=>window.print());
+}
 
 function setTab(which){
   const onLogin=(which==="login");
