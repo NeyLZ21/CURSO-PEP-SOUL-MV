@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-:root{--brand:#781C38;--ink:#1f2937;--muted:#6b7280;--bg:#f8fafc;--card:#ffffff;--ok:#15803d;--danger:#b91c1c}
+:root{--brand:#781C38;--ink:#1f2937;--muted:#6b7280;--bg:#f8fafc;--card:#ffffff;--ok:#15803d;--danger:#b91c1c;--gold:#d4af37}
 *{box-sizing:border-box}
 body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
 .container{max-width:980px;margin:auto;padding:24px}
@@ -18,28 +18,41 @@ h1{font-size:clamp(22px,3.5vw,34px);margin:0}.subtitle{color:var(--muted);margin
 .card{background:var(--card);border-radius:18px;box-shadow:0 10px 24px rgba(0,0,0,.06);padding:20px}
 .grid{display:grid;gap:16px}.grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media (max-width:800px){.grid.cols-2{grid-template-columns:1fr}}
-button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor:pointer;font-weight:600}.btn-primary{background:var(--brand);color:#fff}.btn-muted{background:#e5e7eb;color:#111827}.btn-success{background:var(--ok);color:#fff}.btn[disabled]{opacity:.5;cursor:not-allowed}
+button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor:pointer;font-weight:600}
+.btn-primary{background:var(--brand);color:#fff}
+.btn-muted{background:#e5e7eb;color:#111827}
+.btn-success{background:var(--ok);color:#fff}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
 .badge{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:600;background:#eef2ff;color:#3730a3}
 .progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}.progress>span{display:block;height:100%;background:var(--brand);width:0}
 .module{display:flex;gap:16px;align-items:flex-start}.module .num{flex:0 0 auto;width:36px;height:36px;border-radius:10px;background:#f3f4f6;display:grid;place-content:center;font-weight:700}.module .meta{flex:1}
 .yt-wrap{position:relative;padding-top:56.25%;border-radius:16px;overflow:hidden;background:#000;margin-top:12px}.yt-wrap iframe,.yt-wrap .player-host{position:absolute;inset:0;width:100%;height:100%;border:0}
-.lock{position:absolute;inset:0;display:grid;place-content:center;background:rgba(17,24,39,.65);color:#fff;font-weight:700;font-size:14px;border-radius:16px;backdrop-filter:blur(1px);text-align:center;padding:12px;z-index:3}.muted{color:var(--muted)}.footer{margin-top:24px;color:var(--muted);font-size:13px}
+.lock{position:absolute;inset:0;display:grid;place-content:center;background:rgba(17,24,39,.65);color:#fff;font-weight:700;font-size:14px;border-radius:16px;backdrop-filter:blur(1px);text-align:center;padding:12px;z-index:3}
+.muted{color:var(--muted)}.footer{margin-top:24px;color:var(--muted);font-size:13px}
 #certificado{display:none}#certificado.show{display:block}
 .input-wrap{position:relative}.input-wrap input,.input-wrap select,input,select{width:100%;padding:12px 40px 12px 12px;border-radius:12px;border:1px solid #e5e7eb}.eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;border:0;background:transparent;font-size:16px}
 .alert{border-radius:12px;padding:12px 14px;font-size:14px}.alert-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
 .saving::after{content:'';display:inline-block;width:14px;height:14px;margin-left:8px;border:2px solid #9ca3af;border-top-color:transparent;border-radius:999px;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
-.quiz-wrap{margin-top:12px;border-top:1px solid #e5e7eb;padding-top:12px}.quiz-hint{font-size:13px}
+.quiz-wrap{margin-top:12px;border-top:1px solid #e5e7eb;padding-top:12px}
+.quiz-hint{font-size:13px}
+.quiz-question-card{margin-bottom:10px;padding:16px 18px}
+.quiz-options{margin-top:10px;display:grid;gap:8px}
+.quiz-option{display:flex;align-items:flex-start;gap:10px;margin:0;font-size:15px;line-height:1.35;cursor:pointer}
+.quiz-option input[type="radio"]{margin:2px 0 0 0;flex:0 0 auto}
+.quiz-option span{display:inline-block}
 .poster{position:absolute;inset:0;background:#000;display:grid;place-items:center;cursor:pointer;z-index:2}.poster img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.8)}.poster button{position:relative;z-index:2;padding:10px 14px;border-radius:999px;background:#ffffffd9;font-weight:800;border:0}
 .warnmsg{position:absolute;left:12px;right:12px;bottom:12px;background:#fff3cd;color:#7a5400;border-radius:10px;padding:8px 10px;font-size:13px;display:none;z-index:4}
 .auth-error{color:var(--danger)!important;font-weight:600}.auth-ok{color:var(--ok)!important;font-weight:600}
 .loading-screen{display:none;position:fixed;inset:0;background:rgba(248,250,252,.92);backdrop-filter:blur(2px);z-index:9999;align-items:center;justify-content:center}.loading-card{background:#fff;padding:20px 24px;border-radius:18px;box-shadow:0 10px 24px rgba(0,0,0,.08);display:flex;align-items:center;gap:12px;font-weight:700;color:#3730a3}.spinner{width:18px;height:18px;border:3px solid #c7d2fe;border-top-color:#3730a3;border-radius:999px;animation:spin .8s linear infinite}
+
+/* CERTIFICADO */
 .cert-actions{display:flex;justify-content:center;gap:10px;margin-top:20px}
 .cert-card{
 position:relative;
 background:#ffffff;
 border:6px solid var(--brand);
 border-radius:18px;
-padding:80px 70px;
+padding:70px 70px 60px;
 text-align:center;
 max-width:1100px;
 margin:0 auto;
@@ -50,8 +63,8 @@ content:"";
 position:absolute;
 top:0;
 right:0;
-width:160px;
-height:160px;
+width:150px;
+height:150px;
 background:var(--brand);
 clip-path:polygon(100% 0, 0 0, 100% 100%);
 }
@@ -60,69 +73,125 @@ content:"";
 position:absolute;
 bottom:0;
 left:0;
-width:120px;
-height:120px;
+width:110px;
+height:110px;
 background:var(--brand);
 clip-path:polygon(0 100%, 0 0, 100% 100%);
 }
-.cert-line{
-width:140px;
-height:3px;
-background:#d4af37;
-margin:20px auto;
+.cert-card-inner{position:relative;z-index:1}
+.cert-gold-stroke-top{
+position:absolute;
+top:26px;
+right:26px;
+width:115px;
+height:4px;
+background:var(--gold);
+transform:rotate(-48deg);
+transform-origin:right center;
+border-radius:999px;
+z-index:1;
+opacity:.95;
+}
+.cert-gold-stroke-bottom{
+position:absolute;
+bottom:18px;
+left:10px;
+width:95px;
+height:4px;
+background:var(--gold);
+transform:rotate(-48deg);
+transform-origin:left center;
+border-radius:999px;
+z-index:1;
+opacity:.95;
+}
+.cert-hvq{
+position:absolute;
+top:20px;
+left:20px;
+width:54px;
+height:64px;
+background:var(--brand);
+border-radius:10px;
+display:grid;
+place-items:center;
+color:#fff;
+font-weight:800;
+font-size:18px;
+font-style:italic;
+z-index:2;
+box-shadow:0 6px 14px rgba(0,0,0,.12);
 }
 .cert-title{
-font-size:48px;
+font-size:52px;
 font-weight:800;
 color:var(--brand);
 letter-spacing:2px;
-margin-bottom:10px;
+margin:8px 0 8px;
+font-family:Georgia,"Times New Roman",serif;
 }
-.cert-subtitle{
-font-size:22px;
-margin-bottom:10px;
+.cert-divider{
+display:flex;
+align-items:center;
+justify-content:center;
+gap:12px;
+margin:6px 0 26px;
 color:#444;
 }
+.cert-divider .line{
+width:80px;
+height:1px;
+background:#8b8b8b;
+}
+.cert-divider .orn{font-size:14px;line-height:1}
+.cert-subtitle{
+font-size:26px;
+margin-bottom:10px;
+color:#555;
+font-family:Georgia,"Times New Roman",serif;
+}
 .cert-name{
-font-size:36px;
-font-weight:700;
-margin:18px 0;
-letter-spacing:1px;
-position:relative;
-z-index:1;
+font-size:38px;
+font-weight:400;
+margin:14px 0 10px;
+letter-spacing:.8px;
+color:#111827;
+text-transform:uppercase;
 }
 .cert-email{
 font-size:18px;
-color:#555;
-margin-bottom:20px;
-position:relative;
-z-index:1;
+color:#4b5563;
+margin-bottom:28px;
 }
 .cert-text{
-font-size:22px;
-line-height:1.6;
-margin:20px auto;
-max-width:800px;
-position:relative;
-z-index:1;
+font-size:23px;
+line-height:1.7;
+margin:0 auto 18px;
+max-width:860px;
+font-family:Georgia,"Times New Roman",serif;
+color:#555;
 }
 .cert-course{
 color:var(--brand);
 font-weight:700;
 }
 .cert-module{
-margin-top:15px;
-font-size:20px;
+margin-top:8px;
+font-size:19px;
 font-weight:600;
-position:relative;
-z-index:1;
+color:#374151;
+}
+.cert-footer-line{
+width:185px;
+height:2px;
+background:#d7a6b4;
+margin:40px auto 12px;
 }
 .cert-meta{
-margin-top:30px;
-font-size:18px;
-color:#444;
-position:relative;
-z-index:1;
+font-size:17px;
+color:#555;
+font-family:Georgia,"Times New Roman",serif;
+line-height:1.6;
 }
 #certificado-pdf{display:none}
 </style>
@@ -175,14 +244,20 @@ z-index:1;
 
 <section id="certificado" class="container">
 <div class="cert-card" id="certificado-pdf">
+<div class="cert-hvq">HvQ</div>
+<div class="cert-gold-stroke-top"></div>
+<div class="cert-gold-stroke-bottom"></div>
+<div class="cert-card-inner">
 <div class="cert-title">CERTIFICADO</div>
-<div class="cert-line"></div>
+<div class="cert-divider"><span class="orn">✦</span><span class="line"></span><span class="orn">✧</span><span class="line"></span><span class="orn">✦</span></div>
 <div class="cert-subtitle">Otorgado a</div>
 <div class="cert-name" id="cert-nombre">Nombre Apellido</div>
 <div class="cert-email" id="cert-email"></div>
-<div class="cert-text">Por completar satisfactoriamente el curso online de <span class="cert-course">Inducción a PEP - SOUL MV</span></div>
+<div class="cert-text">Por completar satisfactoriamente el curso online de <span class="cert-course">Inducción a PEP - SOUL MV</span>.</div>
 <div class="cert-module">Módulo: <span id="cert-modulo"></span></div>
+<div class="cert-footer-line"></div>
 <div class="cert-meta"><div id="cert-fecha"></div><div>Hospital Vozandes Quito - TICS</div></div>
+</div>
 </div>
 <div class="cert-actions no-print"><button id="btn-download-cert" class="btn btn-primary">Descargar certificado en PDF</button></div>
 </section>
@@ -269,7 +344,23 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){if(players[pid])retu
 function renderModules(modulesDef){destroyAllPlayers(); const wrap=$('#modules'); wrap.innerHTML=''; modulesDef.forEach((m,modIdx)=>{const doneVideos=(state.videosDone?.[m.id]||{}); const firstLockedMsg=modIdx===0?null:(prevModuleConcluded(m.id)?null:'Primero aprueba la evaluación del módulo anterior'); const videosHtml=m.videos.map((v,i)=>{const pid=`player-${m.id}-${i}`; const locked=(i===0)?!!firstLockedMsg:false; const lockedMsg=locked?firstLockedMsg:null; cfgByPid.set(pid,{pid,videoId:v.yt,moduleId:m.id,index:i}); return makePoster(pid,v.yt,lockedMsg);}).join(''); const canStart=m.videos.every(v=>doneVideos[v.yt]); const passed=state.quizzes?.[m.id]?.passed; const card=document.createElement('article'); card.className='card module'; card.innerHTML=`<div class="num">${modIdx+1}</div><div class="meta"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><h3 style="margin:0">${m.titulo}</h3><span class="badge">1 video</span></div><p class="muted" style="margin:6px 0 10px">Debes ver el video completo para habilitar la evaluación y aprobarla para desbloquear el siguiente módulo.</p>${videosHtml}<div class="quiz-wrap"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><div class="quiz-hint muted" id="hint-${m.id}">${canStart?'Listo para evaluar':'Completa el video para habilitar'}</div><button class="btn ${passed?'btn-success':'btn-primary'}" id="btn-${m.id}" ${canStart?'':'disabled'}>${passed?'Aprobado ✓':'Comenzar evaluación'}</button></div><div id="quiz-${m.id}" style="display:none;margin-top:12px"></div><div class="muted" id="res-${m.id}" style="display:none;margin-top:8px"></div></div></div>`; wrap.appendChild(card); m.videos.forEach((v,i)=>{const pid=`player-${m.id}-${i}`; const poster=card.querySelector(`[data-load="${pid}"]`); poster?.addEventListener('click',()=>clickToLoad(pid)); poster?.querySelector('button')?.addEventListener('click',ev=>{ev.stopPropagation(); clickToLoad(pid);});}); card.querySelector(`#btn-${m.id}`).addEventListener('click',()=>{if(state.quizzes?.[m.id]?.passed)return; renderQuizForModule(m);});});}
 function updateModuleLocksAndButtons(modulesDef){modulesDef.forEach((m,modIdx)=>{const doneVideos=(state.videosDone?.[m.id]||{}); const firstLockedMsg=modIdx===0?null:(prevModuleConcluded(m.id)?null:'Primero aprueba la evaluación del módulo anterior'); m.videos.forEach((v,i)=>{const pid=`player-${m.id}-${i}`; const wrap=document.getElementById(pid)?.closest('.yt-wrap'); if(!wrap)return; const existingLock=document.getElementById(`lock-${pid}`); const shouldLock=(i===0)?!!firstLockedMsg:false; if(shouldLock&&!existingLock){const div=document.createElement('div'); div.className='lock'; div.id=`lock-${pid}`; div.textContent=`🔒 ${firstLockedMsg}`; wrap.appendChild(div);} else if(!shouldLock&&existingLock){existingLock.remove();}}); const canStart=m.videos.every(v=>doneVideos[v.yt]); const passed=state.quizzes?.[m.id]?.passed; const btn=$(`#btn-${m.id}`); const hint=$(`#hint-${m.id}`); if(btn&&hint){btn.disabled=!canStart; btn.textContent=passed?'Aprobado ✓':'Comenzar evaluación'; btn.classList.toggle('btn-success',!!passed); btn.classList.toggle('btn-primary',!passed); hint.textContent=canStart?'Listo para evaluar':'Completa el video para habilitar';} const res=$(`#res-${m.id}`); if(res&&state.quizzes?.[m.id]){const q=state.quizzes[m.id]; res.style.display='block'; res.textContent=`Resultado: ${q.correct}/${q.total} (${q.scorePct}%). ${q.passed?'✅ Aprobado':'❌ No aprobado'}.`;}});}
 function maybeEnableQuiz(m){const canStart=m.videos.every(v=>(state.videosDone?.[m.id]||{})[v.yt]); const btn=$(`#btn-${m.id}`); const hint=$(`#hint-${m.id}`); if(btn&&hint){btn.disabled=!canStart; hint.textContent=canStart?'Listo para evaluar':'Completa el video para habilitar';}}
-function renderQuizForModule(m){const wrap=$(`#quiz-${m.id}`); wrap.innerHTML=''; m.quiz.forEach((q,idx)=>{const card=document.createElement('div'); card.className='card'; card.style.marginBottom='8px'; const opts=q.options.map(o=>`<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="radio" name="${q.id}" value="${o.key}"> <span>${o.key}) ${o.label}</span></label>`).join(''); card.innerHTML=`<strong>${idx+1}. ${q.text}</strong><div style="margin-top:6px">${opts}</div>`; wrap.appendChild(card);}); const submit=document.createElement('button'); submit.className='btn btn-primary'; submit.textContent='Enviar evaluación'; submit.addEventListener('click',()=>gradeQuizModule(m)); wrap.appendChild(submit); wrap.style.display='block';}
+function renderQuizForModule(m){
+const wrap=$(`#quiz-${m.id}`);
+wrap.innerHTML='';
+m.quiz.forEach((q,idx)=>{
+const card=document.createElement('div');
+card.className='card quiz-question-card';
+const opts=q.options.map(o=>`<label class="quiz-option"><input type="radio" name="${q.id}" value="${o.key}"><span>${o.key}) ${o.label}</span></label>`).join('');
+card.innerHTML=`<strong>${idx+1}. ${q.text}</strong><div class="quiz-options">${opts}</div>`;
+wrap.appendChild(card);
+});
+const submit=document.createElement('button');
+submit.className='btn btn-primary';
+submit.textContent='Enviar evaluación';
+submit.addEventListener('click',()=>gradeQuizModule(m));
+wrap.appendChild(submit);
+wrap.style.display='block';
+}
 function gradeQuizModule(m){let correct=0; m.quiz.forEach(q=>{const c=document.querySelector(`input[name="${q.id}"]:checked`); if(c&&c.value===q.correct) correct++;}); const PASS_PCT=80; const scorePct=Math.round((correct/m.quiz.length)*100); state.quizzes=state.quizzes||{}; state.quizzes[m.id]={correct,total:m.quiz.length,scorePct,passed:scorePct>=PASS_PCT}; persist(); const res=$(`#res-${m.id}`); res.style.display='block'; res.textContent=`Resultado: ${correct}/${m.quiz.length} (${scorePct}%). ${state.quizzes[m.id].passed?'✅ Aprobado':'❌ No aprobado'}.`; const quizWrap=$(`#quiz-${m.id}`); if(quizWrap){setTimeout(()=>{quizWrap.style.display='none';},500);} if(state.quizzes[m.id].passed){const btn=$(`#btn-${m.id}`); if(btn){btn.textContent='Aprobado ✓'; btn.classList.remove('btn-primary'); btn.classList.add('btn-success');} setTimeout(()=>syncToCloud(true),300);} updateGlobalProgress(); updateModuleLocksAndButtons(state.course?.modules||[]);}
 function updateGlobalProgress(){const spec=(state.profile?.spec||'').trim(); if(!spec||!TIPOS_MODULO.includes(spec)){ $('#progress').style.display='none'; $('#modules').style.display='none'; $('#certificado').classList.remove('show'); return; } const modulesDef=pickModulesFor(spec); state.course={spec,modules:modulesDef}; const totalVideos=modulesDef.reduce((a,m)=>a+m.videos.length,0); const doneVideos=modulesDef.reduce((a,m)=>a+m.videos.filter(v=>(state.videosDone?.[m.id]||{})[v.yt]).length,0); const pct=totalVideos?Math.round((doneVideos/totalVideos)*100):0; $('#progress').style.display='block'; $('#modules').style.display='grid'; $('#bar').style.width=pct+'%'; const evalsPassed=modulesDef.filter(m=>state.quizzes?.[m.id]?.passed).length; const allPassed=modulesDef.length>0&&modulesDef.every(m=>state.quizzes?.[m.id]?.passed); $('#progress-label').textContent=`${pct}% completado — Videos ${doneVideos}/${totalVideos} • Evaluaciones aprobadas ${evalsPassed}/${modulesDef.length}${allPassed?' • ✅ Listo para certificar':''}`; if(allPassed){const preferName=state.profile?.name||auth.currentUser?.displayName||''; const preferEmail=state.profile?.email||auth.currentUser?.email||''; $('#cert-nombre').textContent=preferName; $('#cert-email').textContent=preferEmail?`Correo electrónico: ${preferEmail}`:''; $('#cert-modulo').textContent=state.profile?.spec||''; $('#cert-fecha').textContent=`Fecha: ${new Date().toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'})}`; $('#certificado').classList.add('show');} else $('#certificado').classList.remove('show');}
 function hydrateUIFromState(){fillProfileForm(); if(profileComplete()){setProfileReadonly(true); $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.'; renderAllByTrack((state.profile?.spec||'').trim()); updateGlobalProgress();} else {setProfileReadonly(false); $('#pf-help').textContent='Completa todos los campos para habilitar los módulos.'; $('#progress').style.display='none'; $('#modules').style.display='none'; $('#certificado').classList.remove('show'); lastRenderedTrack='';}}
