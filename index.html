@@ -70,8 +70,8 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .spinner{width:18px;height:18px;border:3px solid #c7d2fe;border-top-color:#3730a3;border-radius:999px;animation:spin .8s linear infinite}
 .cert-actions{display:flex;justify-content:center;gap:10px;margin-top:20px}
 .certificate-shell{position:relative;background:#fff;min-height:1120px;padding:72px 76px;overflow:hidden;border:6px solid #781C38;border-radius:18px}
-.certificate-shell::before,.certificate-shell::after{content:'';position:absolute;pointer-events:none}
-.certificate-shell::before{top:0;right:0;width:320px;height:240px;background:linear-gradient(135deg, transparent 0 18%, #8d0f4f 18% 70%, #d4a23a 70% 72%, transparent 72% 100%)}
+.certificate-shell::before,.certificate-shell::after{left:0;bottom:0;width:360px;height:300px;background:linear-gradient(315deg, transparent 0 12%, #781C38 12% 66%, #D4A23A 66% 67.5%, #781C38 67.5% 84%, transparent 84% 100%)}
+.certificate-shell::before{top:0;right:0;width:470px;height:330px;background:linear-gradient(135deg, transparent 0 10%, #781C38 10% 66%, #D4A23A 66% 67.5%, #781C38 67.5% 84%, transparent 84% 100%)}
 .certificate-shell::after{left:0;bottom:0;width:290px;height:240px;background:linear-gradient(315deg, transparent 0 18%, #8d0f4f 18% 70%, #d4a23a 70% 72%, transparent 72% 100%)}
 .cert-topmark{position:absolute;left:36px;top:28px;width:78px;height:78px;border-radius:12px;background:#781C38;display:grid;place-items:center;color:#ffffff;font-weight:900;font-size:32px;font-style:italic;box-shadow:0 8px 18px rgba(0,0,0,.10);letter-spacing:1px}
 .cert-print-title{font-family:Georgia, 'Times New Roman', serif;font-size:78px;line-height:1;color:#8d0f4f;letter-spacing:1px;text-align:center;margin:34px 0 10px}
@@ -805,14 +805,43 @@ document.addEventListener("click",(e)=>{
   inp.type=inp.type==="password"?"text":"password";
 });
 
-const oldPrintBtn=$("#btn-print-cert");
-if(oldPrintBtn){
-  oldPrintBtn.addEventListener("click",()=>window.print());
+async function downloadCertificatePDF(){
+  const source=document.getElementById("certificado-pdf");
+  if(!source || !window.html2canvas || !window.jspdf) return;
+
+  const clone=source.cloneNode(true);
+  clone.style.display="block";
+  clone.style.position="fixed";
+  clone.style.left="-10000px";
+  clone.style.top="0";
+  clone.style.width="1600px";
+  clone.style.minHeight="900px";
+  clone.style.height="900px";
+  clone.style.zIndex="-1";
+  document.body.appendChild(clone);
+
+  try{
+    const canvas=await html2canvas(clone,{scale:2,backgroundColor:"#ffffff",useCORS:true});
+    const imgData=canvas.toDataURL("imagePNG",1.0);
+    const jsPDFCtor=window.jspdf.jsPDF;
+    const pdf=new jsPDFCtor({orientation:"landscape",unit:"mm",format:"a4"});
+    const pageWidth=pdf.internal.pageSize.getWidth();
+    const pageHeight=pdf.internal.pageSize.getHeight();
+    pdf.addImage(imgData,"PNG",0,0,pageWidth,pageHeight);
+    let safeName=(document.getElementById("cert-nombre")?.textContent || "certificado").trim();
+    safeName=safeName.split(" ").join("_");
+    pdf.save("Certificado_Aprobacion_"+safeName+".pdf");
+  }catch(e){
+    console.error("No se pudo generar el PDF",e);
+    alert("No se pudo generar el certificado en PDF.");
+  }finally{
+    clone.remove();
+  }
 }
 
-const downloadBtn=$("#btn-download-cert");
+const downloadBtn=document.getElementById("btn-download-cert");
 if(downloadBtn){
-  downloadBtn.addEventListener("click",()=>window.print());
+  downloadBtn.addEventListener("click",downloadCertificatePDF);
 }
 
 function setTab(which){
