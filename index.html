@@ -38,9 +38,11 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .footer{margin-top:24px;color:var(--muted);font-size:13px}
 #certificado{display:none}
 #certificado.show{display:block}
+.certificate-shell{display:none}
 @media print{
   .no-print{display:none !important}
   #certificado{display:block !important}
+  .certificate-shell{display:block !important}
   body{background:#fff}
   .container{max-width:none;padding:0}
 }
@@ -67,6 +69,35 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .loading-card{background:#fff;padding:20px 24px;border-radius:18px;box-shadow:0 10px 24px rgba(0,0,0,.08);display:flex;align-items:center;gap:12px;font-weight:700;color:#3730a3}
 .spinner{width:18px;height:18px;border:3px solid #c7d2fe;border-top-color:#3730a3;border-radius:999px;animation:spin .8s linear infinite}
 .cert-actions{display:flex;justify-content:center;gap:10px;margin-top:20px}
+.certificate-shell{position:relative;background:#fff;min-height:1120px;padding:72px 76px;overflow:hidden}
+.certificate-shell::before,.certificate-shell::after{content:'';position:absolute;pointer-events:none}
+.certificate-shell::before{top:0;right:0;width:320px;height:240px;background:linear-gradient(135deg, transparent 0 18%, #8d0f4f 18% 70%, #d4a23a 70% 72%, transparent 72% 100%)}
+.certificate-shell::after{left:0;bottom:0;width:290px;height:240px;background:linear-gradient(315deg, transparent 0 18%, #8d0f4f 18% 70%, #d4a23a 70% 72%, transparent 72% 100%)}
+.cert-topmark{position:absolute;left:36px;top:28px;width:78px;height:78px;border-radius:12px;background:var(--brand);display:grid;place-items:center;color:#fff;font-weight:800;font-size:30px;font-style:italic;box-shadow:0 8px 18px rgba(0,0,0,.10)}
+.cert-print-title{font-family:Georgia, 'Times New Roman', serif;font-size:78px;line-height:1;color:#8d0f4f;letter-spacing:1px;text-align:center;margin:34px 0 10px}
+.cert-divider{display:flex;align-items:center;justify-content:center;gap:14px;margin:8px 0 28px;color:#111}
+.cert-divider .line{height:1px;width:120px;background:#111}
+.cert-divider .dot{font-size:18px;line-height:1}
+.cert-body{text-align:center;position:relative;z-index:1}
+.cert-label{font-family:Georgia, 'Times New Roman', serif;font-size:30px;color:#444;margin:32px 0 12px}
+.cert-person{font-size:46px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:#111;margin:0 0 12px}
+.cert-mail{font-size:22px;color:#374151;margin:0 0 34px}
+.cert-text{font-family:Georgia, 'Times New Roman', serif;font-size:26px;line-height:1.65;color:#5b5b5b;max-width:1100px;margin:0 auto}
+.cert-text strong{color:#4b1023}
+.cert-sign-wrap{margin-top:96px;text-align:center}
+.cert-sign-line{width:280px;height:2px;background:#d6a1b4;margin:0 auto 12px}
+.cert-sign-text{font-family:Georgia, 'Times New Roman', serif;font-size:24px;letter-spacing:.4px;color:#333}
+.cert-date-print{position:absolute;right:52px;bottom:34px;font-size:22px;color:#222}
+@media print{
+  @page{size:A4 landscape;margin:0}
+  #certificado{padding:0 !important;margin:0 !important}
+  .certificate-shell{min-height:auto;height:100vh;padding:54px 64px}
+}
+@media (max-width:900px){
+  .cert-print-title{font-size:54px}
+  .cert-person{font-size:32px}
+  .cert-text{font-size:20px}
+}
 </style>
 </head>
 <body>
@@ -200,19 +231,30 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
   <section id="modules" class="grid no-print" style="display:none"></section>
 
   <section id="certificado" class="container">
-    <div class="cert-card">
-      <div class="cert-title">Certificado de Aprobación</div>
-      <p>Otorgado a</p>
-      <div class="cert-name" id="cert-nombre">Nombre Apellido</div>
-      <div class="cert-meta" id="cert-email" style="margin-bottom:10px"></div>
-      <p>por completar satisfactoriamente el curso online de <strong>Inducción a PEP - SOUL MV</strong>.</p>
-      <div class="cert-meta">
-        <div id="cert-fecha"></div>
-        <div>Hospital Vozandes Quito - TICS</div>
+    <div class="certificate-shell" id="certificado-pdf">
+      <div class="cert-topmark">HvQ</div>
+      <div class="cert-print-title">CERTIFICADO</div>
+      <div class="cert-divider">
+        <span class="dot">✦</span>
+        <span class="line"></span>
+        <span class="dot">✧</span>
+        <span class="line"></span>
+        <span class="dot">✦</span>
       </div>
+      <div class="cert-body">
+        <div class="cert-label">Otorgado a</div>
+        <div class="cert-person" id="cert-nombre">Nombre Apellido</div>
+        <div class="cert-mail" id="cert-email"></div>
+        <div class="cert-text">Por completar satisfactoriamente el curso online de <strong>Inducción a PEP - SOUL MV</strong>.</div>
+        <div class="cert-sign-wrap">
+          <div class="cert-sign-line"></div>
+          <div class="cert-sign-text">Hospital Vozandes Quito - TICS</div>
+        </div>
+      </div>
+      <div class="cert-date-print" id="cert-fecha"></div>
     </div>
     <div class="cert-actions no-print">
-      <button id="btn-print-cert" class="btn btn-primary">Imprimir certificado</button>
+      <button id="btn-download-cert" class="btn btn-primary">Descargar certificado en PDF</button>
     </div>
   </section>
 
