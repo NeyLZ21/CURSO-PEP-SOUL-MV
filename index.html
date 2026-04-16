@@ -34,7 +34,96 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 .auth-error{color:var(--danger)!important;font-weight:600}.auth-ok{color:var(--ok)!important;font-weight:600}
 .loading-screen{display:none;position:fixed;inset:0;background:rgba(248,250,252,.92);backdrop-filter:blur(2px);z-index:9999;align-items:center;justify-content:center}.loading-card{background:#fff;padding:20px 24px;border-radius:18px;box-shadow:0 10px 24px rgba(0,0,0,.08);display:flex;align-items:center;gap:12px;font-weight:700;color:#3730a3}.spinner{width:18px;height:18px;border:3px solid #c7d2fe;border-top-color:#3730a3;border-radius:999px;animation:spin .8s linear infinite}
 .cert-actions{display:flex;justify-content:center;gap:10px;margin-top:20px}
-.cert-card{background:#fff;border:4px solid var(--brand);border-radius:20px;padding:40px;text-align:center}.cert-title{font-size:28px;font-weight:800;margin:0 0 10px;color:var(--brand)}.cert-name{font-size:26px;font-weight:800;margin:8px 0}.cert-meta{color:#374151;margin-top:10px}
+.cert-card{
+position:relative;
+background:#ffffff;
+border:6px solid var(--brand);
+border-radius:18px;
+padding:80px 70px;
+text-align:center;
+max-width:1100px;
+margin:0 auto;
+overflow:hidden;
+}
+.cert-card::before{
+content:"";
+position:absolute;
+top:0;
+right:0;
+width:160px;
+height:160px;
+background:var(--brand);
+clip-path:polygon(100% 0, 0 0, 100% 100%);
+}
+.cert-card::after{
+content:"";
+position:absolute;
+bottom:0;
+left:0;
+width:120px;
+height:120px;
+background:var(--brand);
+clip-path:polygon(0 100%, 0 0, 100% 100%);
+}
+.cert-line{
+width:140px;
+height:3px;
+background:#d4af37;
+margin:20px auto;
+}
+.cert-title{
+font-size:48px;
+font-weight:800;
+color:var(--brand);
+letter-spacing:2px;
+margin-bottom:10px;
+}
+.cert-subtitle{
+font-size:22px;
+margin-bottom:10px;
+color:#444;
+}
+.cert-name{
+font-size:36px;
+font-weight:700;
+margin:18px 0;
+letter-spacing:1px;
+position:relative;
+z-index:1;
+}
+.cert-email{
+font-size:18px;
+color:#555;
+margin-bottom:20px;
+position:relative;
+z-index:1;
+}
+.cert-text{
+font-size:22px;
+line-height:1.6;
+margin:20px auto;
+max-width:800px;
+position:relative;
+z-index:1;
+}
+.cert-course{
+color:var(--brand);
+font-weight:700;
+}
+.cert-module{
+margin-top:15px;
+font-size:20px;
+font-weight:600;
+position:relative;
+z-index:1;
+}
+.cert-meta{
+margin-top:30px;
+font-size:18px;
+color:#444;
+position:relative;
+z-index:1;
+}
 #certificado-pdf{display:none}
 </style>
 </head>
@@ -42,13 +131,65 @@ button,.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;cursor
 <div id="global-loading" class="loading-screen"><div class="loading-card"><div class="spinner"></div><div>Cargando perfil y avance…</div></div></div>
 <div class="container">
 <header class="no-print"><div class="logo">HVQ</div><div style="flex:1"><h1>Inducción a PEP - SOUL MV</h1><div class="subtitle">Curso para Médicos y estudiantes en formación • By Dr. Ney Loor</div></div><div style="display:flex;gap:8px;align-items:center"><span id="auth-user" class="muted" style="font-size:13px"></span><button id="btn-logout" class="btn btn-muted" style="display:none">Cerrar sesión</button></div></header>
-<section id="step-welcome" class="card no-print"><div class="grid cols-2" style="align-items:start"><div><h2 style="margin:0 0 6px">Acceso</h2><p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña.</p><div class="grid" id="auth-forms"><div style="display:flex; gap:8px; margin-bottom:8px"><button id="tab-login" class="btn btn-primary">Iniciar sesión</button><button id="tab-register" class="btn btn-muted">Registrarme</button></div><div id="form-login"><label>Correo electrónico<br><input id="login-email" type="email" placeholder="usuario@dominio.com" required autocomplete="username email"></label><label>Contraseña<br><div class="input-wrap"><input id="login-pass" type="password" placeholder="••••••••" required autocomplete="current-password"><button type="button" class="eye" data-eye="#login-pass">👁️</button></div></label><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" id="btn-login">Confirmar</button><button class="btn" id="btn-reset" style="background:#e5e7eb">Restablecer contraseña</button></div></div><div id="form-register" style="display:none"><label>Correo electrónico<br><input id="reg-email" type="email" placeholder="usuario@dominio.com" required autocomplete="email"></label><label>Contraseña<br><div class="input-wrap"><input id="reg-pass" type="password" placeholder="Mínimo 6 caracteres" required autocomplete="new-password"><button type="button" class="eye" data-eye="#reg-pass">👁️</button></div></label><label>Confirmar contraseña<br><div class="input-wrap"><input id="reg-pass2" type="password" placeholder="Repite la contraseña" required autocomplete="new-password"><button type="button" class="eye" data-eye="#reg-pass2">👁️</button></div></label><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-muted" id="btn-register-2">Crear cuenta</button></div></div><div id="auth-msg" class="muted" style="min-height:18px"></div></div><div id="verify-box" class="alert alert-warn" style="display:none;margin-top:10px"><strong>Verifica tu correo:</strong> te enviamos un email de verificación. Confírmalo y vuelve a esta pantalla para continuar.<div style="display:flex;gap:8px;margin-top:8px"><button id="btn-check-verify" class="btn btn-primary">Ya verifiqué mi correo</button><button id="btn-resend-verify" class="btn btn-muted">Reenviar verificación</button></div></div></div><div class="card" style="background:#fff7f7;border:1px dashed #fda4af"><div class="badge"><span>ℹ️</span> Requisitos</div><ul><li>Registrarse y validar correo electrónico</li><li>Completar el video de cada módulo para habilitar su evaluación</li><li>Aprobar la evaluación del módulo anterior para desbloquear el siguiente</li><li>Descargar el certificado al finalizar</li></ul></div></div></section>
-<section id="profile" class="card no-print" style="display:none;margin:18px 0"><h2 style="margin:0 0 8px">Mi perfil</h2><p class="muted" id="pf-help">Completa todos los campos para habilitar los módulos.</p><div class="grid cols-2"><label>Nombre completo (para certificado)<br><input id="pf-name" type="text" required></label><label style="grid-column:1/-1">Módulo<br><select id="pf-spec"><option value="">Selecciona el módulo…</option><option value="ESTUDIANTES EN FORMACION">ESTUDIANTES EN FORMACION</option><option value="CLÍNICO/QUIRÚRGICO">CLÍNICO/QUIRÚRGICO</option><option value="CLÍNICO">CLÍNICO</option><option value="SOLO UCI">SOLO UCI</option><option value="SOLO EMERGENCIAS">SOLO EMERGENCIAS</option><option value="SOLO CONSULTA EXTERNA O RADIOLOGÍA">SOLO CONSULTA EXTERNA O RADIOLOGÍA</option></select><small class="muted">Selecciona de la lista. Esto define los módulos y evaluaciones que verás.</small></label></div><div class="actions" style="display:flex;gap:8px;margin-top:10px"><button id="btn-edit-profile" class="btn btn-muted" style="display:none">Modificar</button><button id="btn-cancel-profile" class="btn btn-muted" style="display:none">Cancelar</button><button id="btn-save-profile" class="btn btn-primary" disabled>Guardar perfil</button></div><div id="pf-msg" class="muted" style="margin-top:6px"></div></section>
+
+<section id="step-welcome" class="card no-print">
+<div class="grid cols-2" style="align-items:start">
+<div>
+<h2 style="margin:0 0 6px">Acceso</h2>
+<p class="muted" style="margin:0 0 14px">Inicia sesión o regístrate con tu correo y una contraseña.</p>
+<div class="grid" id="auth-forms">
+<div style="display:flex; gap:8px; margin-bottom:8px"><button id="tab-login" class="btn btn-primary">Iniciar sesión</button><button id="tab-register" class="btn btn-muted">Registrarme</button></div>
+<div id="form-login">
+<label>Correo electrónico<br><input id="login-email" type="email" placeholder="usuario@dominio.com" required autocomplete="username email"></label>
+<label>Contraseña<br><div class="input-wrap"><input id="login-pass" type="password" placeholder="••••••••" required autocomplete="current-password"><button type="button" class="eye" data-eye="#login-pass">👁️</button></div></label>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" id="btn-login">Confirmar</button><button class="btn" id="btn-reset" style="background:#e5e7eb">Restablecer contraseña</button></div>
+</div>
+<div id="form-register" style="display:none">
+<label>Correo electrónico<br><input id="reg-email" type="email" placeholder="usuario@dominio.com" required autocomplete="email"></label>
+<label>Contraseña<br><div class="input-wrap"><input id="reg-pass" type="password" placeholder="Mínimo 6 caracteres" required autocomplete="new-password"><button type="button" class="eye" data-eye="#reg-pass">👁️</button></div></label>
+<label>Confirmar contraseña<br><div class="input-wrap"><input id="reg-pass2" type="password" placeholder="Repite la contraseña" required autocomplete="new-password"><button type="button" class="eye" data-eye="#reg-pass2">👁️</button></div></label>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-muted" id="btn-register-2">Crear cuenta</button></div>
+</div>
+<div id="auth-msg" class="muted" style="min-height:18px"></div>
+</div>
+<div id="verify-box" class="alert alert-warn" style="display:none;margin-top:10px"><strong>Verifica tu correo:</strong> te enviamos un email de verificación. Confírmalo y vuelve a esta pantalla para continuar.<div style="display:flex;gap:8px;margin-top:8px"><button id="btn-check-verify" class="btn btn-primary">Ya verifiqué mi correo</button><button id="btn-resend-verify" class="btn btn-muted">Reenviar verificación</button></div></div>
+</div>
+<div class="card" style="background:#fff7f7;border:1px dashed #fda4af"><div class="badge"><span>ℹ️</span> Requisitos</div><ul><li>Registrarse y validar correo electrónico</li><li>Completar el video de cada módulo para habilitar su evaluación</li><li>Aprobar la evaluación del módulo anterior para desbloquear el siguiente</li><li>Descargar el certificado al finalizar</li></ul></div>
+</div>
+</section>
+
+<section id="profile" class="card no-print" style="display:none;margin:18px 0">
+<h2 style="margin:0 0 8px">Mi perfil</h2>
+<p class="muted" id="pf-help">Completa todos los campos para habilitar los módulos.</p>
+<div class="grid cols-2">
+<label>Nombre completo (para certificado)<br><input id="pf-name" type="text" required></label>
+<label style="grid-column:1/-1">Módulo<br><select id="pf-spec"><option value="">Selecciona el módulo…</option><option value="ESTUDIANTES EN FORMACION">ESTUDIANTES EN FORMACION</option><option value="CLÍNICO/QUIRÚRGICO">CLÍNICO/QUIRÚRGICO</option><option value="CLÍNICO">CLÍNICO</option><option value="SOLO UCI">SOLO UCI</option><option value="SOLO EMERGENCIAS">SOLO EMERGENCIAS</option><option value="SOLO CONSULTA EXTERNA O RADIOLOGÍA">SOLO CONSULTA EXTERNA O RADIOLOGÍA</option></select><small class="muted">Selecciona de la lista. Esto define los módulos y evaluaciones que verás.</small></label>
+</div>
+<div class="actions" style="display:flex;gap:8px;margin-top:10px"><button id="btn-edit-profile" class="btn btn-muted" style="display:none">Modificar</button><button id="btn-cancel-profile" class="btn btn-muted" style="display:none">Cancelar</button><button id="btn-save-profile" class="btn btn-primary" disabled>Guardar perfil</button></div>
+<div id="pf-msg" class="muted" style="margin-top:6px"></div>
+</section>
+
 <section id="progress" class="no-print" style="display:none;margin:18px 0"><div class="card"><div class="grid cols-2" style="align-items:center"><div><strong>Progreso del curso</strong><div class="muted" id="progress-label">0% completado</div></div><div class="progress"><span id="bar" style="width:0%"></span></div></div></div></section>
+
 <section id="modules" class="grid no-print" style="display:none"></section>
-<section id="certificado" class="container"><div class="cert-card" id="certificado-pdf"><div class="cert-title">Certificado de Aprobación</div><p>Otorgado a</p><div class="cert-name" id="cert-nombre">Nombre Apellido</div><div class="cert-meta" id="cert-email" style="margin-bottom:10px"></div><p>por completar satisfactoriamente el curso online de <strong>Inducción a PEP - SOUL MV</strong>.</p><div class="cert-meta"><div id="cert-fecha"></div><div>Hospital Vozandes Quito - TICS</div></div></div><div class="cert-actions no-print"><button id="btn-download-cert" class="btn btn-primary">Descargar certificado en PDF</button></div></section>
+
+<section id="certificado" class="container">
+<div class="cert-card" id="certificado-pdf">
+<div class="cert-title">CERTIFICADO</div>
+<div class="cert-line"></div>
+<div class="cert-subtitle">Otorgado a</div>
+<div class="cert-name" id="cert-nombre">Nombre Apellido</div>
+<div class="cert-email" id="cert-email"></div>
+<div class="cert-text">Por completar satisfactoriamente el curso online de <span class="cert-course">Inducción a PEP - SOUL MV</span></div>
+<div class="cert-module">Módulo: <span id="cert-modulo"></span></div>
+<div class="cert-meta"><div id="cert-fecha"></div><div>Hospital Vozandes Quito - TICS</div></div>
+</div>
+<div class="cert-actions no-print"><button id="btn-download-cert" class="btn btn-primary">Descargar certificado en PDF</button></div>
+</section>
+
 <div class="footer no-print">© <span id="year"></span> Hospital Vozandes — Inducción a PEP - SOUL MV - Desarrollado por Dr. Ney Loor</div>
 </div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://www.youtube.com/iframe_api"></script>
@@ -130,7 +271,7 @@ function updateModuleLocksAndButtons(modulesDef){modulesDef.forEach((m,modIdx)=>
 function maybeEnableQuiz(m){const canStart=m.videos.every(v=>(state.videosDone?.[m.id]||{})[v.yt]); const btn=$(`#btn-${m.id}`); const hint=$(`#hint-${m.id}`); if(btn&&hint){btn.disabled=!canStart; hint.textContent=canStart?'Listo para evaluar':'Completa el video para habilitar';}}
 function renderQuizForModule(m){const wrap=$(`#quiz-${m.id}`); wrap.innerHTML=''; m.quiz.forEach((q,idx)=>{const card=document.createElement('div'); card.className='card'; card.style.marginBottom='8px'; const opts=q.options.map(o=>`<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="radio" name="${q.id}" value="${o.key}"> <span>${o.key}) ${o.label}</span></label>`).join(''); card.innerHTML=`<strong>${idx+1}. ${q.text}</strong><div style="margin-top:6px">${opts}</div>`; wrap.appendChild(card);}); const submit=document.createElement('button'); submit.className='btn btn-primary'; submit.textContent='Enviar evaluación'; submit.addEventListener('click',()=>gradeQuizModule(m)); wrap.appendChild(submit); wrap.style.display='block';}
 function gradeQuizModule(m){let correct=0; m.quiz.forEach(q=>{const c=document.querySelector(`input[name="${q.id}"]:checked`); if(c&&c.value===q.correct) correct++;}); const PASS_PCT=80; const scorePct=Math.round((correct/m.quiz.length)*100); state.quizzes=state.quizzes||{}; state.quizzes[m.id]={correct,total:m.quiz.length,scorePct,passed:scorePct>=PASS_PCT}; persist(); const res=$(`#res-${m.id}`); res.style.display='block'; res.textContent=`Resultado: ${correct}/${m.quiz.length} (${scorePct}%). ${state.quizzes[m.id].passed?'✅ Aprobado':'❌ No aprobado'}.`; const quizWrap=$(`#quiz-${m.id}`); if(quizWrap){setTimeout(()=>{quizWrap.style.display='none';},500);} if(state.quizzes[m.id].passed){const btn=$(`#btn-${m.id}`); if(btn){btn.textContent='Aprobado ✓'; btn.classList.remove('btn-primary'); btn.classList.add('btn-success');} setTimeout(()=>syncToCloud(true),300);} updateGlobalProgress(); updateModuleLocksAndButtons(state.course?.modules||[]);}
-function updateGlobalProgress(){const spec=(state.profile?.spec||'').trim(); if(!spec||!TIPOS_MODULO.includes(spec)){ $('#progress').style.display='none'; $('#modules').style.display='none'; $('#certificado').classList.remove('show'); return; } const modulesDef=pickModulesFor(spec); state.course={spec,modules:modulesDef}; const totalVideos=modulesDef.reduce((a,m)=>a+m.videos.length,0); const doneVideos=modulesDef.reduce((a,m)=>a+m.videos.filter(v=>(state.videosDone?.[m.id]||{})[v.yt]).length,0); const pct=totalVideos?Math.round((doneVideos/totalVideos)*100):0; $('#progress').style.display='block'; $('#modules').style.display='grid'; $('#bar').style.width=pct+'%'; const evalsPassed=modulesDef.filter(m=>state.quizzes?.[m.id]?.passed).length; const allPassed=modulesDef.length>0&&modulesDef.every(m=>state.quizzes?.[m.id]?.passed); $('#progress-label').textContent=`${pct}% completado — Videos ${doneVideos}/${totalVideos} • Evaluaciones aprobadas ${evalsPassed}/${modulesDef.length}${allPassed?' • ✅ Listo para certificar':''}`; if(allPassed){const preferName=state.profile?.name||auth.currentUser?.displayName||''; const preferEmail=state.profile?.email||auth.currentUser?.email||''; $('#cert-nombre').textContent=preferName; $('#cert-email').textContent=preferEmail?`Correo electrónico: ${preferEmail}`:''; $('#cert-fecha').textContent=`Fecha: ${new Date().toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'})}`; $('#certificado').classList.add('show');} else $('#certificado').classList.remove('show');}
+function updateGlobalProgress(){const spec=(state.profile?.spec||'').trim(); if(!spec||!TIPOS_MODULO.includes(spec)){ $('#progress').style.display='none'; $('#modules').style.display='none'; $('#certificado').classList.remove('show'); return; } const modulesDef=pickModulesFor(spec); state.course={spec,modules:modulesDef}; const totalVideos=modulesDef.reduce((a,m)=>a+m.videos.length,0); const doneVideos=modulesDef.reduce((a,m)=>a+m.videos.filter(v=>(state.videosDone?.[m.id]||{})[v.yt]).length,0); const pct=totalVideos?Math.round((doneVideos/totalVideos)*100):0; $('#progress').style.display='block'; $('#modules').style.display='grid'; $('#bar').style.width=pct+'%'; const evalsPassed=modulesDef.filter(m=>state.quizzes?.[m.id]?.passed).length; const allPassed=modulesDef.length>0&&modulesDef.every(m=>state.quizzes?.[m.id]?.passed); $('#progress-label').textContent=`${pct}% completado — Videos ${doneVideos}/${totalVideos} • Evaluaciones aprobadas ${evalsPassed}/${modulesDef.length}${allPassed?' • ✅ Listo para certificar':''}`; if(allPassed){const preferName=state.profile?.name||auth.currentUser?.displayName||''; const preferEmail=state.profile?.email||auth.currentUser?.email||''; $('#cert-nombre').textContent=preferName; $('#cert-email').textContent=preferEmail?`Correo electrónico: ${preferEmail}`:''; $('#cert-modulo').textContent=state.profile?.spec||''; $('#cert-fecha').textContent=`Fecha: ${new Date().toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'})}`; $('#certificado').classList.add('show');} else $('#certificado').classList.remove('show');}
 function hydrateUIFromState(){fillProfileForm(); if(profileComplete()){setProfileReadonly(true); $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.'; renderAllByTrack((state.profile?.spec||'').trim()); updateGlobalProgress();} else {setProfileReadonly(false); $('#pf-help').textContent='Completa todos los campos para habilitar los módulos.'; $('#progress').style.display='none'; $('#modules').style.display='none'; $('#certificado').classList.remove('show'); lastRenderedTrack='';}}
 function renderAllByTrack(track){if(!track||!TIPOS_MODULO.includes(track)){lastRenderedTrack=''; state.course={spec:'',modules:[]}; persist(); $('#progress').style.display='none'; $('#modules').style.display='none'; $('#certificado').classList.remove('show'); return;} const modulesDef=pickModulesFor(track); state.course={spec:track,modules:modulesDef}; persist(); $('#progress').style.display='block'; $('#modules').style.display='grid'; if(lastRenderedTrack!==track){renderModules(modulesDef); lastRenderedTrack=track;} else updateModuleLocksAndButtons(modulesDef); updateGlobalProgress();}
 function subscribeUserDoc(uid){if(unsubUserDoc){try{unsubUserDoc();}catch(_){} unsubUserDoc=null;} unsubUserDoc=db.collection('users').doc(uid).onSnapshot(snap=>{if(!snap.exists)return; applyCloudData(snap.data()||{}); hydrateUIFromState();},err=>console.warn('Snapshot error',err));}
