@@ -274,10 +274,31 @@ line-height:1.6;
 <script>
 const firebaseConfig={apiKey:"AIzaSyBSfmhvU6e778w7S6GQd3WDRFHF7wE0iZ8",authDomain:"induccion-pep-hvq.firebaseapp.com",projectId:"induccion-pep-hvq",storageBucket:"induccion-pep-hvq.firebasestorage.app",messagingSenderId:"651724182766",appId:"1:651724182766:web:4eec9be43e9e8e60dc0fff",measurementId:"G-Z62L1CCYP1"};
 if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-const auth=firebase.auth(); const db=firebase.firestore(); auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.warn); try{firebase.firestore().enablePersistence({synchronizeTabs:true}).catch(()=>{});}catch(_){ }
-const $=s=>document.querySelector(s); document.getElementById('year').textContent=new Date().getFullYear();
-const MSGS={"auth/email-already-in-use":"Ese correo ya tiene una cuenta. Usa Iniciar sesión.","auth/invalid-email":"El formato del correo no es válido.","auth/missing-email":"Ingresa tu correo.","auth/missing-password":"Ingresa tu contraseña.","auth/weak-password":"La contraseña es muy corta (mínimo 6).","auth/user-not-found":"Correo no registrado.","auth/wrong-password":"Contraseña incorrecta.","auth/invalid-credential":"Contraseña incorrecta.","auth/invalid-login-credentials":"Contraseña incorrecta.","auth/too-many-requests":"Demasiados intentos. Intenta más tarde.","auth/network-request-failed":"Error de red. Revisa tu conexión."};
+const auth=firebase.auth();
+const db=firebase.firestore();
+
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.warn);
+try{firebase.firestore().enablePersistence({synchronizeTabs:true}).catch(()=>{});}catch(_){}
+
+const $=s=>document.querySelector(s);
+document.getElementById('year').textContent=new Date().getFullYear();
+
+const MSGS={
+"auth/email-already-in-use":"Ese correo ya tiene una cuenta. Usa Iniciar sesión.",
+"auth/invalid-email":"El formato del correo no es válido.",
+"auth/missing-email":"Ingresa tu correo.",
+"auth/missing-password":"Ingresa tu contraseña.",
+"auth/weak-password":"La contraseña es muy corta (mínimo 6).",
+"auth/user-not-found":"Correo no registrado.",
+"auth/wrong-password":"Contraseña incorrecta.",
+"auth/invalid-credential":"Contraseña incorrecta.",
+"auth/invalid-login-credentials":"Contraseña incorrecta.",
+"auth/too-many-requests":"Demasiados intentos. Intenta más tarde.",
+"auth/network-request-failed":"Error de red. Revisa tu conexión."
+};
+
 const TIPOS_MODULO=["ESTUDIANTES EN FORMACION","CLÍNICO/QUIRÚRGICO","CLÍNICO","SOLO UCI","SOLO EMERGENCIAS","SOLO CONSULTA EXTERNA O RADIOLOGÍA"];
+
 const MODS_POR_TIPO={
 "ESTUDIANTES EN FORMACION":["GENERALIDADES","HOSPITALIZACIÓN","CENTRO QUIRÚRGICO","CONSULTA EXTERNA","EMERGENCIAS","INDICACIONES PARA PRÁCTICA EVALUADA"],
 "CLÍNICO/QUIRÚRGICO":["GENERALIDADES","HOSPITALIZACIÓN","CENTRO QUIRÚRGICO","CONSULTA EXTERNA","INDICACIONES PARA PRÁCTICA EVALUADA"],
@@ -286,6 +307,7 @@ const MODS_POR_TIPO={
 "SOLO EMERGENCIAS":["GENERALIDADES","EMERGENCIAS","INDICACIONES PARA PRÁCTICA EVALUADA"],
 "SOLO CONSULTA EXTERNA O RADIOLOGÍA":["GENERALIDADES","CONSULTA EXTERNA","INDICACIONES PARA PRÁCTICA EVALUADA"]
 };
+
 const VIDEO_DEFAULTS={
 "GENERALIDADES":["dQw4w9WgXcQ"],
 "HOSPITALIZACIÓN":["kJQP7kiw5Fk"],
@@ -294,108 +316,919 @@ const VIDEO_DEFAULTS={
 "EMERGENCIAS":["2vjPBrBU-TM"],
 "INDICACIONES PARA PRÁCTICA EVALUADA":["RgKAFK5djSk"]
 };
-let CURRENT_UID=null, unsubUserDoc=null, savingProfile=false, lastCloudSyncAt=0, cloudSyncTimer=null, lastRenderedTrack="", players={}, cfgByPid=new Map();
-const keyFor=uid=>`soulmv_${uid||'anon'}`; const defaultState=()=>({profile:{name:'',spec:'',email:''},videosDone:{},quizzes:{},play:{},course:{spec:'',modules:[]}}); let state=defaultState();
-const loadState=uid=>{try{return JSON.parse(localStorage.getItem(keyFor(uid))||'{}');}catch{return {}}}; const persist=()=>localStorage.setItem(keyFor(CURRENT_UID),JSON.stringify(state));
-function msg(t,type='normal'){const el=$('#auth-msg'); if(!el)return; el.textContent=t||''; el.classList.remove('auth-error','auth-ok'); if(type==='error')el.classList.add('auth-error'); if(type==='ok')el.classList.add('auth-ok');}
-function showGlobalLoading(show){const el=$('#global-loading'); if(el) el.style.display=show?'flex':'none';}
+
+let CURRENT_UID=null;
+let unsubUserDoc=null;
+let savingProfile=false;
+let lastCloudSyncAt=0;
+let cloudSyncTimer=null;
+let lastRenderedTrack="";
+let players={};
+let cfgByPid=new Map();
+
+const keyFor=uid=>`soulmv_${uid||'anon'}`;
+const defaultState=()=>({profile:{name:'',spec:'',email:''},videosDone:{},quizzes:{},play:{},course:{spec:'',modules:[]}})
+let state=defaultState();
+
+const loadState=uid=>{try{return JSON.parse(localStorage.getItem(keyFor(uid))||'{}');}catch{return {}}};
+const persist=()=>localStorage.setItem(keyFor(CURRENT_UID),JSON.stringify(state));
+
+function msg(t,type='normal'){
+  const el=$('#auth-msg');
+  if(!el)return;
+  el.textContent=t||'';
+  el.classList.remove('auth-error','auth-ok');
+  if(type==='error')el.classList.add('auth-error');
+  if(type==='ok')el.classList.add('auth-ok');
+}
+
+function showGlobalLoading(show){
+  const el=$('#global-loading');
+  if(el) el.style.display=show?'flex':'none';
+}
+
 const emailOk=e=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((e||'').trim().toLowerCase());
-function normalizeCloudData(data){return{profile:{...(data?.profile||{})},videosDone:{...(data?.videosDone||{})},quizzes:{...(data?.quizzes||{})},play:{...(data?.play||{})}}}
-function applyCloudData(data){const n=normalizeCloudData(data||{}); state.profile=n.profile||{}; state.videosDone=n.videosDone||{}; state.quizzes=n.quizzes||{}; state.play=n.play||{}; persist();}
-async function ensureUserDoc(uid,email=''){const ref=db.collection('users').doc(uid); const snap=await ref.get().catch(()=>null); if(!snap||!snap.exists){await ref.set({profile:{email:email||'',name:'',spec:''},videosDone:{},quizzes:{},play:{},updatedAt:firebase.firestore.FieldValue.serverTimestamp()});} return ref;}
-async function syncToCloud(force=false){try{const uid=auth.currentUser?.uid; if(!uid)return; const now=Date.now(); if(!force&&now-lastCloudSyncAt<4000)return; lastCloudSyncAt=now; await db.collection('users').doc(uid).set({profile:state.profile||{},videosDone:state.videosDone||{},quizzes:state.quizzes||{},play:state.play||{},updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});}catch(e){console.warn('No se pudo guardar en la nube',e);}}
-function scheduleCloudSync(delay=1200){if(cloudSyncTimer) clearTimeout(cloudSyncTimer); cloudSyncTimer=setTimeout(()=>syncToCloud(false),delay);}
-function showLogin(){destroyAllPlayers(); lastRenderedTrack=''; $('#step-welcome').style.display='block'; $('#profile').style.display='none'; $('#progress').style.display='none'; $('#modules').style.display='none'; $('#btn-logout').style.display='none'; $('#verify-box').style.display='none'; $('#certificado').classList.remove('show'); showGlobalLoading(false);}
-function showAppShell(){ $('#step-welcome').style.display='none'; $('#profile').style.display='block'; $('#btn-logout').style.display='inline-flex'; }
-function profileComplete(){const p=state.profile||{}; return !!(p.name&&p.spec&&TIPOS_MODULO.includes(p.spec));}
-function setProfileReadonly(ro){['pf-name','pf-spec'].forEach(id=>{const el=document.getElementById(id); if(!el)return; if(el.tagName==='SELECT') el.disabled=ro; else el.readOnly=ro; el.style.background=ro?'#eef2ff':'#fff';}); $('#btn-edit-profile').style.display=ro?'inline-flex':'none'; $('#btn-cancel-profile').style.display=ro?'none':'inline-flex'; $('#btn-save-profile').style.display=ro?'none':'inline-flex'; $('#btn-save-profile').disabled=true;}
-function fillProfileForm(){ $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||''; $('#pf-spec').value=state.profile?.spec||''; }
-document.addEventListener('input',e=>{if(e.target?.id==='pf-name') $('#btn-save-profile').disabled=false;}); document.addEventListener('change',e=>{if(e.target?.id==='pf-spec') $('#btn-save-profile').disabled=false;});
-document.addEventListener('click',e=>{const btn=e.target.closest('.eye'); if(!btn)return; const inp=document.querySelector(btn.dataset.eye); if(inp) inp.type=inp.type==='password'?'text':'password';});
+
+function normalizeCloudData(data){
+  return{
+    profile:{...(data?.profile||{})},
+    videosDone:{...(data?.videosDone||{})},
+    quizzes:{...(data?.quizzes||{})},
+    play:{...(data?.play||{})}
+  };
+}
+
+function mergeDeepProgress(localObj, cloudObj){
+  const result={...(localObj||{})};
+  for(const k in (cloudObj||{})){
+    if(typeof cloudObj[k]==='object' && cloudObj[k]!==null && !Array.isArray(cloudObj[k])){
+      result[k]=mergeDeepProgress(result[k]||{}, cloudObj[k]);
+    }else{
+      result[k]=cloudObj[k];
+    }
+  }
+  return result;
+}
+
+function applyCloudData(data){
+  const n=normalizeCloudData(data||{});
+
+  if(Object.keys(n.profile||{}).length){
+    state.profile={...(state.profile||{}),...n.profile};
+  }
+
+  state.videosDone=mergeDeepProgress(state.videosDone||{}, n.videosDone||{});
+  state.quizzes=mergeDeepProgress(state.quizzes||{}, n.quizzes||{});
+  state.play=mergeDeepProgress(state.play||{}, n.play||{});
+
+  persist();
+}
+
+async function ensureUserDoc(uid,email=''){
+  const ref=db.collection('users').doc(uid);
+  const snap=await ref.get().catch(()=>null);
+  if(!snap||!snap.exists){
+    await ref.set({
+      profile:{email:email||'',name:'',spec:''},
+      videosDone:{},
+      quizzes:{},
+      play:{},
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }
+  return ref;
+}
+
+async function syncToCloud(force=false){
+  try{
+    const uid=auth.currentUser?.uid;
+    if(!uid)return;
+
+    if(!state.profile?.spec && !state.profile?.name && !Object.keys(state.videosDone||{}).length && !Object.keys(state.quizzes||{}).length){
+      return;
+    }
+
+    const now=Date.now();
+    if(!force&&now-lastCloudSyncAt<4000)return;
+    lastCloudSyncAt=now;
+
+    await db.collection('users').doc(uid).set({
+      profile:state.profile||{},
+      videosDone:state.videosDone||{},
+      quizzes:state.quizzes||{},
+      play:state.play||{},
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    },{merge:true});
+  }catch(e){
+    console.warn('No se pudo guardar en la nube',e);
+  }
+}
+
+function scheduleCloudSync(delay=1200){
+  if(cloudSyncTimer) clearTimeout(cloudSyncTimer);
+  cloudSyncTimer=setTimeout(()=>syncToCloud(false),delay);
+}
+
+function showLogin(){
+  destroyAllPlayers();
+  lastRenderedTrack='';
+  $('#step-welcome').style.display='block';
+  $('#profile').style.display='none';
+  $('#progress').style.display='none';
+  $('#modules').style.display='none';
+  $('#btn-logout').style.display='none';
+  $('#verify-box').style.display='none';
+  $('#certificado').classList.remove('show');
+  showGlobalLoading(false);
+}
+
+function showAppShell(){
+  $('#step-welcome').style.display='none';
+  $('#profile').style.display='block';
+  $('#btn-logout').style.display='inline-flex';
+}
+
+function profileComplete(){
+  const p=state.profile||{};
+  return !!(p.name&&p.spec&&TIPOS_MODULO.includes(p.spec));
+}
+
+function setProfileReadonly(ro){
+  ['pf-name','pf-spec'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    if(el.tagName==='SELECT') el.disabled=ro;
+    else el.readOnly=ro;
+    el.style.background=ro?'#eef2ff':'#fff';
+  });
+  $('#btn-edit-profile').style.display=ro?'inline-flex':'none';
+  $('#btn-cancel-profile').style.display=ro?'none':'inline-flex';
+  $('#btn-save-profile').style.display=ro?'none':'inline-flex';
+  $('#btn-save-profile').disabled=true;
+}
+
+function fillProfileForm(){
+  $('#pf-name').value=state.profile?.name||auth.currentUser?.displayName||'';
+  $('#pf-spec').value=state.profile?.spec||'';
+}
+
+document.addEventListener('input',e=>{
+  if(e.target?.id==='pf-name') $('#btn-save-profile').disabled=false;
+});
+
+document.addEventListener('change',e=>{
+  if(e.target?.id==='pf-spec') $('#btn-save-profile').disabled=false;
+});
+
+document.addEventListener('click',e=>{
+  const btn=e.target.closest('.eye');
+  if(!btn)return;
+  const inp=document.querySelector(btn.dataset.eye);
+  if(inp) inp.type=inp.type==='password'?'text':'password';
+});
 
 function pickModulesFor(track){
-const wanted=MODS_POR_TIPO[track]||[];
-return wanted.map((titulo,idx)=>{
-const safeId=titulo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\w\s-]/g,'').replace(/\s+/g,'-');
-const ids=(VIDEO_DEFAULTS[titulo]||['dQw4w9WgXcQ']).slice(0,1);
-return{
-id:`${safeId}-${idx+1}`,
-titulo,
-videos:ids.map((v,i)=>({yt:v,n:i+1})),
-quiz:[
-{id:`${safeId}-${idx+1}-q1`,text:`Pregunta 1 del módulo ${titulo}`,options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'A'},
-{id:`${safeId}-${idx+1}-q2`,text:`Pregunta 2 del módulo ${titulo}`,options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'B'},
-{id:`${safeId}-${idx+1}-q3`,text:`Pregunta 3 del módulo ${titulo}`,options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'B'}
-]
-};
-});
+  const wanted=MODS_POR_TIPO[track]||[];
+  return wanted.map((titulo,idx)=>{
+    const safeId=titulo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\w\s-]/g,'').replace(/\s+/g,'-');
+    const ids=(VIDEO_DEFAULTS[titulo]||['dQw4w9WgXcQ']).slice(0,1);
+    return{
+      id:`${safeId}-${idx+1}`,
+      titulo,
+      videos:ids.map((v,i)=>({yt:v,n:i+1})),
+      quiz:[
+        {id:`${safeId}-${idx+1}-q1`,text:`Pregunta 1 del módulo ${titulo}`,options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'A'},
+        {id:`${safeId}-${idx+1}-q2`,text:`Pregunta 2 del módulo ${titulo}`,options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'B'},
+        {id:`${safeId}-${idx+1}-q3`,text:`Pregunta 3 del módulo ${titulo}`,options:[{key:'A',label:'Opción A'},{key:'B',label:'Opción B'},{key:'C',label:'Opción C'}],correct:'B'}
+      ]
+    };
+  });
 }
 
 function getSelectedTrack(){return (state.profile?.spec||'').trim();}
-function prevModuleConcluded(moduleId){const mods=state.course?.modules||[]; const idx=mods.findIndex(m=>m.id===moduleId); if(idx<=0)return true; const prev=mods[idx-1]; return !!(state.quizzes?.[prev.id]?.passed);}
-function ensureStoreFor(mid,vid){state.play=state.play||{}; state.play[mid]=state.play[mid]||{}; state.play[mid][vid]=state.play[mid][vid]||{t:0,allow:0,dur:0}; return state.play[mid][vid];}
-function isLocked(cfg){if(cfg.index===0&&!prevModuleConcluded(cfg.moduleId)) return true; return false;}
-function lockReason(cfg){if(cfg.index===0&&!prevModuleConcluded(cfg.moduleId)) return 'Primero aprueba la evaluación del módulo anterior'; return 'Bloqueado';}
-function showWarn(pid,text){const w=document.getElementById(`warn-${pid}`); if(!w)return; w.textContent=text; w.style.display='block'; setTimeout(()=>{if(w)w.style.display='none';},1800);}
-function makePoster(pid,videoId,lockedMsg){const lockLayer=lockedMsg?`<div class="lock" id="lock-${pid}">🔒 ${lockedMsg}</div>`:''; return `<div class="yt-wrap" style="margin-top:8px"><div class="player-host" id="${pid}"></div><div class="poster" data-load="${pid}"><img src="https://i.ytimg.com/vi/${videoId}/hqdefault.jpg" alt=""><button type="button">Ver video ▶</button></div>${lockLayer}<div class="warnmsg" id="warn-${pid}"></div></div>`;}
-function destroyAllPlayers(){Object.keys(players).forEach(k=>{try{players[k]?.player?.pauseVideo?.(); players[k]?.player?.stopVideo?.(); players[k]?.player?.destroy?.();}catch(_){} delete players[k];}); cfgByPid.clear();}
-function clickToLoad(pid){const cfg=cfgByPid.get(pid); if(!cfg)return; if(isLocked(cfg)){showWarn(pid,lockReason(cfg)); return;} if(players[pid])return; actuallyCreatePlayer(cfg); const poster=document.querySelector(`.poster[data-load="${pid}"]`); if(poster) poster.remove();}
-function actuallyCreatePlayer({pid,videoId,moduleId,index}){if(players[pid])return; const store=ensureStoreFor(moduleId,videoId); players[pid]={player:null}; const holder=document.getElementById(pid); if(!holder)return; let tick=null; players[pid].player=new YT.Player(pid,{height:'360',width:'640',videoId,playerVars:{rel:0,modestbranding:1,controls:1,disablekb:1,playsinline:1},events:{onReady:(ev)=>{try{const startAt=Math.min(Number(store.t||0),Number(store.allow||0)); if(startAt>1) ev.target.seekTo(startAt,true);}catch(_){}},onStateChange:(ev)=>{const p=ev.target; const st=ev.data; if(st===YT.PlayerState.PLAYING){if(isLocked({moduleId,index})){showWarn(pid,lockReason({moduleId,index})); try{p.pauseVideo();}catch(_){} return;} if(tick) clearInterval(tick); tick=setInterval(()=>{let cur=0,dur=0; try{cur=p.getCurrentTime?.()||0; dur=p.getDuration?.()||0;}catch(_){} if(dur&&(!store.dur||Math.abs(store.dur-dur)>0.5)) store.dur=dur; if(cur>(store.allow+1.0)){try{p.seekTo(store.allow,true);}catch(_){} return;} if(cur>store.allow) store.allow=cur; store.t=cur; persist(); if(Math.floor(cur)%5===0) scheduleCloudSync(1200);},500);} else if(st===YT.PlayerState.PAUSED){if(tick){clearInterval(tick); tick=null;} try{const cur=p.getCurrentTime?.()||0; const dur=p.getDuration?.()||0; if(dur) store.dur=dur; store.t=cur; if(cur>store.allow) store.allow=cur; persist(); scheduleCloudSync(600);}catch(_){} } else if(st===YT.PlayerState.ENDED){if(tick){clearInterval(tick); tick=null;} state.videosDone=state.videosDone||{}; state.videosDone[moduleId]=state.videosDone[moduleId]||{}; state.videosDone[moduleId][videoId]=true; store.allow=store.dur||store.allow||0; store.t=store.allow; persist(); updateGlobalProgress(); maybeEnableQuiz({id:moduleId,videos:[{yt:videoId}]}); syncToCloud(true);}},onError:()=>showWarn(pid,'No se pudo cargar el video.')}});}
-function renderModules(modulesDef){destroyAllPlayers(); const wrap=$('#modules'); wrap.innerHTML=''; modulesDef.forEach((m,modIdx)=>{const doneVideos=(state.videosDone?.[m.id]||{}); const firstLockedMsg=modIdx===0?null:(prevModuleConcluded(m.id)?null:'Primero aprueba la evaluación del módulo anterior'); const videosHtml=m.videos.map((v,i)=>{const pid=`player-${m.id}-${i}`; const locked=(i===0)?!!firstLockedMsg:false; const lockedMsg=locked?firstLockedMsg:null; cfgByPid.set(pid,{pid,videoId:v.yt,moduleId:m.id,index:i}); return makePoster(pid,v.yt,lockedMsg);}).join(''); const canStart=m.videos.every(v=>doneVideos[v.yt]); const passed=state.quizzes?.[m.id]?.passed; const card=document.createElement('article'); card.className='card module'; card.innerHTML=`<div class="num">${modIdx+1}</div><div class="meta"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><h3 style="margin:0">${m.titulo}</h3><span class="badge">1 video</span></div><p class="muted" style="margin:6px 0 10px">Debes ver el video completo para habilitar la evaluación y aprobarla para desbloquear el siguiente módulo.</p>${videosHtml}<div class="quiz-wrap"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><div class="quiz-hint muted" id="hint-${m.id}">${canStart?'Listo para evaluar':'Completa el video para habilitar'}</div><button class="btn ${passed?'btn-success':'btn-primary'}" id="btn-${m.id}" ${canStart?'':'disabled'}>${passed?'Aprobado ✓':'Comenzar evaluación'}</button></div><div id="quiz-${m.id}" style="display:none;margin-top:12px"></div><div class="muted" id="res-${m.id}" style="display:none;margin-top:8px"></div></div></div>`; wrap.appendChild(card); m.videos.forEach((v,i)=>{const pid=`player-${m.id}-${i}`; const poster=card.querySelector(`[data-load="${pid}"]`); poster?.addEventListener('click',()=>clickToLoad(pid)); poster?.querySelector('button')?.addEventListener('click',ev=>{ev.stopPropagation(); clickToLoad(pid);});}); card.querySelector(`#btn-${m.id}`).addEventListener('click',()=>{if(state.quizzes?.[m.id]?.passed)return; renderQuizForModule(m);});});}
-function updateModuleLocksAndButtons(modulesDef){modulesDef.forEach((m,modIdx)=>{const doneVideos=(state.videosDone?.[m.id]||{}); const firstLockedMsg=modIdx===0?null:(prevModuleConcluded(m.id)?null:'Primero aprueba la evaluación del módulo anterior'); m.videos.forEach((v,i)=>{const pid=`player-${m.id}-${i}`; const wrap=document.getElementById(pid)?.closest('.yt-wrap'); if(!wrap)return; const existingLock=document.getElementById(`lock-${pid}`); const shouldLock=(i===0)?!!firstLockedMsg:false; if(shouldLock&&!existingLock){const div=document.createElement('div'); div.className='lock'; div.id=`lock-${pid}`; div.textContent=`🔒 ${firstLockedMsg}`; wrap.appendChild(div);} else if(!shouldLock&&existingLock){existingLock.remove();}}); const canStart=m.videos.every(v=>doneVideos[v.yt]); const passed=state.quizzes?.[m.id]?.passed; const btn=$(`#btn-${m.id}`); const hint=$(`#hint-${m.id}`); if(btn&&hint){btn.disabled=!canStart; btn.textContent=passed?'Aprobado ✓':'Comenzar evaluación'; btn.classList.toggle('btn-success',!!passed); btn.classList.toggle('btn-primary',!passed); hint.textContent=canStart?'Listo para evaluar':'Completa el video para habilitar';} const res=$(`#res-${m.id}`); if(res&&state.quizzes?.[m.id]){const q=state.quizzes[m.id]; res.style.display='block'; res.textContent=`Resultado: ${q.correct}/${q.total} (${q.scorePct}%). ${q.passed?'✅ Aprobado':'❌ No aprobado'}.`;}});}
-function maybeEnableQuiz(m){const canStart=m.videos.every(v=>(state.videosDone?.[m.id]||{})[v.yt]); const btn=$(`#btn-${m.id}`); const hint=$(`#hint-${m.id}`); if(btn&&hint){btn.disabled=!canStart; hint.textContent=canStart?'Listo para evaluar':'Completa el video para habilitar';}}
-function renderQuizForModule(m){
-const wrap=$(`#quiz-${m.id}`);
-wrap.innerHTML='';
-m.quiz.forEach((q,idx)=>{
-const card=document.createElement('div');
-card.className='card quiz-question-card';
-const opts=q.options.map(o=>`<label class="quiz-option"><input type="radio" name="${q.id}" value="${o.key}"><span>${o.key}) ${o.label}</span></label>`).join('');
-card.innerHTML=`<strong>${idx+1}. ${q.text}</strong><div class="quiz-options">${opts}</div>`;
-wrap.appendChild(card);
-});
-const submit=document.createElement('button');
-submit.className='btn btn-primary';
-submit.textContent='Enviar evaluación';
-submit.addEventListener('click',()=>gradeQuizModule(m));
-wrap.appendChild(submit);
-wrap.style.display='block';
+function prevModuleConcluded(moduleId){
+  const mods=state.course?.modules||[];
+  const idx=mods.findIndex(m=>m.id===moduleId);
+  if(idx<=0)return true;
+  const prev=mods[idx-1];
+  return !!(state.quizzes?.[prev.id]?.passed);
 }
-function gradeQuizModule(m){let correct=0; m.quiz.forEach(q=>{const c=document.querySelector(`input[name="${q.id}"]:checked`); if(c&&c.value===q.correct) correct++;}); const PASS_PCT=80; const scorePct=Math.round((correct/m.quiz.length)*100); state.quizzes=state.quizzes||{}; state.quizzes[m.id]={correct,total:m.quiz.length,scorePct,passed:scorePct>=PASS_PCT}; persist(); const res=$(`#res-${m.id}`); res.style.display='block'; res.textContent=`Resultado: ${correct}/${m.quiz.length} (${scorePct}%). ${state.quizzes[m.id].passed?'✅ Aprobado':'❌ No aprobado'}.`; const quizWrap=$(`#quiz-${m.id}`); if(quizWrap){setTimeout(()=>{quizWrap.style.display='none';},500);} if(state.quizzes[m.id].passed){const btn=$(`#btn-${m.id}`); if(btn){btn.textContent='Aprobado ✓'; btn.classList.remove('btn-primary'); btn.classList.add('btn-success');} setTimeout(()=>syncToCloud(true),300);} updateGlobalProgress(); updateModuleLocksAndButtons(state.course?.modules||[]);}
-function updateGlobalProgress(){const spec=(state.profile?.spec||'').trim(); if(!spec||!TIPOS_MODULO.includes(spec)){ $('#progress').style.display='none'; $('#modules').style.display='none'; $('#certificado').classList.remove('show'); return; } const modulesDef=pickModulesFor(spec); state.course={spec,modules:modulesDef}; const totalVideos=modulesDef.reduce((a,m)=>a+m.videos.length,0); const doneVideos=modulesDef.reduce((a,m)=>a+m.videos.filter(v=>(state.videosDone?.[m.id]||{})[v.yt]).length,0); const pct=totalVideos?Math.round((doneVideos/totalVideos)*100):0; $('#progress').style.display='block'; $('#modules').style.display='grid'; $('#bar').style.width=pct+'%'; const evalsPassed=modulesDef.filter(m=>state.quizzes?.[m.id]?.passed).length; const allPassed=modulesDef.length>0&&modulesDef.every(m=>state.quizzes?.[m.id]?.passed); $('#progress-label').textContent=`${pct}% completado — Videos ${doneVideos}/${totalVideos} • Evaluaciones aprobadas ${evalsPassed}/${modulesDef.length}${allPassed?' • ✅ Listo para certificar':''}`; if(allPassed){const preferName=state.profile?.name||auth.currentUser?.displayName||''; const preferEmail=state.profile?.email||auth.currentUser?.email||''; $('#cert-nombre').textContent=preferName; $('#cert-email').textContent=preferEmail?`Correo electrónico: ${preferEmail}`:''; $('#cert-modulo').textContent=state.profile?.spec||''; $('#cert-fecha').textContent=`Fecha: ${new Date().toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'})}`; $('#certificado').classList.add('show');} else $('#certificado').classList.remove('show');}
-function hydrateUIFromState(){fillProfileForm(); if(profileComplete()){setProfileReadonly(true); $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.'; renderAllByTrack((state.profile?.spec||'').trim()); updateGlobalProgress();} else {setProfileReadonly(false); $('#pf-help').textContent='Completa todos los campos para habilitar los módulos.'; $('#progress').style.display='none'; $('#modules').style.display='none'; $('#certificado').classList.remove('show'); lastRenderedTrack='';}}
-function renderAllByTrack(track){if(!track||!TIPOS_MODULO.includes(track)){lastRenderedTrack=''; state.course={spec:'',modules:[]}; persist(); $('#progress').style.display='none'; $('#modules').style.display='none'; $('#certificado').classList.remove('show'); return;} const modulesDef=pickModulesFor(track); state.course={spec:track,modules:modulesDef}; persist(); $('#progress').style.display='block'; $('#modules').style.display='grid'; if(lastRenderedTrack!==track){renderModules(modulesDef); lastRenderedTrack=track;} else updateModuleLocksAndButtons(modulesDef); updateGlobalProgress();}
-function subscribeUserDoc(uid){if(unsubUserDoc){try{unsubUserDoc();}catch(_){} unsubUserDoc=null;} unsubUserDoc=db.collection('users').doc(uid).onSnapshot(snap=>{if(!snap.exists)return; applyCloudData(snap.data()||{}); hydrateUIFromState();},err=>console.warn('Snapshot error',err));}
-async function loadInitialRemoteData(uid,email){const ref=await ensureUserDoc(uid,email); const snap=await ref.get().catch(()=>null); if(snap&&snap.exists){applyCloudData(snap.data()||{}); state.profile={...(state.profile||{}),email:email||state.profile?.email||''}; persist();}}
-async function showCourse(){const user=auth.currentUser; if(!user)return; if(!user.emailVerified){showLogin(); $('#verify-box').style.display='block'; $('#btn-logout').style.display='inline-flex'; return;} showGlobalLoading(true); showAppShell(); state={...defaultState(),...loadState(user.uid)}; hydrateUIFromState(); await loadInitialRemoteData(user.uid,user.email||''); hydrateUIFromState(); subscribeUserDoc(user.uid); showGlobalLoading(false);}
-$('#btn-save-profile').addEventListener('click',async ()=>{const name=($('#pf-name').value||'').trim(); const spec=($('#pf-spec').value||'').trim(); const pfMsg=$('#pf-msg'); const btn=$('#btn-save-profile'); if(!name||!spec){pfMsg.textContent='Completa nombre y módulo.'; return;} if(!TIPOS_MODULO.includes(spec)){pfMsg.textContent='Selecciona un módulo válido de la lista.'; return;} state.profile={...(state.profile||{}),name,spec,email:auth.currentUser?.email||state.profile?.email||''}; persist(); hydrateUIFromState(); pfMsg.classList.add('saving'); pfMsg.textContent='Guardando…'; btn.disabled=true; savingProfile=true; try{if(auth.currentUser&&name){try{await auth.currentUser.updateProfile({displayName:name});}catch(_){}} await syncToCloud(true); savingProfile=false; pfMsg.classList.remove('saving'); pfMsg.textContent='✅ Perfil guardado.'; setProfileReadonly(true); setTimeout(()=>{if(pfMsg.textContent.includes('✅')) pfMsg.textContent='';},3000);}catch(e){savingProfile=false; pfMsg.classList.remove('saving'); pfMsg.textContent='No se pudo guardar en Firebase.'; setProfileReadonly(false);}});
-$('#btn-edit-profile').addEventListener('click',()=>{setProfileReadonly(false); $('#pf-help').textContent='Edita tus datos y guarda los cambios.'; $('#pf-msg').textContent='';}); $('#btn-cancel-profile').addEventListener('click',()=>hydrateUIFromState());
-auth.onAuthStateChanged(async user=>{if(!user){CURRENT_UID=null; state=defaultState(); $('#auth-user').textContent=''; lastRenderedTrack=''; if(unsubUserDoc){try{unsubUserDoc();}catch(_){} unsubUserDoc=null;} showLogin(); msg(''); return;} const freshUser=auth.currentUser||user; CURRENT_UID=freshUser.uid; $('#auth-user').textContent=freshUser.email||''; if(!freshUser.emailVerified){showLogin(); $('#btn-logout').style.display='inline-flex'; $('#verify-box').style.display='block'; msg('Tu sesión está iniciada, pero debes verificar tu correo para continuar.'); return;} msg(''); $('#verify-box').style.display='none'; $('#btn-logout').style.display='inline-flex'; await showCourse();});
-$('#btn-register-2').addEventListener('click',async ()=>{const email=($('#reg-email').value||'').trim().toLowerCase(); const pass=($('#reg-pass').value||'').trim(); const pass2=($('#reg-pass2').value||'').trim(); if(!email||!pass||!pass2)return msg('Completa todos los campos.','error'); if(!emailOk(email))return msg('El formato del correo no es válido.','error'); if(pass!==pass2)return msg('Las contraseñas no coinciden.','error'); try{const methods=await auth.fetchSignInMethodsForEmail(email); if(methods&&methods.length){setTab('login'); $('#login-email').value=email; return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.','error');} const {user}=await auth.createUserWithEmailAndPassword(email,pass); if(auth.currentUser?.uid!==user.uid) await auth.updateCurrentUser(user); await ensureUserDoc(user.uid,user.email||''); try{await auth.currentUser.sendEmailVerification({url:location.href.split('?')[0]+'?verified=1',handleCodeInApp:false}); msg('Te enviamos el correo de verificación (revisa Spam).','ok');}catch(_){msg('No se pudo enviar automáticamente. Usa Reenviar verificación.','error');} $('#verify-box').style.display='block'; setTab('login'); $('#login-email').value=email;}catch(e){msg(MSGS[e.code]||'Ocurrió un error. Intenta nuevamente.','error');}});
-$('#btn-check-verify').addEventListener('click',async ()=>{if(auth.currentUser){await auth.currentUser.reload(); if(auth.currentUser.emailVerified){$('#verify-box').style.display='none'; msg('');} else msg('Aún no se detecta la verificación del correo.','error');}});
-$('#btn-resend-verify').addEventListener('click',async ()=>{try{if(auth.currentUser){await auth.currentUser.sendEmailVerification({url:location.href.split('?')[0]+'?verified=1',handleCodeInApp:false}); msg('Te enviamos el correo de verificación (revisa Spam).','ok');} else msg('Primero inicia sesión.','error');}catch(e){msg(MSGS[e.code]||'No se pudo enviar.','error');}});
-$('#btn-login').addEventListener('click',async ()=>{const email=($('#login-email').value||'').trim().toLowerCase(); const pass=($('#login-pass').value||'').trim(); if(!email||!pass)return msg('Ingresa correo y contraseña.','error'); if(!emailOk(email))return msg('El formato del correo no es válido.','error'); const btn=$('#btn-login'); btn.disabled=true; try{await auth.signInWithEmailAndPassword(email,pass); const u=auth.currentUser; await u.reload().catch(()=>{}); if(!u.emailVerified){msg('Tu sesión está iniciada, pero debes verificar tu correo antes de continuar.','error'); $('#verify-box').style.display='block'; $('#btn-logout').style.display='inline-flex'; showLogin(); return;} msg(''); $('#verify-box').style.display='none'; $('#btn-logout').style.display='inline-flex';}catch(e){let methods=[]; try{methods=await auth.fetchSignInMethodsForEmail(email);}catch(_){} if(!methods||methods.length===0){msg('Correo no registrado.','error'); setTab('reg'); $('#reg-email').value=email;} else if(['auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials'].includes(e.code)){msg('Contraseña incorrecta.','error');} else msg(MSGS[e.code]||'Ocurrió un error. Intenta nuevamente.','error');}finally{btn.disabled=false;}});
-$('#btn-reset').addEventListener('click',async ()=>{const email=($('#login-email').value||'').trim().toLowerCase(); if(!email)return msg('Escribe tu correo para enviarte el enlace.','error'); if(!emailOk(email))return msg('El formato del correo no es válido.','error'); try{const methods=await auth.fetchSignInMethodsForEmail(email); if(!methods||!methods.length)return msg('Correo no registrado.','error'); await auth.sendPasswordResetEmail(email); msg('Te enviamos un correo para restablecer la contraseña.','ok');}catch(e){msg(MSGS[e.code]||'No se pudo enviar.','error');}});
-$('#btn-logout').addEventListener('click',async ()=>{persist(); await syncToCloud(true); destroyAllPlayers(); await auth.signOut(); msg('Sesión cerrada.');});
-async function downloadCertificatePDF(){const source=document.getElementById('certificado-pdf'); if(!source)return alert('No se encontró el certificado.'); if(!window.html2canvas||!window.jspdf||!window.jspdf.jsPDF)return alert('No se cargaron las librerías del PDF.'); const clone=source.cloneNode(true); clone.style.display='block'; clone.style.position='fixed'; clone.style.left='-10000px'; clone.style.top='0'; clone.style.width='1400px'; clone.style.zIndex='-1'; clone.style.visibility='visible'; document.body.appendChild(clone); try{const canvas=await window.html2canvas(clone,{scale:2,backgroundColor:'#ffffff',useCORS:true,logging:false}); const imgData=canvas.toDataURL('image/png',1.0); const PDF=window.jspdf.jsPDF; const pdf=new PDF({orientation:'landscape',unit:'mm',format:'a4'}); pdf.addImage(imgData,'PNG',0,0,pdf.internal.pageSize.getWidth(),pdf.internal.pageSize.getHeight()); let safeName=(document.getElementById('cert-nombre')?.textContent||'certificado').trim(); safeName=safeName.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ _-]/g,'').replace(/\s+/g,'_'); pdf.save('Certificado_Aprobacion_'+safeName+'.pdf');}catch(e){console.error(e); alert('No se pudo generar el certificado en PDF.');}finally{clone.remove();}}
-const downloadBtn=document.getElementById('btn-download-cert'); if(downloadBtn){downloadBtn.addEventListener('click',downloadCertificatePDF); downloadBtn.onclick=downloadCertificatePDF;}
+
+function ensureStoreFor(mid,vid){
+  state.play=state.play||{};
+  state.play[mid]=state.play[mid]||{};
+  state.play[mid][vid]=state.play[mid][vid]||{t:0,allow:0,dur:0};
+  return state.play[mid][vid];
+}
+
+function isLocked(cfg){
+  if(cfg.index===0&&!prevModuleConcluded(cfg.moduleId)) return true;
+  return false;
+}
+
+function lockReason(cfg){
+  if(cfg.index===0&&!prevModuleConcluded(cfg.moduleId)) return 'Primero aprueba la evaluación del módulo anterior';
+  return 'Bloqueado';
+}
+
+function showWarn(pid,text){
+  const w=document.getElementById(`warn-${pid}`);
+  if(!w)return;
+  w.textContent=text;
+  w.style.display='block';
+  setTimeout(()=>{if(w)w.style.display='none';},1800);
+}
+
+function makePoster(pid,videoId,lockedMsg){
+  const lockLayer=lockedMsg?`<div class="lock" id="lock-${pid}">🔒 ${lockedMsg}</div>`:'';
+  return `<div class="yt-wrap" style="margin-top:8px"><div class="player-host" id="${pid}"></div><div class="poster" data-load="${pid}"><img src="https://i.ytimg.com/vi/${videoId}/hqdefault.jpg" alt=""><button type="button">Ver video ▶</button></div>${lockLayer}<div class="warnmsg" id="warn-${pid}"></div></div>`;
+}
+
+function destroyAllPlayers(){
+  Object.keys(players).forEach(k=>{
+    try{
+      players[k]?.player?.pauseVideo?.();
+      players[k]?.player?.stopVideo?.();
+      players[k]?.player?.destroy?.();
+    }catch(_){}
+    delete players[k];
+  });
+  cfgByPid.clear();
+}
+
+function clickToLoad(pid){
+  const cfg=cfgByPid.get(pid);
+  if(!cfg)return;
+  if(isLocked(cfg)){
+    showWarn(pid,lockReason(cfg));
+    return;
+  }
+  if(players[pid])return;
+  actuallyCreatePlayer(cfg);
+  const poster=document.querySelector(`.poster[data-load="${pid}"]`);
+  if(poster) poster.remove();
+}
+
+function actuallyCreatePlayer({pid,videoId,moduleId,index}){
+  if(players[pid])return;
+
+  const store=ensureStoreFor(moduleId,videoId);
+  players[pid]={player:null};
+  const holder=document.getElementById(pid);
+  if(!holder)return;
+
+  let tick=null;
+  players[pid].player=new YT.Player(pid,{
+    height:'360',
+    width:'640',
+    videoId,
+    playerVars:{rel:0,modestbranding:1,controls:1,disablekb:1,playsinline:1},
+    events:{
+      onReady:(ev)=>{
+        try{
+          const startAt=Math.min(Number(store.t||0),Number(store.allow||0));
+          if(startAt>1) ev.target.seekTo(startAt,true);
+        }catch(_){}
+      },
+      onStateChange:(ev)=>{
+        const p=ev.target;
+        const st=ev.data;
+
+        if(st===YT.PlayerState.PLAYING){
+          if(isLocked({moduleId,index})){
+            showWarn(pid,lockReason({moduleId,index}));
+            try{p.pauseVideo();}catch(_){}
+            return;
+          }
+
+          if(tick) clearInterval(tick);
+          tick=setInterval(()=>{
+            let cur=0,dur=0;
+            try{
+              cur=p.getCurrentTime?.()||0;
+              dur=p.getDuration?.()||0;
+            }catch(_){}
+
+            if(dur&&(!store.dur||Math.abs(store.dur-dur)>0.5)) store.dur=dur;
+            if(cur>(store.allow+1.0)){
+              try{p.seekTo(store.allow,true);}catch(_){}
+              return;
+            }
+
+            if(cur>store.allow) store.allow=cur;
+            store.t=cur;
+            persist();
+            if(Math.floor(cur)%5===0) scheduleCloudSync(1200);
+          },500);
+
+        }else if(st===YT.PlayerState.PAUSED){
+          if(tick){
+            clearInterval(tick);
+            tick=null;
+          }
+          try{
+            const cur=p.getCurrentTime?.()||0;
+            const dur=p.getDuration?.()||0;
+            if(dur) store.dur=dur;
+            store.t=cur;
+            if(cur>store.allow) store.allow=cur;
+            persist();
+            scheduleCloudSync(600);
+          }catch(_){}
+
+        }else if(st===YT.PlayerState.ENDED){
+          if(tick){
+            clearInterval(tick);
+            tick=null;
+          }
+          state.videosDone=state.videosDone||{};
+          state.videosDone[moduleId]=state.videosDone[moduleId]||{};
+          state.videosDone[moduleId][videoId]=true;
+          store.allow=store.dur||store.allow||0;
+          store.t=store.allow;
+          persist();
+          updateGlobalProgress();
+          maybeEnableQuiz({id:moduleId,videos:[{yt:videoId}]});
+          syncToCloud(true);
+        }
+      },
+      onError:()=>showWarn(pid,'No se pudo cargar el video.')
+    }
+  });
+}
+
+function renderModules(modulesDef){
+  destroyAllPlayers();
+  const wrap=$('#modules');
+  wrap.innerHTML='';
+
+  modulesDef.forEach((m,modIdx)=>{
+    const doneVideos=(state.videosDone?.[m.id]||{});
+    const firstLockedMsg=modIdx===0?null:(prevModuleConcluded(m.id)?null:'Primero aprueba la evaluación del módulo anterior');
+
+    const videosHtml=m.videos.map((v,i)=>{
+      const pid=`player-${m.id}-${i}`;
+      const locked=(i===0)?!!firstLockedMsg:false;
+      const lockedMsg=locked?firstLockedMsg:null;
+      cfgByPid.set(pid,{pid,videoId:v.yt,moduleId:m.id,index:i});
+      return makePoster(pid,v.yt,lockedMsg);
+    }).join('');
+
+    const canStart=m.videos.every(v=>doneVideos[v.yt]);
+    const passed=state.quizzes?.[m.id]?.passed;
+
+    const card=document.createElement('article');
+    card.className='card module';
+    card.innerHTML=`<div class="num">${modIdx+1}</div><div class="meta"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><h3 style="margin:0">${m.titulo}</h3><span class="badge">1 video</span></div><p class="muted" style="margin:6px 0 10px">Debes ver el video completo para habilitar la evaluación y aprobarla para desbloquear el siguiente módulo.</p>${videosHtml}<div class="quiz-wrap"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><div class="quiz-hint muted" id="hint-${m.id}">${canStart?'Listo para evaluar':'Completa el video para habilitar'}</div><button class="btn ${passed?'btn-success':'btn-primary'}" id="btn-${m.id}" ${canStart?'':'disabled'}>${passed?'Aprobado ✓':'Comenzar evaluación'}</button></div><div id="quiz-${m.id}" style="display:none;margin-top:12px"></div><div class="muted" id="res-${m.id}" style="display:none;margin-top:8px"></div></div></div>`;
+    wrap.appendChild(card);
+
+    m.videos.forEach((v,i)=>{
+      const pid=`player-${m.id}-${i}`;
+      const poster=card.querySelector(`[data-load="${pid}"]`);
+      poster?.addEventListener('click',()=>clickToLoad(pid));
+      poster?.querySelector('button')?.addEventListener('click',ev=>{
+        ev.stopPropagation();
+        clickToLoad(pid);
+      });
+    });
+
+    card.querySelector(`#btn-${m.id}`).addEventListener('click',()=>{
+      if(state.quizzes?.[m.id]?.passed)return;
+      renderQuizForModule(m);
+    });
+  });
+}
+
+function updateModuleLocksAndButtons(modulesDef){
+  modulesDef.forEach((m,modIdx)=>{
+    const doneVideos=(state.videosDone?.[m.id]||{});
+    const firstLockedMsg=modIdx===0?null:(prevModuleConcluded(m.id)?null:'Primero aprueba la evaluación del módulo anterior');
+
+    m.videos.forEach((v,i)=>{
+      const pid=`player-${m.id}-${i}`;
+      const wrap=document.getElementById(pid)?.closest('.yt-wrap');
+      if(!wrap)return;
+      const existingLock=document.getElementById(`lock-${pid}`);
+      const shouldLock=(i===0)?!!firstLockedMsg:false;
+
+      if(shouldLock&&!existingLock){
+        const div=document.createElement('div');
+        div.className='lock';
+        div.id=`lock-${pid}`;
+        div.textContent=`🔒 ${firstLockedMsg}`;
+        wrap.appendChild(div);
+      }else if(!shouldLock&&existingLock){
+        existingLock.remove();
+      }
+    });
+
+    const canStart=m.videos.every(v=>doneVideos[v.yt]);
+    const passed=state.quizzes?.[m.id]?.passed;
+    const btn=$(`#btn-${m.id}`);
+    const hint=$(`#hint-${m.id}`);
+
+    if(btn&&hint){
+      btn.disabled=!canStart;
+      btn.textContent=passed?'Aprobado ✓':'Comenzar evaluación';
+      btn.classList.toggle('btn-success',!!passed);
+      btn.classList.toggle('btn-primary',!passed);
+      hint.textContent=canStart?'Listo para evaluar':'Completa el video para habilitar';
+    }
+
+    const res=$(`#res-${m.id}`);
+    if(res&&state.quizzes?.[m.id]){
+      const q=state.quizzes[m.id];
+      res.style.display='block';
+      res.textContent=`Resultado: ${q.correct}/${q.total} (${q.scorePct}%). ${q.passed?'✅ Aprobado':'❌ No aprobado'}.`;
+    }
+  });
+}
+
+function maybeEnableQuiz(m){
+  const canStart=m.videos.every(v=>(state.videosDone?.[m.id]||{})[v.yt]);
+  const btn=$(`#btn-${m.id}`);
+  const hint=$(`#hint-${m.id}`);
+  if(btn&&hint){
+    btn.disabled=!canStart;
+    hint.textContent=canStart?'Listo para evaluar':'Completa el video para habilitar';
+  }
+}
+
+function renderQuizForModule(m){
+  const wrap=$(`#quiz-${m.id}`);
+  wrap.innerHTML='';
+
+  m.quiz.forEach((q,idx)=>{
+    const card=document.createElement('div');
+    card.className='card quiz-question-card';
+    const opts=q.options.map(o=>`<label class="quiz-option"><input type="radio" name="${q.id}" value="${o.key}"><span>${o.key}) ${o.label}</span></label>`).join('');
+    card.innerHTML=`<strong>${idx+1}. ${q.text}</strong><div class="quiz-options">${opts}</div>`;
+    wrap.appendChild(card);
+  });
+
+  const submit=document.createElement('button');
+  submit.className='btn btn-primary';
+  submit.textContent='Enviar evaluación';
+  submit.addEventListener('click',()=>gradeQuizModule(m));
+  wrap.appendChild(submit);
+  wrap.style.display='block';
+}
+
+function gradeQuizModule(m){
+  let correct=0;
+  m.quiz.forEach(q=>{
+    const c=document.querySelector(`input[name="${q.id}"]:checked`);
+    if(c&&c.value===q.correct) correct++;
+  });
+
+  const PASS_PCT=80;
+  const scorePct=Math.round((correct/m.quiz.length)*100);
+  state.quizzes=state.quizzes||{};
+  state.quizzes[m.id]={correct,total:m.quiz.length,scorePct,passed:scorePct>=PASS_PCT};
+  persist();
+
+  const res=$(`#res-${m.id}`);
+  res.style.display='block';
+  res.textContent=`Resultado: ${correct}/${m.quiz.length} (${scorePct}%). ${state.quizzes[m.id].passed?'✅ Aprobado':'❌ No aprobado'}.`;
+
+  const quizWrap=$(`#quiz-${m.id}`);
+  if(quizWrap){
+    setTimeout(()=>{quizWrap.style.display='none';},500);
+  }
+
+  if(state.quizzes[m.id].passed){
+    const btn=$(`#btn-${m.id}`);
+    if(btn){
+      btn.textContent='Aprobado ✓';
+      btn.classList.remove('btn-primary');
+      btn.classList.add('btn-success');
+    }
+    setTimeout(()=>syncToCloud(true),300);
+  }
+
+  updateGlobalProgress();
+  updateModuleLocksAndButtons(state.course?.modules||[]);
+}
+
+function updateGlobalProgress(){
+  const spec=(state.profile?.spec||'').trim();
+
+  if(!spec||!TIPOS_MODULO.includes(spec)){
+    $('#progress').style.display='none';
+    $('#modules').style.display='none';
+    $('#certificado').classList.remove('show');
+    return;
+  }
+
+  const modulesDef=pickModulesFor(spec);
+  state.course={spec,modules:modulesDef};
+
+  const totalVideos=modulesDef.reduce((a,m)=>a+m.videos.length,0);
+  const doneVideos=modulesDef.reduce((a,m)=>a+m.videos.filter(v=>(state.videosDone?.[m.id]||{})[v.yt]).length,0);
+  const pct=totalVideos?Math.round((doneVideos/totalVideos)*100):0;
+
+  $('#progress').style.display='block';
+  $('#modules').style.display='grid';
+  $('#bar').style.width=pct+'%';
+
+  const evalsPassed=modulesDef.filter(m=>state.quizzes?.[m.id]?.passed).length;
+  const allPassed=modulesDef.length>0&&modulesDef.every(m=>state.quizzes?.[m.id]?.passed);
+
+  $('#progress-label').textContent=`${pct}% completado — Videos ${doneVideos}/${totalVideos} • Evaluaciones aprobadas ${evalsPassed}/${modulesDef.length}${allPassed?' • ✅ Listo para certificar':''}`;
+
+  if(allPassed){
+    const preferName=state.profile?.name||auth.currentUser?.displayName||'';
+    const preferEmail=state.profile?.email||auth.currentUser?.email||'';
+    $('#cert-nombre').textContent=preferName;
+    $('#cert-email').textContent=preferEmail?`Correo electrónico: ${preferEmail}`:'';
+    $('#cert-modulo').textContent=state.profile?.spec||'';
+    $('#cert-fecha').textContent=`Fecha: ${new Date().toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'})}`;
+    $('#certificado').classList.add('show');
+  }else{
+    $('#certificado').classList.remove('show');
+  }
+}
+
+function hydrateUIFromState(){
+  fillProfileForm();
+
+  if(profileComplete()){
+    setProfileReadonly(true);
+    $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.';
+    renderAllByTrack((state.profile?.spec||'').trim());
+    updateGlobalProgress();
+  }else{
+    setProfileReadonly(false);
+    $('#pf-help').textContent='Completa todos los campos para habilitar los módulos.';
+    $('#progress').style.display='none';
+    $('#modules').style.display='none';
+    $('#certificado').classList.remove('show');
+    lastRenderedTrack='';
+  }
+}
+
+function renderAllByTrack(track){
+  if(!track||!TIPOS_MODULO.includes(track)){
+    lastRenderedTrack='';
+    state.course={spec:'',modules:[]};
+    persist();
+    $('#progress').style.display='none';
+    $('#modules').style.display='none';
+    $('#certificado').classList.remove('show');
+    return;
+  }
+
+  const modulesDef=pickModulesFor(track);
+  state.course={spec:track,modules:modulesDef};
+  persist();
+  $('#progress').style.display='block';
+  $('#modules').style.display='grid';
+
+  if(lastRenderedTrack!==track){
+    renderModules(modulesDef);
+    lastRenderedTrack=track;
+  }else{
+    updateModuleLocksAndButtons(modulesDef);
+  }
+
+  updateGlobalProgress();
+}
+
+function subscribeUserDoc(uid){
+  if(unsubUserDoc){
+    try{unsubUserDoc();}catch(_){}
+    unsubUserDoc=null;
+  }
+
+  unsubUserDoc=db.collection('users').doc(uid).onSnapshot(snap=>{
+    if(!snap.exists)return;
+    applyCloudData(snap.data()||{});
+    hydrateUIFromState();
+  },err=>console.warn('Snapshot error',err));
+}
+
+async function loadInitialRemoteData(uid,email){
+  const ref=await ensureUserDoc(uid,email);
+  const snap=await ref.get().catch(()=>null);
+
+  if(snap&&snap.exists){
+    applyCloudData(snap.data()||{});
+    state.profile={...(state.profile||{}),email:email||state.profile?.email||''};
+    persist();
+  }
+}
+
+async function showCourse(){
+  const user=auth.currentUser;
+  if(!user)return;
+
+  if(!user.emailVerified){
+    showLogin();
+    $('#verify-box').style.display='block';
+    $('#btn-logout').style.display='inline-flex';
+    return;
+  }
+
+  showGlobalLoading(true);
+  showAppShell();
+
+  CURRENT_UID=user.uid;
+  state=defaultState();
+
+  await loadInitialRemoteData(user.uid,user.email||'');
+
+  const local=loadState(user.uid);
+
+  const cloudHasData=
+    !!state.profile?.name ||
+    !!state.profile?.spec ||
+    Object.keys(state.videosDone||{}).length>0 ||
+    Object.keys(state.quizzes||{}).length>0 ||
+    Object.keys(state.play||{}).length>0;
+
+  if(!cloudHasData && local && Object.keys(local).length){
+    state={
+      ...defaultState(),
+      ...local,
+      profile:{...(local.profile||{}),email:user.email||local.profile?.email||''}
+    };
+    persist();
+  }else{
+    state.profile={...(state.profile||{}),email:user.email||state.profile?.email||''};
+    persist();
+  }
+
+  hydrateUIFromState();
+  subscribeUserDoc(user.uid);
+  showGlobalLoading(false);
+}
+
+$('#btn-save-profile').addEventListener('click',async ()=>{
+  const name=($('#pf-name').value||'').trim();
+  const spec=($('#pf-spec').value||'').trim();
+  const pfMsg=$('#pf-msg');
+  const btn=$('#btn-save-profile');
+
+  if(!name||!spec){
+    pfMsg.textContent='Completa nombre y módulo.';
+    return;
+  }
+
+  if(!TIPOS_MODULO.includes(spec)){
+    pfMsg.textContent='Selecciona un módulo válido de la lista.';
+    return;
+  }
+
+  state.profile={...(state.profile||{}),name,spec,email:auth.currentUser?.email||state.profile?.email||''};
+  persist();
+  hydrateUIFromState();
+  pfMsg.classList.add('saving');
+  pfMsg.textContent='Guardando…';
+  btn.disabled=true;
+  savingProfile=true;
+
+  try{
+    if(auth.currentUser&&name){
+      try{await auth.currentUser.updateProfile({displayName:name});}catch(_){}
+    }
+    await syncToCloud(true);
+    savingProfile=false;
+    pfMsg.classList.remove('saving');
+    pfMsg.textContent='✅ Perfil guardado.';
+    setProfileReadonly(true);
+    setTimeout(()=>{if(pfMsg.textContent.includes('✅')) pfMsg.textContent='';},3000);
+  }catch(e){
+    savingProfile=false;
+    pfMsg.classList.remove('saving');
+    pfMsg.textContent='No se pudo guardar en Firebase.';
+    setProfileReadonly(false);
+  }
+});
+
+$('#btn-edit-profile').addEventListener('click',()=>{
+  setProfileReadonly(false);
+  $('#pf-help').textContent='Edita tus datos y guarda los cambios.';
+  $('#pf-msg').textContent='';
+});
+
+$('#btn-cancel-profile').addEventListener('click',()=>hydrateUIFromState());
+
+auth.onAuthStateChanged(async user=>{
+  if(!user){
+    CURRENT_UID=null;
+    state=defaultState();
+    $('#auth-user').textContent='';
+    lastRenderedTrack='';
+    if(unsubUserDoc){
+      try{unsubUserDoc();}catch(_){}
+      unsubUserDoc=null;
+    }
+    showLogin();
+    msg('');
+    return;
+  }
+
+  const freshUser=auth.currentUser||user;
+  CURRENT_UID=freshUser.uid;
+  $('#auth-user').textContent=freshUser.email||'';
+
+  if(!freshUser.emailVerified){
+    showLogin();
+    $('#btn-logout').style.display='inline-flex';
+    $('#verify-box').style.display='block';
+    msg('Tu sesión está iniciada, pero debes verificar tu correo para continuar.');
+    return;
+  }
+
+  msg('');
+  $('#verify-box').style.display='none';
+  $('#btn-logout').style.display='inline-flex';
+  await showCourse();
+});
+
+$('#btn-register-2').addEventListener('click',async ()=>{
+  const email=($('#reg-email').value||'').trim().toLowerCase();
+  const pass=($('#reg-pass').value||'').trim();
+  const pass2=($('#reg-pass2').value||'').trim();
+
+  if(!email||!pass||!pass2)return msg('Completa todos los campos.','error');
+  if(!emailOk(email))return msg('El formato del correo no es válido.','error');
+  if(pass!==pass2)return msg('Las contraseñas no coinciden.','error');
+
+  try{
+    const methods=await auth.fetchSignInMethodsForEmail(email);
+    if(methods&&methods.length){
+      setTab('login');
+      $('#login-email').value=email;
+      return msg('Ese correo ya tiene cuenta. Usa Iniciar sesión.','error');
+    }
+
+    const {user}=await auth.createUserWithEmailAndPassword(email,pass);
+    if(auth.currentUser?.uid!==user.uid) await auth.updateCurrentUser(user);
+    await ensureUserDoc(user.uid,user.email||'');
+
+    try{
+      await auth.currentUser.sendEmailVerification({url:location.href.split('?')[0]+'?verified=1',handleCodeInApp:false});
+      msg('Te enviamos el correo de verificación (revisa Spam).','ok');
+    }catch(_){
+      msg('No se pudo enviar automáticamente. Usa Reenviar verificación.','error');
+    }
+
+    $('#verify-box').style.display='block';
+    setTab('login');
+    $('#login-email').value=email;
+  }catch(e){
+    msg(MSGS[e.code]||'Ocurrió un error. Intenta nuevamente.','error');
+  }
+});
+
+$('#btn-check-verify').addEventListener('click',async ()=>{
+  if(auth.currentUser){
+    await auth.currentUser.reload();
+    if(auth.currentUser.emailVerified){
+      $('#verify-box').style.display='none';
+      msg('');
+    }else{
+      msg('Aún no se detecta la verificación del correo.','error');
+    }
+  }
+});
+
+$('#btn-resend-verify').addEventListener('click',async ()=>{
+  try{
+    if(auth.currentUser){
+      await auth.currentUser.sendEmailVerification({url:location.href.split('?')[0]+'?verified=1',handleCodeInApp:false});
+      msg('Te enviamos el correo de verificación (revisa Spam).','ok');
+    }else{
+      msg('Primero inicia sesión.','error');
+    }
+  }catch(e){
+    msg(MSGS[e.code]||'No se pudo enviar.','error');
+  }
+});
+
+$('#btn-login').addEventListener('click',async ()=>{
+  const email=($('#login-email').value||'').trim().toLowerCase();
+  const pass=($('#login-pass').value||'').trim();
+
+  if(!email||!pass)return msg('Ingresa correo y contraseña.','error');
+  if(!emailOk(email))return msg('El formato del correo no es válido.','error');
+
+  const btn=$('#btn-login');
+  btn.disabled=true;
+
+  try{
+    await auth.signInWithEmailAndPassword(email,pass);
+    const u=auth.currentUser;
+    await u.reload().catch(()=>{});
+
+    if(!u.emailVerified){
+      msg('Tu sesión está iniciada, pero debes verificar tu correo antes de continuar.','error');
+      $('#verify-box').style.display='block';
+      $('#btn-logout').style.display='inline-flex';
+      showLogin();
+      return;
+    }
+
+    msg('');
+    $('#verify-box').style.display='none';
+    $('#btn-logout').style.display='inline-flex';
+  }catch(e){
+    let methods=[];
+    try{methods=await auth.fetchSignInMethodsForEmail(email);}catch(_){}
+    if(!methods||methods.length===0){
+      msg('Correo no registrado.','error');
+      setTab('reg');
+      $('#reg-email').value=email;
+    }else if(['auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials'].includes(e.code)){
+      msg('Contraseña incorrecta.','error');
+    }else{
+      msg(MSGS[e.code]||'Ocurrió un error. Intenta nuevamente.','error');
+    }
+  }finally{
+    btn.disabled=false;
+  }
+});
+
+$('#btn-reset').addEventListener('click',async ()=>{
+  const email=($('#login-email').value||'').trim().toLowerCase();
+  if(!email)return msg('Escribe tu correo para enviarte el enlace.','error');
+  if(!emailOk(email))return msg('El formato del correo no es válido.','error');
+
+  try{
+    const methods=await auth.fetchSignInMethodsForEmail(email);
+    if(!methods||!methods.length)return msg('Correo no registrado.','error');
+    await auth.sendPasswordResetEmail(email);
+    msg('Te enviamos un correo para restablecer la contraseña.','ok');
+  }catch(e){
+    msg(MSGS[e.code]||'No se pudo enviar.','error');
+  }
+});
+
+$('#btn-logout').addEventListener('click',async ()=>{
+  persist();
+  await syncToCloud(true);
+  destroyAllPlayers();
+  await auth.signOut();
+  msg('Sesión cerrada.');
+});
+
+async function downloadCertificatePDF(){
+  const source=document.getElementById('certificado-pdf');
+  if(!source)return alert('No se encontró el certificado.');
+  if(!window.html2canvas||!window.jspdf||!window.jspdf.jsPDF)return alert('No se cargaron las librerías del PDF.');
+
+  const clone=source.cloneNode(true);
+  clone.style.display='block';
+  clone.style.position='fixed';
+  clone.style.left='-10000px';
+  clone.style.top='0';
+  clone.style.width='1400px';
+  clone.style.zIndex='-1';
+  clone.style.visibility='visible';
+  document.body.appendChild(clone);
+
+  try{
+    const canvas=await window.html2canvas(clone,{scale:2,backgroundColor:'#ffffff',useCORS:true,logging:false});
+    const imgData=canvas.toDataURL('image/png',1.0);
+    const PDF=window.jspdf.jsPDF;
+    const pdf=new PDF({orientation:'landscape',unit:'mm',format:'a4'});
+    pdf.addImage(imgData,'PNG',0,0,pdf.internal.pageSize.getWidth(),pdf.internal.pageSize.getHeight());
+
+    let safeName=(document.getElementById('cert-nombre')?.textContent||'certificado').trim();
+    safeName=safeName.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ _-]/g,'').replace(/\s+/g,'_');
+    pdf.save('Certificado_Aprobacion_'+safeName+'.pdf');
+  }catch(e){
+    console.error(e);
+    alert('No se pudo generar el certificado en PDF.');
+  }finally{
+    clone.remove();
+  }
+}
+
+const downloadBtn=document.getElementById('btn-download-cert');
+if(downloadBtn){
+  downloadBtn.addEventListener('click',downloadCertificatePDF);
+  downloadBtn.onclick=downloadCertificatePDF;
+}
 
 function setTab(tab){
-const loginBtn=document.getElementById('tab-login');
-const registerBtn=document.getElementById('tab-register');
-const loginForm=document.getElementById('form-login');
-const registerForm=document.getElementById('form-register');
-if(tab==='login'){
-loginBtn.className='btn btn-primary';
-registerBtn.className='btn btn-muted';
-loginForm.style.display='block';
-registerForm.style.display='none';
-}else{
-loginBtn.className='btn btn-muted';
-registerBtn.className='btn btn-primary';
-loginForm.style.display='none';
-registerForm.style.display='block';
-}
+  const loginBtn=document.getElementById('tab-login');
+  const registerBtn=document.getElementById('tab-register');
+  const loginForm=document.getElementById('form-login');
+  const registerForm=document.getElementById('form-register');
+
+  if(tab==='login'){
+    loginBtn.className='btn btn-primary';
+    registerBtn.className='btn btn-muted';
+    loginForm.style.display='block';
+    registerForm.style.display='none';
+  }else{
+    loginBtn.className='btn btn-muted';
+    registerBtn.className='btn btn-primary';
+    loginForm.style.display='none';
+    registerForm.style.display='block';
+  }
 }
 
 document.getElementById('tab-login').addEventListener('click',()=>setTab('login'));
