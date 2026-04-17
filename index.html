@@ -109,7 +109,7 @@ opacity:.95;
 position:absolute;
 top:20px;
 left:20px;
-width:68px;
+width:54px;
 height:64px;
 background:var(--brand);
 border-radius:10px;
@@ -117,7 +117,7 @@ display:grid;
 place-items:center;
 color:#fff;
 font-weight:800;
-font-size:20px;
+font-size:18px;
 font-style:italic;
 z-index:2;
 box-shadow:0 6px 14px rgba(0,0,0,.12);
@@ -181,23 +181,11 @@ font-size:19px;
 font-weight:600;
 color:#374151;
 }
-.cert-qr-wrap{
-margin:22px auto 0;
-display:flex;
-justify-content:center;
-}
-#cert-qr{
-background:#fff;
-padding:8px;
-border:1px solid #ead1d8;
-border-radius:10px;
-width:max-content;
-}
 .cert-footer-line{
 width:185px;
 height:2px;
 background:#d7a6b4;
-margin:26px auto 12px;
+margin:40px auto 12px;
 }
 .cert-meta{
 font-size:17px;
@@ -267,7 +255,6 @@ line-height:1.6;
 <div class="cert-email" id="cert-email"></div>
 <div class="cert-text">Por completar satisfactoriamente el curso online de <span class="cert-course">Inducción a PEP - SOUL MV</span>.</div>
 <div class="cert-module">Módulo: <span id="cert-modulo"></span></div>
-<div class="cert-qr-wrap"><div id="cert-qr"></div></div>
 <div class="cert-footer-line"></div>
 <div class="cert-meta"><div id="cert-fecha"></div><div>Hospital Vozandes Quito - TICS</div></div>
 </div>
@@ -281,7 +268,6 @@ line-height:1.6;
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://www.youtube.com/iframe_api"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -376,20 +362,7 @@ wrap.appendChild(submit);
 wrap.style.display='block';
 }
 function gradeQuizModule(m){let correct=0; m.quiz.forEach(q=>{const c=document.querySelector(`input[name="${q.id}"]:checked`); if(c&&c.value===q.correct) correct++;}); const PASS_PCT=80; const scorePct=Math.round((correct/m.quiz.length)*100); state.quizzes=state.quizzes||{}; state.quizzes[m.id]={correct,total:m.quiz.length,scorePct,passed:scorePct>=PASS_PCT}; persist(); const res=$(`#res-${m.id}`); res.style.display='block'; res.textContent=`Resultado: ${correct}/${m.quiz.length} (${scorePct}%). ${state.quizzes[m.id].passed?'✅ Aprobado':'❌ No aprobado'}.`; const quizWrap=$(`#quiz-${m.id}`); if(quizWrap){setTimeout(()=>{quizWrap.style.display='none';},500);} if(state.quizzes[m.id].passed){const btn=$(`#btn-${m.id}`); if(btn){btn.textContent='Aprobado ✓'; btn.classList.remove('btn-primary'); btn.classList.add('btn-success');} setTimeout(()=>syncToCloud(true),300);} updateGlobalProgress(); updateModuleLocksAndButtons(state.course?.modules||[]);}
-
-function renderCertificateQR(){
-const qrBox=document.getElementById('cert-qr');
-if(!qrBox) return;
-qrBox.innerHTML='';
-const nombre=state.profile?.name||auth.currentUser?.displayName||'';
-const correo=state.profile?.email||auth.currentUser?.email||'';
-const modulo=state.profile?.spec||'';
-const fecha=new Date().toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'});
-const qrData=`Certificado HVQ\nNombre: ${nombre}\nCorreo: ${correo}\nMódulo: ${modulo}\nFecha: ${fecha}`;
-new QRCode(qrBox,{text:qrData,width:110,height:110});
-}
-
-function updateGlobalProgress(){const spec=(state.profile?.spec||'').trim(); if(!spec||!TIPOS_MODULO.includes(spec)){ $('#progress').style.display='none'; $('#modules').style.display='none'; $('#certificado').classList.remove('show'); return; } const modulesDef=pickModulesFor(spec); state.course={spec,modules:modulesDef}; const totalVideos=modulesDef.reduce((a,m)=>a+m.videos.length,0); const doneVideos=modulesDef.reduce((a,m)=>a+m.videos.filter(v=>(state.videosDone?.[m.id]||{})[v.yt]).length,0); const pct=totalVideos?Math.round((doneVideos/totalVideos)*100):0; $('#progress').style.display='block'; $('#modules').style.display='grid'; $('#bar').style.width=pct+'%'; const evalsPassed=modulesDef.filter(m=>state.quizzes?.[m.id]?.passed).length; const allPassed=modulesDef.length>0&&modulesDef.every(m=>state.quizzes?.[m.id]?.passed); $('#progress-label').textContent=`${pct}% completado — Videos ${doneVideos}/${totalVideos} • Evaluaciones aprobadas ${evalsPassed}/${modulesDef.length}${allPassed?' • ✅ Listo para certificar':''}`; if(allPassed){const preferName=state.profile?.name||auth.currentUser?.displayName||''; const preferEmail=state.profile?.email||auth.currentUser?.email||''; $('#cert-nombre').textContent=preferName; $('#cert-email').textContent=preferEmail?`Correo electrónico: ${preferEmail}`:''; $('#cert-modulo').textContent=state.profile?.spec||''; $('#cert-fecha').textContent=`Fecha: ${new Date().toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'})}`; renderCertificateQR(); $('#certificado').classList.add('show');} else $('#certificado').classList.remove('show');}
+function updateGlobalProgress(){const spec=(state.profile?.spec||'').trim(); if(!spec||!TIPOS_MODULO.includes(spec)){ $('#progress').style.display='none'; $('#modules').style.display='none'; $('#certificado').classList.remove('show'); return; } const modulesDef=pickModulesFor(spec); state.course={spec,modules:modulesDef}; const totalVideos=modulesDef.reduce((a,m)=>a+m.videos.length,0); const doneVideos=modulesDef.reduce((a,m)=>a+m.videos.filter(v=>(state.videosDone?.[m.id]||{})[v.yt]).length,0); const pct=totalVideos?Math.round((doneVideos/totalVideos)*100):0; $('#progress').style.display='block'; $('#modules').style.display='grid'; $('#bar').style.width=pct+'%'; const evalsPassed=modulesDef.filter(m=>state.quizzes?.[m.id]?.passed).length; const allPassed=modulesDef.length>0&&modulesDef.every(m=>state.quizzes?.[m.id]?.passed); $('#progress-label').textContent=`${pct}% completado — Videos ${doneVideos}/${totalVideos} • Evaluaciones aprobadas ${evalsPassed}/${modulesDef.length}${allPassed?' • ✅ Listo para certificar':''}`; if(allPassed){const preferName=state.profile?.name||auth.currentUser?.displayName||''; const preferEmail=state.profile?.email||auth.currentUser?.email||''; $('#cert-nombre').textContent=preferName; $('#cert-email').textContent=preferEmail?`Correo electrónico: ${preferEmail}`:''; $('#cert-modulo').textContent=state.profile?.spec||''; $('#cert-fecha').textContent=`Fecha: ${new Date().toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'})}`; $('#certificado').classList.add('show');} else $('#certificado').classList.remove('show');}
 function hydrateUIFromState(){fillProfileForm(); if(profileComplete()){setProfileReadonly(true); $('#pf-help').textContent='Puedes actualizar tus datos cuando quieras.'; renderAllByTrack((state.profile?.spec||'').trim()); updateGlobalProgress();} else {setProfileReadonly(false); $('#pf-help').textContent='Completa todos los campos para habilitar los módulos.'; $('#progress').style.display='none'; $('#modules').style.display='none'; $('#certificado').classList.remove('show'); lastRenderedTrack='';}}
 function renderAllByTrack(track){if(!track||!TIPOS_MODULO.includes(track)){lastRenderedTrack=''; state.course={spec:'',modules:[]}; persist(); $('#progress').style.display='none'; $('#modules').style.display='none'; $('#certificado').classList.remove('show'); return;} const modulesDef=pickModulesFor(track); state.course={spec:track,modules:modulesDef}; persist(); $('#progress').style.display='block'; $('#modules').style.display='grid'; if(lastRenderedTrack!==track){renderModules(modulesDef); lastRenderedTrack=track;} else updateModuleLocksAndButtons(modulesDef); updateGlobalProgress();}
 function subscribeUserDoc(uid){if(unsubUserDoc){try{unsubUserDoc();}catch(_){} unsubUserDoc=null;} unsubUserDoc=db.collection('users').doc(uid).onSnapshot(snap=>{if(!snap.exists)return; applyCloudData(snap.data()||{}); hydrateUIFromState();},err=>console.warn('Snapshot error',err));}
