@@ -40,31 +40,9 @@ input[type="text"],input[type="email"],input[type="password"],select{width:100%;
 .quiz-hint{font-size:13px}
 .quiz-question-card{margin-bottom:10px;padding:16px 18px}
 .quiz-options{margin-top:12px;display:grid;gap:10px}
-.quiz-option{
-display:flex;
-align-items:center;
-justify-content:flex-start;
-gap:8px;
-margin:0;
-font-size:15px;
-line-height:1.35;
-cursor:pointer;
-width:fit-content;
-max-width:100%;
-}
-.quiz-option input[type="radio"]{
-width:16px;
-height:16px;
-margin:0;
-padding:0;
-flex:0 0 16px;
-accent-color:var(--brand);
-}
-.quiz-option span{
-display:inline;
-margin:0;
-padding:0;
-}
+.quiz-option{display:flex;align-items:center;justify-content:flex-start;gap:8px;margin:0;font-size:15px;line-height:1.35;cursor:pointer;width:fit-content;max-width:100%}
+.quiz-option input[type="radio"]{width:16px;height:16px;margin:0;padding:0;flex:0 0 16px;accent-color:var(--brand)}
+.quiz-option span{display:inline;margin:0;padding:0}
 .poster{position:absolute;inset:0;background:#000;display:grid;place-items:center;cursor:pointer;z-index:2}.poster img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.8)}.poster button{position:relative;z-index:2;padding:10px 14px;border-radius:999px;background:#ffffffd9;font-weight:800;border:0}
 .warnmsg{position:absolute;left:12px;right:12px;bottom:12px;background:#fff3cd;color:#7a5400;border-radius:10px;padding:8px 10px;font-size:13px;display:none;z-index:4}
 .auth-error{color:var(--danger)!important;font-weight:600}.auth-ok{color:var(--ok)!important;font-weight:600}
@@ -134,16 +112,17 @@ opacity:.95;
 position:absolute;
 top:20px;
 left:20px;
-width:54px;
+width:90px;
 height:64px;
 background:var(--brand);
-border-radius:10px;
+border-radius:12px;
 display:grid;
 place-items:center;
 color:#fff;
 font-weight:800;
-font-size:18px;
+font-size:22px;
 font-style:italic;
+letter-spacing:.5px;
 z-index:2;
 box-shadow:0 6px 14px rgba(0,0,0,.12);
 }
@@ -218,6 +197,29 @@ color:#555;
 font-family:Georgia,"Times New Roman",serif;
 line-height:1.6;
 }
+.cert-qr-wrap{
+position:absolute;
+right:30px;
+bottom:26px;
+z-index:2;
+background:#fff;
+padding:8px;
+border-radius:12px;
+box-shadow:0 4px 12px rgba(0,0,0,.08);
+border:1px solid #ead4dc;
+text-align:center;
+}
+.cert-qr{
+width:110px;
+height:110px;
+display:block;
+}
+.cert-qr-label{
+margin-top:6px;
+font-size:11px;
+font-weight:600;
+color:#6b7280;
+}
 #certificado-pdf{display:none}
 </style>
 </head>
@@ -269,9 +271,15 @@ line-height:1.6;
 
 <section id="certificado" class="container">
 <div class="cert-card" id="certificado-pdf">
-<div class="cert-hvq">HvQ</div>
+<div class="cert-hvq">HVQ</div>
 <div class="cert-gold-stroke-top"></div>
 <div class="cert-gold-stroke-bottom"></div>
+
+<div class="cert-qr-wrap">
+<img id="cert-qr" class="cert-qr" alt="QR del certificado">
+<div class="cert-qr-label">Validación</div>
+</div>
+
 <div class="cert-card-inner">
 <div class="cert-title">CERTIFICADO</div>
 <div class="cert-divider"><span class="orn">✦</span><span class="line"></span><span class="orn">✧</span><span class="line"></span><span class="orn">✦</span></div>
@@ -344,7 +352,6 @@ const VIDEO_DEFAULTS={
 
 let CURRENT_UID=null;
 let unsubUserDoc=null;
-let savingProfile=false;
 let lastCloudSyncAt=0;
 let cloudSyncTimer=null;
 let lastRenderedTrack="";
@@ -397,15 +404,12 @@ function mergeDeepProgress(localObj, cloudObj){
 
 function applyCloudData(data){
   const n=normalizeCloudData(data||{});
-
   if(Object.keys(n.profile||{}).length){
     state.profile={...(state.profile||{}),...n.profile};
   }
-
   state.videosDone=mergeDeepProgress(state.videosDone||{}, n.videosDone||{});
   state.quizzes=mergeDeepProgress(state.quizzes||{}, n.quizzes||{});
   state.play=mergeDeepProgress(state.play||{}, n.play||{});
-
   persist();
 }
 
@@ -428,15 +432,12 @@ async function syncToCloud(force=false){
   try{
     const uid=auth.currentUser?.uid;
     if(!uid)return;
-
     if(!state.profile?.spec && !state.profile?.name && !Object.keys(state.videosDone||{}).length && !Object.keys(state.quizzes||{}).length){
       return;
     }
-
     const now=Date.now();
     if(!force&&now-lastCloudSyncAt<4000)return;
     lastCloudSyncAt=now;
-
     await db.collection('users').doc(uid).set({
       profile:state.profile||{},
       videosDone:state.videosDone||{},
@@ -530,7 +531,6 @@ function pickModulesFor(track){
   });
 }
 
-function getSelectedTrack(){return (state.profile?.spec||'').trim();}
 function prevModuleConcluded(moduleId){
   const mods=state.course?.modules||[];
   const idx=mods.findIndex(m=>m.id===moduleId);
@@ -596,7 +596,6 @@ function clickToLoad(pid){
 
 function actuallyCreatePlayer({pid,videoId,moduleId,index}){
   if(players[pid])return;
-
   const store=ensureStoreFor(moduleId,videoId);
   players[pid]={player:null};
   const holder=document.getElementById(pid);
@@ -660,7 +659,6 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
             persist();
             scheduleCloudSync(600);
           }catch(_){}
-
         }else if(st===YT.PlayerState.ENDED){
           if(tick){
             clearInterval(tick);
@@ -835,6 +833,30 @@ function gradeQuizModule(m){
   updateModuleLocksAndButtons(state.course?.modules||[]);
 }
 
+function buildCertificateQRText(){
+  const nombre=($('#cert-nombre')?.textContent||'').trim();
+  const correo=(state.profile?.email||auth.currentUser?.email||'').trim();
+  const modulo=($('#cert-modulo')?.textContent||'').trim();
+  const fecha=($('#cert-fecha')?.textContent||'').replace(/^Fecha:\s*/,'').trim();
+
+  return [
+    'Hospital Vozandes Quito - TICS',
+    'Certificado de Aprobación',
+    'Nombre: ' + nombre,
+    'Correo: ' + correo,
+    'Módulo aprobado: ' + modulo,
+    'Fecha: ' + fecha
+  ].join('\n');
+}
+
+function renderCertificateQR(){
+  const qrImg=document.getElementById('cert-qr');
+  if(!qrImg)return;
+  const payload=buildCertificateQRText();
+  const qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='+encodeURIComponent(payload);
+  qrImg.src=qrUrl;
+}
+
 function updateGlobalProgress(){
   const spec=(state.profile?.spec||'').trim();
 
@@ -864,10 +886,13 @@ function updateGlobalProgress(){
   if(allPassed){
     const preferName=state.profile?.name||auth.currentUser?.displayName||'';
     const preferEmail=state.profile?.email||auth.currentUser?.email||'';
+    const fechaFormateada=new Date().toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'});
+
     $('#cert-nombre').textContent=preferName;
     $('#cert-email').textContent=preferEmail?`Correo electrónico: ${preferEmail}`:'';
     $('#cert-modulo').textContent=state.profile?.spec||'';
-    $('#cert-fecha').textContent=`Fecha: ${new Date().toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'})}`;
+    $('#cert-fecha').textContent=`Fecha: ${fechaFormateada}`;
+    renderCertificateQR();
     $('#certificado').classList.add('show');
   }else{
     $('#certificado').classList.remove('show');
@@ -1010,20 +1035,17 @@ $('#btn-save-profile').addEventListener('click',async ()=>{
   pfMsg.classList.add('saving');
   pfMsg.textContent='Guardando…';
   btn.disabled=true;
-  savingProfile=true;
 
   try{
     if(auth.currentUser&&name){
       try{await auth.currentUser.updateProfile({displayName:name});}catch(_){}
     }
     await syncToCloud(true);
-    savingProfile=false;
     pfMsg.classList.remove('saving');
     pfMsg.textContent='✅ Perfil guardado.';
     setProfileReadonly(true);
     setTimeout(()=>{if(pfMsg.textContent.includes('✅')) pfMsg.textContent='';},3000);
   }catch(e){
-    savingProfile=false;
     pfMsg.classList.remove('saving');
     pfMsg.textContent='No se pudo guardar en Firebase.';
     setProfileReadonly(false);
@@ -1202,6 +1224,8 @@ async function downloadCertificatePDF(){
   const source=document.getElementById('certificado-pdf');
   if(!source)return alert('No se encontró el certificado.');
   if(!window.html2canvas||!window.jspdf||!window.jspdf.jsPDF)return alert('No se cargaron las librerías del PDF.');
+
+  renderCertificateQR();
 
   const clone=source.cloneNode(true);
   clone.style.display='block';
