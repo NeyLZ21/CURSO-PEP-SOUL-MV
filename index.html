@@ -1,6 +1,3 @@
-Aquí tienes el **código completo** basado en el archivo que subiste , con los bloqueos y ajustes integrados:
-
-```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -97,6 +94,16 @@ input[type="text"],input[type="email"],input[type="password"],select{width:100%;
   left:0;
   bottom:0;
   width:120px;
+  height:110px;
+  z-index:5;
+  background:transparent;
+  pointer-events:auto;
+}
+.yt-bottom-right-blocker{
+  position:absolute;
+  right:0;
+  bottom:0;
+  width:300px;
   height:110px;
   z-index:5;
   background:transparent;
@@ -564,6 +571,7 @@ function makePoster(pid,videoId,lockedMsg){
       ${lockLayer}
       <div class="yt-top-blocker" aria-hidden="true" title=""></div>
       <div class="yt-left-share-blocker" aria-hidden="true" title=""></div>
+      <div class="yt-bottom-right-blocker" aria-hidden="true" title=""></div>
       <div class="warnmsg" id="warn-${pid}"></div>
     </div>`;
 }
@@ -1257,25 +1265,90 @@ document.addEventListener('contextmenu',function(e){
 });
 
 document.addEventListener('click',function(e){
-  if(e.target.closest('.yt-top-blocker') || e.target.closest('.yt-left-share-blocker')){
+  if(
+    e.target.closest('.yt-top-blocker') ||
+    e.target.closest('.yt-left-share-blocker') ||
+    e.target.closest('.yt-bottom-right-blocker')
+  ){
     e.preventDefault();
     e.stopPropagation();
     return false;
   }
 },true);
 
-document.addEventListener('click',function(e){
-  const link=e.target.closest('a');
-  if(!link) return;
-  e.preventDefault();
-  e.stopPropagation();
-  return false;
-},true);
+(function(){
+  const blockedProtocols=['http:','https:'];
 
-window.open=function(){
-  return null;
-};
+  window.open=function(){
+    return null;
+  };
+
+  document.addEventListener('click',function(e){
+    const a=e.target.closest('a');
+    if(!a) return;
+
+    const href=a.getAttribute('href')||'';
+    const target=a.getAttribute('target')||'';
+
+    if(a.id==='btn-download-cert') return;
+
+    if(target==='_blank'){
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+
+    try{
+      const url=new URL(href,location.href);
+      if(blockedProtocols.includes(url.protocol) && url.origin!==location.origin){
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+    }catch(_){
+      if(href && !href.startsWith('#') && !href.startsWith('javascript:')){
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+    }
+  },true);
+
+  document.addEventListener('auxclick',function(e){
+    if(e.button===1){
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+  },true);
+
+  document.addEventListener('mousedown',function(e){
+    if(e.button===1){
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+  },true);
+
+  document.addEventListener('mouseup',function(e){
+    if(e.button===1){
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+  },true);
+
+  ['touchstart','pointerdown'].forEach(evt=>{
+    document.addEventListener(evt,function(e){
+      const a=e.target.closest('a');
+      if(!a) return;
+      if(a.id==='btn-download-cert') return;
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    },true);
+  });
+})();
 </script>
 </body>
 </html>
-```
