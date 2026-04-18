@@ -1,3 +1,6 @@
+Aquí tienes el **código completo** basado en el archivo que subiste , con los bloqueos y ajustes integrados:
+
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -77,6 +80,28 @@ input[type="text"],input[type="email"],input[type="password"],select{width:100%;
 .cert-qr{width:110px;height:110px;display:block}
 .cert-qr-label{margin-top:6px;font-size:11px;font-weight:600;color:#6b7280}
 #certificado-pdf{display:none}
+
+/* BLOQUEOS SOBRE EL PLAYER DE YOUTUBE */
+.yt-top-blocker{
+  position:absolute;
+  top:0;
+  left:0;
+  width:78%;
+  height:88px;
+  z-index:5;
+  background:transparent;
+  pointer-events:auto;
+}
+.yt-left-share-blocker{
+  position:absolute;
+  left:0;
+  bottom:0;
+  width:120px;
+  height:110px;
+  z-index:5;
+  background:transparent;
+  pointer-events:auto;
+}
 </style>
 </head>
 <body>
@@ -529,7 +554,18 @@ function showWarn(pid,text){
 
 function makePoster(pid,videoId,lockedMsg){
   const lockLayer=lockedMsg?`<div class="lock" id="lock-${pid}">🔒 ${lockedMsg}</div>`:'';
-  return `<div class="yt-wrap" style="margin-top:8px"><div class="player-host" id="${pid}"></div><div class="poster" data-load="${pid}"><img src="https://i.ytimg.com/vi/${videoId}/hqdefault.jpg" alt=""><button type="button">Ver video ▶</button></div>${lockLayer}<div class="warnmsg" id="warn-${pid}"></div></div>`;
+  return `
+    <div class="yt-wrap" style="margin-top:8px">
+      <div class="player-host" id="${pid}"></div>
+      <div class="poster" data-load="${pid}">
+        <img src="https://i.ytimg.com/vi/${videoId}/hqdefault.jpg" alt="">
+        <button type="button">Ver video ▶</button>
+      </div>
+      ${lockLayer}
+      <div class="yt-top-blocker" aria-hidden="true" title=""></div>
+      <div class="yt-left-share-blocker" aria-hidden="true" title=""></div>
+      <div class="warnmsg" id="warn-${pid}"></div>
+    </div>`;
 }
 
 function destroyAllPlayers(){
@@ -580,7 +616,8 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
       controls:1,
       disablekb:1,
       playsinline:1,
-      fs:1
+      fs:1,
+      iv_load_policy:3
     },
     events:{
       onReady:(ev)=>{
@@ -1220,6 +1257,14 @@ document.addEventListener('contextmenu',function(e){
 });
 
 document.addEventListener('click',function(e){
+  if(e.target.closest('.yt-top-blocker') || e.target.closest('.yt-left-share-blocker')){
+    e.preventDefault();
+    e.stopPropagation();
+    return false;
+  }
+},true);
+
+document.addEventListener('click',function(e){
   const link=e.target.closest('a');
   if(!link) return;
   e.preventDefault();
@@ -1233,3 +1278,4 @@ window.open=function(){
 </script>
 </body>
 </html>
+```
