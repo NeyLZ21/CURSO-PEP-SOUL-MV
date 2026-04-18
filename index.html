@@ -574,7 +574,14 @@ function actuallyCreatePlayer({pid,videoId,moduleId,index}){
     width:'640',
     videoId,
     host:'https://www.youtube-nocookie.com',
-    playerVars:{rel:0,modestbranding:1,controls:1,disablekb:1,playsinline:1},
+    playerVars:{
+      rel:0,
+      modestbranding:1,
+      controls:1,
+      disablekb:1,
+      playsinline:1,
+      fs:1
+    },
     events:{
       onReady:(ev)=>{
         try{
@@ -1197,6 +1204,32 @@ function setTab(tab){
 document.getElementById('tab-login').addEventListener('click',()=>setTab('login'));
 document.getElementById('tab-register').addEventListener('click',()=>setTab('reg'));
 setTab('login');
+
+/* BLOQUEOS */
+document.addEventListener('keydown',function(e){
+  const key=(e.key||'').toLowerCase();
+  if(e.ctrlKey && key==='c') e.preventDefault();
+  if(e.ctrlKey && key==='u') e.preventDefault();
+  if(e.ctrlKey && key==='s') e.preventDefault();
+  if(e.ctrlKey && e.shiftKey && key==='i') e.preventDefault();
+  if(e.key==='F12') e.preventDefault();
+});
+
+document.addEventListener('contextmenu',function(e){
+  if(e.target.closest('.yt-wrap')) e.preventDefault();
+});
+
+document.addEventListener('click',function(e){
+  const link=e.target.closest('a');
+  if(!link) return;
+  e.preventDefault();
+  e.stopPropagation();
+  return false;
+},true);
+
+window.open=function(){
+  return null;
+};
 </script>
 </body>
 </html>
